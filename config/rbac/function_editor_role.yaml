@@ -1,0 +1,24 @@
+# permissions for end users to edit functions.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: function-editor-role
+rules:
+- apiGroups:
+  - openfunction.io
+  resources:
+  - functions
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - openfunction.io
+  resources:
+  - functions/status
+  verbs:
+  - get
