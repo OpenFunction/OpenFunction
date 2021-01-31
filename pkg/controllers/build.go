@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	goerrors "errors"
+	"fmt"
 	"github.com/ghodss/yaml"
 	"github.com/openfunction/pkg/apis/v1alpha1"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -24,7 +25,7 @@ const (
 	buildpacksPipelineRun = "buildpacks-pipeline-run"
 	buildImage            = "build-image"
 	buildpackSourcePvc    = "buildpacks-source-pvc"
-	buildpackCachePvc     = "buildpacks-cache-pvc"
+	platformEnv           = "platform-env"
 	cache                 = "CACHE"
 	image                 = "image"
 	registryUrlKey        = "tekton.dev/docker-0"
@@ -37,7 +38,6 @@ const (
 	workspaceShare        = "shared-workspace"
 	workspaceOutput       = "output"
 	workspaceSource       = "source"
-	functionEnv           = "function-env"
 	functionTarget        = "GOOGLE_FUNCTION_TARGET"
 	functionSignatureType = "GOOGLE_FUNCTION_SIGNATURE_TYPE"
 	platformDir           = "platform-dir"
@@ -68,8 +68,6 @@ func (r *FunctionReconciler) mutateTask(task *pipeline.Task, owner *v1alpha1.Fun
 		if err != nil {
 			return err
 		}
-		expected.Name = name
-		expected.Namespace = owner.Namespace
 
 		for i, _ := range expected.Spec.Steps {
 			expected.Spec.Steps[i].ImagePullPolicy = v1.PullIfNotPresent
@@ -93,7 +91,7 @@ func (r *FunctionReconciler) CreateOrUpdateTask(owner *v1alpha1.Function, name s
 	ctx := context.Background()
 
 	task := pipeline.Task{}
-	task.Name = name
+	task.Name = fmt.Sprintf("%s-%s", owner.Name, name)
 	task.Namespace = owner.Namespace
 	if result, err := controllerutil.CreateOrUpdate(ctx, r.Client, &task, r.mutateTask(&task, owner, name)); err != nil {
 		log.Error(err, "Failed to CreateOrUpdate Task", "result", result)
@@ -124,6 +122,7 @@ func (r *FunctionReconciler) mutateConfigMap(cm *v1.ConfigMap, owner *v1alpha1.F
 				functionSignatureType: expected.Data[functionSignatureType],
 				functionTarget:        expected.Data[functionTarget],
 			}
+			expected.DeepCopyInto(cm)
 			cm.SetOwnerReferences(nil)
 			return ctrl.SetControllerReference(owner, cm, r.Scheme)
 		}
@@ -136,28 +135,11 @@ func (r *FunctionReconciler) CreateOrUpdateConfigMap(owner *v1alpha1.Function) e
 	ctx := context.Background()
 
 	cm := v1.ConfigMap{}
-	cm.Name = functionEnv
+	cm.Name = fmt.Sprintf("%s-%s", owner.Name, platformEnv)
 	cm.Namespace = owner.Namespace
 	if result, err := controllerutil.CreateOrUpdate(ctx, r.Client, &cm, r.mutateConfigMap(&cm, owner)); err != nil {
 		log.Error(err, "Failed to CreateOrUpdate ConfigMap", "result", result)
 		return err
-	}
-	return nil
-}
-
-func (r *FunctionReconciler) CreateOrUpdateBuildpackPVCs(owner *v1alpha1.Function) error {
-	log := r.Log.WithName("CreateBuildpackPVCs")
-	ctx := context.Background()
-
-	pvcs := []string{buildpackSourcePvc, buildpackCachePvc}
-	for _, v := range pvcs {
-		pvc := v1.PersistentVolumeClaim{}
-		pvc.Name = v
-		pvc.Namespace = owner.Namespace
-		if result, err := controllerutil.CreateOrUpdate(ctx, r.Client, &pvc, r.mutatePVC(&pvc, owner)); err != nil {
-			log.Error(err, "Failed to CreateOrUpdate PersistentVolumeClaim", "result", result)
-			return err
-		}
 	}
 	return nil
 }
@@ -192,6 +174,23 @@ func (r *FunctionReconciler) mutatePVC(pvc *v1.PersistentVolumeClaim, owner *v1a
 	}
 }
 
+func (r *FunctionReconciler) CreateOrUpdateBuildpackPVCs(owner *v1alpha1.Function) error {
+	log := r.Log.WithName("CreateBuildpackPVCs")
+	ctx := context.Background()
+
+	pvcs := []string{fmt.Sprintf("%s-%s", owner.Name, buildpackSourcePvc)}
+	for _, v := range pvcs {
+		pvc := v1.PersistentVolumeClaim{}
+		pvc.Name = v
+		pvc.Namespace = owner.Namespace
+		if result, err := controllerutil.CreateOrUpdate(ctx, r.Client, &pvc, r.mutatePVC(&pvc, owner)); err != nil {
+			log.Error(err, "Failed to CreateOrUpdate PersistentVolumeClaim", "result", result)
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *FunctionReconciler) mutateRegistryAuth(ctx context.Context, sa *v1.ServiceAccount, owner *v1alpha1.Function) controllerutil.MutateFn {
 	return func() error {
 		s := v1.Secret{}
@@ -217,7 +216,7 @@ func (r *FunctionReconciler) mutateRegistryAuth(ctx context.Context, sa *v1.Serv
 				Kind:       "ServiceAccount",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      buildpacksSa,
+				Name:      fmt.Sprintf("%s-%s", owner.Name, buildpacksSa),
 				Namespace: owner.Namespace,
 			},
 			Secrets: []v1.ObjectReference{
@@ -240,7 +239,7 @@ func (r *FunctionReconciler) CreateOrUpdateRegistryAuth(owner *v1alpha1.Function
 	log := r.Log.WithName("CreateOrUpdateRegistryAuth")
 	ctx := context.Background()
 	sa := v1.ServiceAccount{}
-	sa.Name = buildpacksSa
+	sa.Name = fmt.Sprintf("%s-%s", owner.Name, buildpacksSa)
 	sa.Namespace = owner.Namespace
 	if result, err := controllerutil.CreateOrUpdate(ctx, r.Client, &sa, r.mutateRegistryAuth(ctx, &sa, owner)); err != nil {
 		log.Error(err, "Failed to CreateOrUpdate ServiceAccount", "result", result)
@@ -252,14 +251,6 @@ func (r *FunctionReconciler) CreateOrUpdateRegistryAuth(owner *v1alpha1.Function
 func (r *FunctionReconciler) mutatePipelineResource(res *pipelineres.PipelineResource, owner *v1alpha1.Function) controllerutil.MutateFn {
 	return func() error {
 		expected := pipelineres.PipelineResource{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "tekton.dev/v1alpha1",
-				Kind:       "PipelineResource",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      buildpacksAppImage,
-				Namespace: owner.Namespace,
-			},
 			Spec: pipelineres.PipelineResourceSpec{
 				Type: pipelineres.PipelineResourceTypeImage,
 				Params: []pipelineres.ResourceParam{
@@ -282,7 +273,7 @@ func (r *FunctionReconciler) CreateOrUpdatePipelineResource(owner *v1alpha1.Func
 	ctx := context.Background()
 
 	res := pipelineres.PipelineResource{}
-	res.Name = buildpacksAppImage
+	res.Name = fmt.Sprintf("%s-%s", owner.Name, buildpacksAppImage)
 	res.Namespace = owner.Namespace
 	if result, err := controllerutil.CreateOrUpdate(ctx, r.Client, &res, r.mutatePipelineResource(&res, owner)); err != nil {
 		log.Error(err, "Failed to CreateOrUpdate PipelineResource", "result", result)
@@ -294,14 +285,6 @@ func (r *FunctionReconciler) CreateOrUpdatePipelineResource(owner *v1alpha1.Func
 func (r *FunctionReconciler) mutatePipeline(p *pipeline.Pipeline, owner *v1alpha1.Function) controllerutil.MutateFn {
 	return func() error {
 		expected := pipeline.Pipeline{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "tekton.dev/v1beta1",
-				Kind:       "Pipeline",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      buildpacksPipeline,
-				Namespace: owner.Namespace,
-			},
 			Spec: pipeline.PipelineSpec{
 				Workspaces: []pipeline.PipelineWorkspaceDeclaration{
 					pipeline.PipelineWorkspaceDeclaration{
@@ -317,9 +300,10 @@ func (r *FunctionReconciler) mutatePipeline(p *pipeline.Pipeline, owner *v1alpha
 			},
 		}
 
+		taskFetchSrcName := fmt.Sprintf("%s-%s", owner.Name, taskGitClone)
 		taskFetchSrc := pipeline.PipelineTask{
-			Name:    taskGitClone,
-			TaskRef: &pipeline.TaskRef{Name: taskGitClone},
+			Name:    taskFetchSrcName,
+			TaskRef: &pipeline.TaskRef{Name: taskFetchSrcName},
 			Workspaces: []pipeline.WorkspacePipelineTaskBinding{
 				pipeline.WorkspacePipelineTaskBinding{
 					Name:      workspaceOutput,
@@ -347,11 +331,12 @@ func (r *FunctionReconciler) mutatePipeline(p *pipeline.Pipeline, owner *v1alpha
 			taskFetchSrc.Params = append(taskFetchSrc.Params, param)
 		}
 
+		taskBuildName := fmt.Sprintf("%s-%s", owner.Name, taskbuild)
 		taskBuild := pipeline.PipelineTask{
-			Name:    taskbuild,
-			TaskRef: &pipeline.TaskRef{Name: taskbuild},
+			Name:    taskBuildName,
+			TaskRef: &pipeline.TaskRef{Name: taskBuildName},
 			RunAfter: []string{
-				taskGitClone,
+				taskFetchSrcName,
 			},
 			Workspaces: []pipeline.WorkspacePipelineTaskBinding{
 				pipeline.WorkspacePipelineTaskBinding{
@@ -410,12 +395,12 @@ func (r *FunctionReconciler) mutatePipeline(p *pipeline.Pipeline, owner *v1alpha
 }
 
 func (r *FunctionReconciler) CreateOrUpdatePipeline(owner *v1alpha1.Function) error {
-	p := pipeline.Pipeline{}
-	p.Name = buildpacksPipeline
-	p.Namespace = owner.Namespace
-
 	log := r.Log.WithName("CreateOrUpdatePipeline")
 	ctx := context.Background()
+
+	p := pipeline.Pipeline{}
+	p.Name = fmt.Sprintf("%s-%s", owner.Name, buildpacksPipeline)
+	p.Namespace = owner.Namespace
 	if result, err := controllerutil.CreateOrUpdate(ctx, r.Client, &p, r.mutatePipeline(&p, owner)); err != nil {
 		log.Error(err, "Failed to CreateOrUpdate Pipeline", "result", result)
 		return err
@@ -438,25 +423,17 @@ func (r *FunctionReconciler) mutatePipelineRun(pr *pipeline.PipelineRun, owner *
 				},
 			},
 		}
-		cms.Name = functionEnv
+		cms.Name = fmt.Sprintf("%s-%s", owner.Name, platformEnv)
 
 		expected := pipeline.PipelineRun{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "tekton.dev/v1beta1",
-				Kind:       "PipelineRun",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      buildpacksPipelineRun,
-				Namespace: owner.Namespace,
-			},
 			Spec: pipeline.PipelineRunSpec{
-				ServiceAccountName: buildpacksSa,
-				PipelineRef:        &pipeline.PipelineRef{Name: buildpacksPipeline},
+				ServiceAccountName: fmt.Sprintf("%s-%s", owner.Name, buildpacksSa),
+				PipelineRef:        &pipeline.PipelineRef{Name: fmt.Sprintf("%s-%s", owner.Name, buildpacksPipeline)},
 				Workspaces: []pipeline.WorkspaceBinding{
 					pipeline.WorkspaceBinding{
 						Name: workspaceShare,
 						PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
-							ClaimName: buildpackSourcePvc,
+							ClaimName: fmt.Sprintf("%s-%s", owner.Name, buildpackSourcePvc),
 						},
 					},
 				},
@@ -464,7 +441,7 @@ func (r *FunctionReconciler) mutatePipelineRun(pr *pipeline.PipelineRun, owner *
 					pipeline.PipelineResourceBinding{
 						Name: buildImage,
 						ResourceRef: &pipeline.PipelineResourceRef{
-							Name: buildpacksAppImage,
+							Name: fmt.Sprintf("%s-%s", owner.Name, buildpacksAppImage),
 						},
 					},
 				},
@@ -473,9 +450,7 @@ func (r *FunctionReconciler) mutatePipelineRun(pr *pipeline.PipelineRun, owner *
 						v1.Volume{
 							Name: buildpacksCache,
 							VolumeSource: v1.VolumeSource{
-								PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
-									ClaimName: buildpackCachePvc,
-								},
+								EmptyDir: &v1.EmptyDirVolumeSource{},
 							},
 						},
 						v1.Volume{
@@ -497,7 +472,7 @@ func (r *FunctionReconciler) mutatePipelineRun(pr *pipeline.PipelineRun, owner *
 
 func (r *FunctionReconciler) CreateOrUpdatePipelineRun(owner *v1alpha1.Function) error {
 	pr := pipeline.PipelineRun{}
-	pr.Name = buildpacksPipelineRun
+	pr.Name = fmt.Sprintf("%s-%s", owner.Name, buildpacksPipelineRun)
 	pr.Namespace = owner.Namespace
 
 	log := r.Log.WithName("CreateOrUpdatePipelineRun")
