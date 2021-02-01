@@ -17,14 +17,14 @@ import (
 )
 
 const (
-	buildpacksSa          = "buildpacks-service-account"
-	buildpacksAppImage    = "buildpacks-app-image"
+	buildSa               = "build-service-account"
+	buildFuncImage        = "build-func-image"
 	builderImage          = "BUILDER_IMAGE"
-	buildpacksCache       = "buildpacks-cache"
-	buildpacksPipeline    = "buildpacks-pipeline"
-	buildpacksPipelineRun = "buildpacks-pipeline-run"
+	buildCache            = "build-cache"
+	buildPipeline         = "build-pipeline"
+	buildPipelineRun      = "build-pipeline-run"
 	buildImage            = "build-image"
-	buildpackSourcePvc    = "buildpacks-source-pvc"
+	buildpackSourcePvc    = "build-source-pvc"
 	platformEnv           = "platform-env"
 	cache                 = "CACHE"
 	image                 = "image"
@@ -32,8 +32,8 @@ const (
 	registryUrl           = "https://index.docker.io/v1/"
 	sourceSubpath         = "SOURCE_SUBPATH"
 	subDirectory          = "subdirectory"
-	taskbuild             = "buildpacks"
-	taskGitClone          = "git-clone"
+	buildTask             = "build"
+	gitCloneTask          = "git-clone"
 	url                   = "url"
 	workspaceShare        = "shared-workspace"
 	workspaceOutput       = "output"
@@ -45,8 +45,8 @@ const (
 
 var (
 	taskTmplDict = map[string]string{
-		taskbuild:    tmplBuild,
-		taskGitClone: tmplGitClone,
+		buildTask:    tmplBuild,
+		gitCloneTask: tmplGitClone,
 	}
 )
 
@@ -216,7 +216,7 @@ func (r *FunctionReconciler) mutateRegistryAuth(ctx context.Context, sa *v1.Serv
 				Kind:       "ServiceAccount",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-%s", owner.Name, buildpacksSa),
+				Name:      fmt.Sprintf("%s-%s", owner.Name, buildSa),
 				Namespace: owner.Namespace,
 			},
 			Secrets: []v1.ObjectReference{
@@ -239,7 +239,7 @@ func (r *FunctionReconciler) CreateOrUpdateRegistryAuth(owner *v1alpha1.Function
 	log := r.Log.WithName("CreateOrUpdateRegistryAuth")
 	ctx := context.Background()
 	sa := v1.ServiceAccount{}
-	sa.Name = fmt.Sprintf("%s-%s", owner.Name, buildpacksSa)
+	sa.Name = fmt.Sprintf("%s-%s", owner.Name, buildSa)
 	sa.Namespace = owner.Namespace
 	if result, err := controllerutil.CreateOrUpdate(ctx, r.Client, &sa, r.mutateRegistryAuth(ctx, &sa, owner)); err != nil {
 		log.Error(err, "Failed to CreateOrUpdate ServiceAccount", "result", result)
@@ -273,7 +273,7 @@ func (r *FunctionReconciler) CreateOrUpdatePipelineResource(owner *v1alpha1.Func
 	ctx := context.Background()
 
 	res := pipelineres.PipelineResource{}
-	res.Name = fmt.Sprintf("%s-%s", owner.Name, buildpacksAppImage)
+	res.Name = fmt.Sprintf("%s-%s", owner.Name, buildFuncImage)
 	res.Namespace = owner.Namespace
 	if result, err := controllerutil.CreateOrUpdate(ctx, r.Client, &res, r.mutatePipelineResource(&res, owner)); err != nil {
 		log.Error(err, "Failed to CreateOrUpdate PipelineResource", "result", result)
@@ -300,7 +300,7 @@ func (r *FunctionReconciler) mutatePipeline(p *pipeline.Pipeline, owner *v1alpha
 			},
 		}
 
-		taskFetchSrcName := fmt.Sprintf("%s-%s", owner.Name, taskGitClone)
+		taskFetchSrcName := fmt.Sprintf("%s-%s", owner.Name, gitCloneTask)
 		taskFetchSrc := pipeline.PipelineTask{
 			Name:    taskFetchSrcName,
 			TaskRef: &pipeline.TaskRef{Name: taskFetchSrcName},
@@ -331,10 +331,10 @@ func (r *FunctionReconciler) mutatePipeline(p *pipeline.Pipeline, owner *v1alpha
 			taskFetchSrc.Params = append(taskFetchSrc.Params, param)
 		}
 
-		taskBuildName := fmt.Sprintf("%s-%s", owner.Name, taskbuild)
-		taskBuild := pipeline.PipelineTask{
-			Name:    taskBuildName,
-			TaskRef: &pipeline.TaskRef{Name: taskBuildName},
+		buildTaskName := fmt.Sprintf("%s-%s", owner.Name, buildTask)
+		buildTask := pipeline.PipelineTask{
+			Name:    buildTaskName,
+			TaskRef: &pipeline.TaskRef{Name: buildTaskName},
 			RunAfter: []string{
 				taskFetchSrcName,
 			},
@@ -356,7 +356,7 @@ func (r *FunctionReconciler) mutatePipeline(p *pipeline.Pipeline, owner *v1alpha
 					Name: cache,
 					Value: pipeline.ArrayOrString{
 						Type:      pipeline.ParamTypeString,
-						StringVal: buildpacksCache,
+						StringVal: buildCache,
 					},
 				},
 				pipeline.Param{
@@ -384,9 +384,9 @@ func (r *FunctionReconciler) mutatePipeline(p *pipeline.Pipeline, owner *v1alpha
 					StringVal: *owner.Spec.Source.SourceSubPath,
 				},
 			}
-			taskBuild.Params = append(taskBuild.Params, param)
+			buildTask.Params = append(buildTask.Params, param)
 		}
-		expected.Spec.Tasks = []pipeline.PipelineTask{taskFetchSrc, taskBuild}
+		expected.Spec.Tasks = []pipeline.PipelineTask{taskFetchSrc, buildTask}
 
 		expected.Spec.DeepCopyInto(&p.Spec)
 		p.SetOwnerReferences(nil)
@@ -399,7 +399,7 @@ func (r *FunctionReconciler) CreateOrUpdatePipeline(owner *v1alpha1.Function) er
 	ctx := context.Background()
 
 	p := pipeline.Pipeline{}
-	p.Name = fmt.Sprintf("%s-%s", owner.Name, buildpacksPipeline)
+	p.Name = fmt.Sprintf("%s-%s", owner.Name, buildPipeline)
 	p.Namespace = owner.Namespace
 	if result, err := controllerutil.CreateOrUpdate(ctx, r.Client, &p, r.mutatePipeline(&p, owner)); err != nil {
 		log.Error(err, "Failed to CreateOrUpdate Pipeline", "result", result)
@@ -427,8 +427,8 @@ func (r *FunctionReconciler) mutatePipelineRun(pr *pipeline.PipelineRun, owner *
 
 		expected := pipeline.PipelineRun{
 			Spec: pipeline.PipelineRunSpec{
-				ServiceAccountName: fmt.Sprintf("%s-%s", owner.Name, buildpacksSa),
-				PipelineRef:        &pipeline.PipelineRef{Name: fmt.Sprintf("%s-%s", owner.Name, buildpacksPipeline)},
+				ServiceAccountName: fmt.Sprintf("%s-%s", owner.Name, buildSa),
+				PipelineRef:        &pipeline.PipelineRef{Name: fmt.Sprintf("%s-%s", owner.Name, buildPipeline)},
 				Workspaces: []pipeline.WorkspaceBinding{
 					pipeline.WorkspaceBinding{
 						Name: workspaceShare,
@@ -441,14 +441,14 @@ func (r *FunctionReconciler) mutatePipelineRun(pr *pipeline.PipelineRun, owner *
 					pipeline.PipelineResourceBinding{
 						Name: buildImage,
 						ResourceRef: &pipeline.PipelineResourceRef{
-							Name: fmt.Sprintf("%s-%s", owner.Name, buildpacksAppImage),
+							Name: fmt.Sprintf("%s-%s", owner.Name, buildFuncImage),
 						},
 					},
 				},
 				PodTemplate: &pipeline.PodTemplate{
 					Volumes: []v1.Volume{
 						v1.Volume{
-							Name: buildpacksCache,
+							Name: buildCache,
 							VolumeSource: v1.VolumeSource{
 								EmptyDir: &v1.EmptyDirVolumeSource{},
 							},
@@ -472,7 +472,7 @@ func (r *FunctionReconciler) mutatePipelineRun(pr *pipeline.PipelineRun, owner *
 
 func (r *FunctionReconciler) CreateOrUpdatePipelineRun(owner *v1alpha1.Function) error {
 	pr := pipeline.PipelineRun{}
-	pr.Name = fmt.Sprintf("%s-%s", owner.Name, buildpacksPipelineRun)
+	pr.Name = fmt.Sprintf("%s-%s", owner.Name, buildPipelineRun)
 	pr.Namespace = owner.Namespace
 
 	log := r.Log.WithName("CreateOrUpdatePipelineRun")

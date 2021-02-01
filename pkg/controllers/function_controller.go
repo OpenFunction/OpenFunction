@@ -60,13 +60,13 @@ func (r *FunctionReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 func (r *FunctionReconciler) createOrUpdateBuild(ctx context.Context, owner *openfunction.Function) (ctrl.Result, error) {
 	log := r.Log.WithName("createOrUpdate")
 
-	if err := r.CreateOrUpdateTask(owner, taskGitClone); err != nil {
-		log.Error(err, "Failed to create task", "task", taskGitClone)
+	if err := r.CreateOrUpdateTask(owner, gitCloneTask); err != nil {
+		log.Error(err, "Failed to create task", "task", gitCloneTask)
 		return ctrl.Result{}, err
 	}
 
-	if err := r.CreateOrUpdateTask(owner, taskbuild); err != nil {
-		log.Error(err, "Failed to create task", "task", taskbuild)
+	if err := r.CreateOrUpdateTask(owner, buildTask); err != nil {
+		log.Error(err, "Failed to create task", "task", buildTask)
 		return ctrl.Result{}, err
 	}
 
