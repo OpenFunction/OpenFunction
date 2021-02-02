@@ -42,14 +42,14 @@ func (r *FunctionReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 	log := r.Log.WithValues("function", req.NamespacedName)
 
-	var function openfunction.Function
+	var fn openfunction.Function
 
-	if err := r.Get(ctx, req.NamespacedName, &function); err != nil {
+	if err := r.Get(ctx, req.NamespacedName, &fn); err != nil {
 		log.Error(err, "Unable to get Function", "function", req.NamespacedName.String())
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	if _, err := r.createOrUpdateBuild(ctx, &function); err != nil {
+	if _, err := r.createOrUpdateBuild(ctx, &fn); err != nil {
 		log.Error(err, "Failed to create build", "function", req.NamespacedName.String())
 		return ctrl.Result{}, err
 	}
@@ -57,50 +57,74 @@ func (r *FunctionReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	return ctrl.Result{}, nil
 }
 
-func (r *FunctionReconciler) createOrUpdateBuild(ctx context.Context, owner *openfunction.Function) (ctrl.Result, error) {
+func (r *FunctionReconciler) createOrUpdateBuild(ctx context.Context, fn *openfunction.Function) (ctrl.Result, error) {
 	log := r.Log.WithName("createOrUpdate")
 
-	if err := r.CreateOrUpdateTask(owner, gitCloneTask); err != nil {
+	if err := r.CreateOrUpdateTask(fn, gitCloneTask); err != nil {
 		log.Error(err, "Failed to create task", "task", gitCloneTask)
 		return ctrl.Result{}, err
 	}
+	status := openfunction.FunctionStatus{Phase: openfunction.GitCloneTask, Status: openfunction.Created}
+	if err := r.updateStatus(ctx, fn, &status); err != nil {
+		return ctrl.Result{}, err
+	}
 
-	if err := r.CreateOrUpdateTask(owner, buildTask); err != nil {
+	if err := r.CreateOrUpdateTask(fn, buildTask); err != nil {
 		log.Error(err, "Failed to create task", "task", buildTask)
 		return ctrl.Result{}, err
 	}
-
-	if err := r.CreateOrUpdateConfigMap(owner); err != nil {
-		log.Error(err, "Failed to create configmap", "namaspace", owner.Namespace)
+	status.Phase = openfunction.BuildTask
+	if err := r.updateStatus(ctx, fn, &status); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	if err := r.CreateOrUpdateBuildpackPVCs(owner); err != nil {
-		log.Error(err, "Failed to create buildpack pvcs", "namaspace", owner.Namespace)
+	if err := r.CreateOrUpdateConfigMap(fn); err != nil {
+		log.Error(err, "Failed to create configmap", "namaspace", fn.Namespace)
 		return ctrl.Result{}, err
 	}
 
-	if err := r.CreateOrUpdateRegistryAuth(owner); err != nil {
-		log.Error(err, "Failed to create registry auth", "namaspace", owner.Namespace)
+	if err := r.CreateOrUpdateBuildpackPVCs(fn); err != nil {
+		log.Error(err, "Failed to create buildpack pvcs", "namaspace", fn.Namespace)
 		return ctrl.Result{}, err
 	}
 
-	if err := r.CreateOrUpdatePipelineResource(owner); err != nil {
-		log.Error(err, "Failed to create PipelineResource", "namaspace", owner.Namespace)
+	if err := r.CreateOrUpdateRegistryAuth(fn); err != nil {
+		log.Error(err, "Failed to create registry auth", "namaspace", fn.Namespace)
 		return ctrl.Result{}, err
 	}
 
-	if err := r.CreateOrUpdatePipeline(owner); err != nil {
-		log.Error(err, "Failed to create Pipeline", "namaspace", owner.Namespace)
+	if err := r.CreateOrUpdatePipelineResource(fn); err != nil {
+		log.Error(err, "Failed to create PipelineResource", "namaspace", fn.Namespace)
 		return ctrl.Result{}, err
 	}
 
-	if err := r.CreateOrUpdatePipelineRun(owner); err != nil {
-		log.Error(err, "Failed to create PipelineRun", "namaspace", owner.Namespace)
+	if err := r.CreateOrUpdatePipeline(fn); err != nil {
+		log.Error(err, "Failed to create Pipeline", "namaspace", fn.Namespace)
+		return ctrl.Result{}, err
+	}
+	status.Phase = openfunction.Pipeline
+	if err := r.updateStatus(ctx, fn, &status); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if err := r.CreateOrUpdatePipelineRun(fn); err != nil {
+		log.Error(err, "Failed to create PipelineRun", "namaspace", fn.Namespace)
+		return ctrl.Result{}, err
+	}
+	status.Phase = openfunction.PipelineRun
+	if err := r.updateStatus(ctx, fn, &status); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *FunctionReconciler) updateStatus(ctx context.Context, fn *openfunction.Function, status *openfunction.FunctionStatus) error {
+	status.DeepCopyInto(&fn.Status)
+	if err := r.Status().Update(context.Background(), fn); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *FunctionReconciler) SetupWithManager(mgr ctrl.Manager) error {

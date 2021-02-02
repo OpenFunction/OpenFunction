@@ -15,8 +15,12 @@ spec:
     kind: Function
     listKind: FunctionList
     plural: functions
+    shortNames:
+    - fn
     singular: function
   scope: Namespaced
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       description: Function is the Schema for the functions API
@@ -162,6 +166,8 @@ spec:
           properties:
             phase:
               description: Building, Created, Published
+              type: string
+            status:
               type: string
           type: object
       type: object

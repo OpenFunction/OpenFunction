@@ -62,9 +62,18 @@ type Registry struct {
 type Language string
 
 const (
-	Go     Language = "go"
-	Python Language = "python"
-	Node   Language = "node"
+	Go           Language = "go"
+	Python       Language = "python"
+	Node         Language = "node"
+	BuildTask             = "BuildTask"
+	GitCloneTask          = "GitClone"
+	Pipeline              = "Pipeline"
+	PipelineRun           = "PipelineRun"
+	Created               = "Created"
+	Running               = "Running"
+	Finished              = "Finished"
+	Success               = "Success"
+	Failed                = "Failed"
 )
 
 type Runtime struct {
@@ -97,11 +106,13 @@ type FunctionSpec struct {
 // FunctionStatus defines the observed state of Function
 type FunctionStatus struct {
 	// Building, Created, Published
-	Phase string `json:"phase,omitempty"`
+	Phase  string `json:"phase,omitempty"`
+	Status string `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
-
+// +kubebuilder:resource:shortName=fn
+// +kubebuilder:subresource:status
 // Function is the Schema for the functions API
 type Function struct {
 	metav1.TypeMeta   `json:",inline"`
