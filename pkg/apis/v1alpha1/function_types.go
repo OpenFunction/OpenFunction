@@ -62,18 +62,13 @@ type Registry struct {
 type Language string
 
 const (
-	Go           Language = "go"
-	Python       Language = "python"
-	Node         Language = "node"
-	BuildTask             = "BuildTask"
-	GitCloneTask          = "GitClone"
-	Pipeline              = "Pipeline"
-	PipelineRun           = "PipelineRun"
-	Created               = "Created"
-	Running               = "Running"
-	Finished              = "Finished"
-	Success               = "Success"
-	Failed                = "Failed"
+	Go        Language = "go"
+	Python    Language = "python"
+	Node      Language = "node"
+	Build              = "Build"
+	Serving            = "Serving"
+	Launching          = "Launching"
+	Launched           = "Launched"
 )
 
 type Runtime struct {
@@ -87,6 +82,8 @@ type FunctionSpec struct {
 	FuncName string `json:"funcName"`
 	// Function type such as HTTP or CloudEvent
 	FuncType string `json:"funcType"`
+	// Function version in format like v1.0.0
+	FuncVersion string `json:"funcVersion"`
 	// The port on which the function will be invoked
 	Port *string `json:"port,omitempty"`
 	// Function provider such as google, aws, azure
@@ -106,8 +103,8 @@ type FunctionSpec struct {
 // FunctionStatus defines the observed state of Function
 type FunctionStatus struct {
 	// Building, Created, Published
-	Phase  string `json:"phase,omitempty"`
-	Status string `json:"status,omitempty"`
+	Phase string `json:"phase,omitempty"`
+	State string `json:"state,omitempty"`
 }
 
 // +kubebuilder:object:root=true

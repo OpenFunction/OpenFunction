@@ -17,16 +17,23 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
+	"fmt"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"strings"
 
 	openfunction "github.com/openfunction/pkg/apis/v1alpha1"
 	"github.com/openfunction/pkg/controllers"
+	ttv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	tekton "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/scheme"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	kcache "k8s.io/client-go/tools/cache"
 	kneventing "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
+	knapis "knative.dev/pkg/apis"
 	knserving "knative.dev/serving/pkg/client/clientset/versioned/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -34,8 +41,9 @@ import (
 )
 
 var (
-	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
+	scheme      = runtime.NewScheme()
+	setupLog    = ctrl.Log.WithName("setup")
+	tektonCache cache.Cache
 )
 
 func init() {
@@ -45,6 +53,79 @@ func init() {
 	_ = tekton.AddToScheme(scheme)
 	_ = openfunction.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
+}
+
+func watchBuildStatus() error {
+	tektonScheme := runtime.NewScheme()
+	_ = tekton.AddToScheme(tektonScheme)
+	ctx := context.Background()
+
+	var err error
+	tektonCache, err = cache.New(ctrl.GetConfigOrDie(), cache.Options{
+		Scheme: tektonScheme,
+	})
+	if err != nil {
+		setupLog.Error(err, "Failed to create tekton cache")
+		return err
+	}
+
+	go func() {
+		_ = tektonCache.Start(ctx.Done())
+	}()
+
+	// Setup informer for PipelineRun
+	plrInf, err := tektonCache.GetInformer(ctx, &ttv1beta1.PipelineRun{})
+	if err != nil {
+		setupLog.Error(err, "Failed to get informer for PipelineRun")
+		return err
+	}
+	plrInf.AddEventHandler(kcache.ResourceEventHandlerFuncs{
+		AddFunc: onFuncBuildUpdate,
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			onFuncBuildUpdate(newObj)
+		},
+	})
+
+	if ok := tektonCache.WaitForCacheSync(ctx.Done()); !ok {
+		err := fmt.Errorf("Tekton cache failed")
+		setupLog.Error(err, "Failed to get informer for PipelineRun")
+		return err
+	}
+
+	return ctx.Err()
+}
+
+func onFuncBuildUpdate(obj interface{}) {
+	if plr, ok := obj.(*ttv1beta1.PipelineRun); ok {
+		if ok := strings.Contains(plr.Name, "-"+controllers.BuildPipelineRun); !ok {
+			return
+		}
+		if plr.Status.CompletionTime != nil {
+			var plrResult ttv1beta1.PipelineRunResult
+			for _, plrResult = range plr.Status.PipelineResults {
+				setupLog.V(1).Info("PipelineResult", "PipelineRun Name", plr.Name,
+					"Result Name", plrResult.Name, "Result Value", plrResult.Value)
+			}
+
+			var condition knapis.Condition
+			for _, condition = range plr.Status.Conditions {
+				setupLog.V(1).Info("PipelineRun condition", "PipelineRun Name", plr.Name,
+					"Status", condition.Status, "Type", condition.Type, "LastTransitionTime", condition.LastTransitionTime,
+					"Message", condition.Message, "Reason", condition.Reason, "Severity", condition.Severity)
+			}
+
+			switch {
+			case plr.IsDone():
+				setupLog.V(1).Info("PipelineRun finished!")
+			case plr.IsCancelled():
+				setupLog.V(1).Info("PipelineRun cancelled!")
+			case plr.IsTimedOut():
+				setupLog.V(1).Info("PipelineRun timeout!")
+			default:
+				setupLog.V(1).Info("PipelineRun status unknown!")
+			}
+		}
+	}
 }
 
 func main() {
@@ -79,6 +160,10 @@ func main() {
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
+
+	if err := watchBuildStatus(); err != nil {
+		os.Exit(1)
+	}
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

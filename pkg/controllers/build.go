@@ -1,11 +1,10 @@
 package controllers
 
 import (
-	"context"
 	goerrors "errors"
 	"fmt"
 	"github.com/ghodss/yaml"
-	"github.com/openfunction/pkg/apis/v1alpha1"
+	openfunction "github.com/openfunction/pkg/apis/v1alpha1"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	pipelineres "github.com/tektoncd/pipeline/pkg/apis/resource/v1alpha1"
 	"k8s.io/api/core/v1"
@@ -22,11 +21,10 @@ const (
 	builderImage          = "BUILDER_IMAGE"
 	buildCache            = "build-cache"
 	buildPipeline         = "build-pipeline"
-	buildPipelineRun      = "build-pipeline-run"
+	BuildPipelineRun      = "build-pipelinerun"
 	buildImage            = "build-image"
 	buildpackSourcePvc    = "build-source-pvc"
 	platformEnv           = "platform-env"
-	cache                 = "CACHE"
 	image                 = "image"
 	registryUrlKey        = "tekton.dev/docker-0"
 	registryUrl           = "https://index.docker.io/v1/"
@@ -55,7 +53,7 @@ func UnmarshalTask(task string) (*pipeline.Task, error) {
 	return &t, yaml.Unmarshal([]byte(task), &t)
 }
 
-func (r *FunctionReconciler) mutateTask(task *pipeline.Task, fn *v1alpha1.Function, name string) controllerutil.MutateFn {
+func (r *FunctionReconciler) mutateTask(task *pipeline.Task, fn *openfunction.Function, name string) controllerutil.MutateFn {
 	return func() error {
 		tmpl := ""
 		ok := false
@@ -86,21 +84,20 @@ func (r *FunctionReconciler) mutateTask(task *pipeline.Task, fn *v1alpha1.Functi
 	}
 }
 
-func (r *FunctionReconciler) CreateOrUpdateTask(fn *v1alpha1.Function, name string) error {
+func (r *FunctionReconciler) CreateOrUpdateTask(fn *openfunction.Function, name string) error {
 	log := r.Log.WithName("CreateOrUpdateTask")
-	ctx := context.Background()
 
 	task := pipeline.Task{}
 	task.Name = fmt.Sprintf("%s-%s", fn.Name, name)
 	task.Namespace = fn.Namespace
-	if result, err := controllerutil.CreateOrUpdate(ctx, r.Client, &task, r.mutateTask(&task, fn, name)); err != nil {
+	if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &task, r.mutateTask(&task, fn, name)); err != nil {
 		log.Error(err, "Failed to CreateOrUpdate Task", "result", result)
 		return err
 	}
 	return nil
 }
 
-func (r *FunctionReconciler) mutateConfigMap(cm *v1.ConfigMap, fn *v1alpha1.Function) controllerutil.MutateFn {
+func (r *FunctionReconciler) mutateConfigMap(cm *v1.ConfigMap, fn *openfunction.Function) controllerutil.MutateFn {
 	return func() error {
 		expected := v1.ConfigMap{
 			TypeMeta: metav1.TypeMeta{
@@ -130,21 +127,20 @@ func (r *FunctionReconciler) mutateConfigMap(cm *v1.ConfigMap, fn *v1alpha1.Func
 	}
 }
 
-func (r *FunctionReconciler) CreateOrUpdateConfigMap(fn *v1alpha1.Function) error {
+func (r *FunctionReconciler) CreateOrUpdateConfigMap(fn *openfunction.Function) error {
 	log := r.Log.WithName("CreateOrUpdateConfigMap")
-	ctx := context.Background()
 
 	cm := v1.ConfigMap{}
 	cm.Name = fmt.Sprintf("%s-%s", fn.Name, platformEnv)
 	cm.Namespace = fn.Namespace
-	if result, err := controllerutil.CreateOrUpdate(ctx, r.Client, &cm, r.mutateConfigMap(&cm, fn)); err != nil {
+	if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &cm, r.mutateConfigMap(&cm, fn)); err != nil {
 		log.Error(err, "Failed to CreateOrUpdate ConfigMap", "result", result)
 		return err
 	}
 	return nil
 }
 
-func (r *FunctionReconciler) mutatePVC(pvc *v1.PersistentVolumeClaim, fn *v1alpha1.Function) controllerutil.MutateFn {
+func (r *FunctionReconciler) mutatePVC(pvc *v1.PersistentVolumeClaim, fn *openfunction.Function) controllerutil.MutateFn {
 	return func() error {
 		expected := v1.PersistentVolumeClaim{
 			TypeMeta: metav1.TypeMeta{
@@ -174,16 +170,15 @@ func (r *FunctionReconciler) mutatePVC(pvc *v1.PersistentVolumeClaim, fn *v1alph
 	}
 }
 
-func (r *FunctionReconciler) CreateOrUpdateBuildpackPVCs(fn *v1alpha1.Function) error {
+func (r *FunctionReconciler) CreateOrUpdateBuildpackPVCs(fn *openfunction.Function) error {
 	log := r.Log.WithName("CreateBuildpackPVCs")
-	ctx := context.Background()
 
 	pvcs := []string{fmt.Sprintf("%s-%s", fn.Name, buildpackSourcePvc)}
 	for _, v := range pvcs {
 		pvc := v1.PersistentVolumeClaim{}
 		pvc.Name = v
 		pvc.Namespace = fn.Namespace
-		if result, err := controllerutil.CreateOrUpdate(ctx, r.Client, &pvc, r.mutatePVC(&pvc, fn)); err != nil {
+		if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &pvc, r.mutatePVC(&pvc, fn)); err != nil {
 			log.Error(err, "Failed to CreateOrUpdate PersistentVolumeClaim", "result", result)
 			return err
 		}
@@ -191,10 +186,10 @@ func (r *FunctionReconciler) CreateOrUpdateBuildpackPVCs(fn *v1alpha1.Function) 
 	return nil
 }
 
-func (r *FunctionReconciler) mutateRegistryAuth(ctx context.Context, sa *v1.ServiceAccount, fn *v1alpha1.Function) controllerutil.MutateFn {
+func (r *FunctionReconciler) mutateRegistryAuth(sa *v1.ServiceAccount, fn *openfunction.Function) controllerutil.MutateFn {
 	return func() error {
 		s := v1.Secret{}
-		if err := r.Client.Get(ctx, types.NamespacedName{Namespace: fn.Namespace, Name: fn.Spec.Registry.Account.Name}, &s); err != nil {
+		if err := r.Client.Get(r.ctx, types.NamespacedName{Namespace: fn.Namespace, Name: fn.Spec.Registry.Account.Name}, &s); err != nil {
 			return err
 		}
 		var url string
@@ -206,7 +201,7 @@ func (r *FunctionReconciler) mutateRegistryAuth(ctx context.Context, sa *v1.Serv
 		s.Annotations[registryUrlKey] = url
 		s.Type = "kubernetes.io/basic-auth"
 
-		if err := r.Client.Update(ctx, &s); err != nil {
+		if err := r.Client.Update(r.ctx, &s); err != nil {
 			return err
 		}
 
@@ -235,20 +230,19 @@ func (r *FunctionReconciler) mutateRegistryAuth(ctx context.Context, sa *v1.Serv
 	}
 }
 
-func (r *FunctionReconciler) CreateOrUpdateRegistryAuth(fn *v1alpha1.Function) error {
+func (r *FunctionReconciler) CreateOrUpdateRegistryAuth(fn *openfunction.Function) error {
 	log := r.Log.WithName("CreateOrUpdateRegistryAuth")
-	ctx := context.Background()
 	sa := v1.ServiceAccount{}
 	sa.Name = fmt.Sprintf("%s-%s", fn.Name, buildSa)
 	sa.Namespace = fn.Namespace
-	if result, err := controllerutil.CreateOrUpdate(ctx, r.Client, &sa, r.mutateRegistryAuth(ctx, &sa, fn)); err != nil {
+	if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &sa, r.mutateRegistryAuth(&sa, fn)); err != nil {
 		log.Error(err, "Failed to CreateOrUpdate ServiceAccount", "result", result)
 		return err
 	}
 	return nil
 }
 
-func (r *FunctionReconciler) mutatePipelineResource(res *pipelineres.PipelineResource, fn *v1alpha1.Function) controllerutil.MutateFn {
+func (r *FunctionReconciler) mutatePipelineResource(res *pipelineres.PipelineResource, fn *openfunction.Function) controllerutil.MutateFn {
 	return func() error {
 		expected := pipelineres.PipelineResource{
 			Spec: pipelineres.PipelineResourceSpec{
@@ -268,21 +262,20 @@ func (r *FunctionReconciler) mutatePipelineResource(res *pipelineres.PipelineRes
 	}
 }
 
-func (r *FunctionReconciler) CreateOrUpdatePipelineResource(fn *v1alpha1.Function) error {
+func (r *FunctionReconciler) CreateOrUpdatePipelineResource(fn *openfunction.Function) error {
 	log := r.Log.WithName("CreatePipelineResource")
-	ctx := context.Background()
 
 	res := pipelineres.PipelineResource{}
 	res.Name = fmt.Sprintf("%s-%s", fn.Name, buildFuncImage)
 	res.Namespace = fn.Namespace
-	if result, err := controllerutil.CreateOrUpdate(ctx, r.Client, &res, r.mutatePipelineResource(&res, fn)); err != nil {
+	if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &res, r.mutatePipelineResource(&res, fn)); err != nil {
 		log.Error(err, "Failed to CreateOrUpdate PipelineResource", "result", result)
 		return err
 	}
 	return nil
 }
 
-func (r *FunctionReconciler) mutatePipeline(p *pipeline.Pipeline, fn *v1alpha1.Function) controllerutil.MutateFn {
+func (r *FunctionReconciler) mutatePipeline(p *pipeline.Pipeline, fn *openfunction.Function) controllerutil.MutateFn {
 	return func() error {
 		expected := pipeline.Pipeline{
 			Spec: pipeline.PipelineSpec{
@@ -353,7 +346,7 @@ func (r *FunctionReconciler) mutatePipeline(p *pipeline.Pipeline, fn *v1alpha1.F
 					},
 				},
 				pipeline.Param{
-					Name: cache,
+					Name: "CACHE",
 					Value: pipeline.ArrayOrString{
 						Type:      pipeline.ParamTypeString,
 						StringVal: buildCache,
@@ -394,14 +387,13 @@ func (r *FunctionReconciler) mutatePipeline(p *pipeline.Pipeline, fn *v1alpha1.F
 	}
 }
 
-func (r *FunctionReconciler) CreateOrUpdatePipeline(fn *v1alpha1.Function) error {
+func (r *FunctionReconciler) CreateOrUpdatePipeline(fn *openfunction.Function) error {
 	log := r.Log.WithName("CreateOrUpdatePipeline")
-	ctx := context.Background()
 
 	p := pipeline.Pipeline{}
 	p.Name = fmt.Sprintf("%s-%s", fn.Name, buildPipeline)
 	p.Namespace = fn.Namespace
-	if result, err := controllerutil.CreateOrUpdate(ctx, r.Client, &p, r.mutatePipeline(&p, fn)); err != nil {
+	if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &p, r.mutatePipeline(&p, fn)); err != nil {
 		log.Error(err, "Failed to CreateOrUpdate Pipeline", "result", result)
 		return err
 	}
@@ -409,7 +401,7 @@ func (r *FunctionReconciler) CreateOrUpdatePipeline(fn *v1alpha1.Function) error
 	return nil
 }
 
-func (r *FunctionReconciler) mutatePipelineRun(pr *pipeline.PipelineRun, fn *v1alpha1.Function) controllerutil.MutateFn {
+func (r *FunctionReconciler) mutatePipelineRun(pr *pipeline.PipelineRun, fn *openfunction.Function) controllerutil.MutateFn {
 	return func() error {
 		cms := v1.ConfigMapVolumeSource{
 			Items: []v1.KeyToPath{
@@ -470,14 +462,14 @@ func (r *FunctionReconciler) mutatePipelineRun(pr *pipeline.PipelineRun, fn *v1a
 	}
 }
 
-func (r *FunctionReconciler) CreateOrUpdatePipelineRun(fn *v1alpha1.Function) error {
+func (r *FunctionReconciler) CreateOrUpdatePipelineRun(fn *openfunction.Function) error {
+	log := r.Log.WithName("CreateOrUpdatePipelineRun")
+
 	pr := pipeline.PipelineRun{}
-	pr.Name = fmt.Sprintf("%s-%s", fn.Name, buildPipelineRun)
+	pr.Name = fmt.Sprintf("%s-%s", fn.Name, BuildPipelineRun)
 	pr.Namespace = fn.Namespace
 
-	log := r.Log.WithName("CreateOrUpdatePipelineRun")
-	ctx := context.Background()
-	if result, err := controllerutil.CreateOrUpdate(ctx, r.Client, &pr, r.mutatePipelineRun(&pr, fn)); err != nil {
+	if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &pr, r.mutatePipelineRun(&pr, fn)); err != nil {
 		log.Error(err, "Failed to CreateOrUpdate PipelineRun", "result", result)
 		return err
 	}

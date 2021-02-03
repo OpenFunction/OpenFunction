@@ -29,8 +29,8 @@ spec:
         name: openfunction
         resources:
           limits:
-            cpu: 100m
-            memory: 30Mi
+            cpu: 500m
+            memory: 100Mi
           requests:
             cpu: 100m
             memory: 20Mi
