@@ -64,7 +64,7 @@ build: test
 push:
 	docker push ${IMG}
 
-clean-image:
+clean:
 	docker rmi `docker image ls|awk '{print $2,$3}'|grep none|awk '{print $2}'|tr "\n" " "`
 
 # find or download controller-gen

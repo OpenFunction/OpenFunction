@@ -23,41 +23,42 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// FunctionBuildSpec defines the desired state of FunctionBuild
-type FunctionBuildSpec struct {
+// FunctionServingSpec defines the desired state of FunctionServing
+type FunctionServingSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of FunctionBuild. Edit FunctionBuild_types.go to remove/update
+	// Foo is an example field of FunctionServing. Edit FunctionServing_types.go to remove/update
 	Foo string `json:"foo,omitempty"`
 }
 
-// FunctionBuildStatus defines the observed state of FunctionBuild
-type FunctionBuildStatus struct {
+// FunctionServingStatus defines the observed state of FunctionServing
+type FunctionServingStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 }
 
 // +kubebuilder:object:root=true
 
-// FunctionBuild is the Schema for the functionbuildren API
-type FunctionBuild struct {
+// FunctionServing is the Schema for the functionservings API
+type FunctionServing struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   FunctionBuildSpec   `json:"spec,omitempty"`
-	Status FunctionBuildStatus `json:"status,omitempty"`
+	Spec   FunctionServingSpec   `json:"spec,omitempty"`
+	Status FunctionServingStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
-
-// FunctionBuildList contains a list of FunctionBuild
-type FunctionBuildList struct {
+// +kubebuilder:resource:shortName=fs
+// +kubebuilder:subresource:status
+// FunctionServingList contains a list of FunctionServing
+type FunctionServingList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []FunctionBuild `json:"items"`
+	Items           []FunctionServing `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&FunctionBuild{}, &FunctionBuildList{})
+	SchemeBuilder.Register(&FunctionServing{}, &FunctionServingList{})
 }

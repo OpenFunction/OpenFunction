@@ -1,13 +1,13 @@
-# permissions for end users to edit functionbuildren.
+# permissions for end users to edit functionbuilds.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: functionbuild-editor-role
 rules:
 - apiGroups:
-  - openfunction.io.openfunction.io
+  - openfunction.io
   resources:
-  - functionbuildren
+  - functionbuilds
   verbs:
   - create
   - delete
@@ -17,8 +17,8 @@ rules:
   - update
   - watch
 - apiGroups:
-  - openfunction.io.openfunction.io
+  - openfunction.io
   resources:
-  - functionbuildren/status
+  - functionbuilds/status
   verbs:
   - get

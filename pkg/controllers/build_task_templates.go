@@ -1,7 +1,7 @@
 package controllers
 
 const (
-	// Tekton build template from https://raw.githubusercontent.com/tektoncd/catalog/master/task/buildpacks/0.1/buildpacks.yaml
+	// Tekton build template from https://raw.githubusercontent.com/tektoncd/catalog/master/task/buildpacks/0.2/buildpacks.yaml
 	tmplBuild = `
 ---
 apiVersion: tekton.dev/v1beta1

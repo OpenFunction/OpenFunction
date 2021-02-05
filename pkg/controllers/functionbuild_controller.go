@@ -24,30 +24,30 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	openfunctioniov1alpha1 "github.com/openfunction/api/v1alpha1"
+	openfunction "github.com/openfunction/pkg/apis/v1alpha1"
 )
 
-// FunctionServingReconciler reconciles a FunctionServing object
-type FunctionServingReconciler struct {
+// FunctionBuildReconciler reconciles a FunctionBuild object
+type FunctionBuildReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=openfunction.io.openfunction.io,resources=functionservings,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=openfunction.io.openfunction.io,resources=functionservings/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=openfunction.io,resources=functionbuilds,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=openfunction.io,resources=functionbuilds/status,verbs=get;update;patch
 
-func (r *FunctionServingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *FunctionBuildReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
-	_ = r.Log.WithValues("functionserving", req.NamespacedName)
+	_ = r.Log.WithValues("functionbuild", req.NamespacedName)
 
 	// your logic here
 
 	return ctrl.Result{}, nil
 }
 
-func (r *FunctionServingReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *FunctionBuildReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&openfunctioniov1alpha1.FunctionServing{}).
+		For(&openfunction.FunctionBuild{}).
 		Complete(r)
 }

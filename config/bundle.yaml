@@ -8,6 +8,60 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.2.5
+  name: functionbuilds.openfunction.io
+spec:
+  group: openfunction.io
+  names:
+    kind: FunctionBuild
+    listKind: FunctionBuildList
+    plural: functionbuilds
+    singular: functionbuild
+  scope: Namespaced
+  validation:
+    openAPIV3Schema:
+      description: FunctionBuild is the Schema for the functionbuilds API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: FunctionBuildSpec defines the desired state of FunctionBuild
+          properties:
+            foo:
+              description: Foo is an example field of FunctionBuild. Edit FunctionBuild_types.go
+                to remove/update
+              type: string
+          type: object
+        status:
+          description: FunctionBuildStatus defines the observed state of FunctionBuild
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.2.5
   name: functions.openfunction.io
 spec:
   group: openfunction.io
@@ -49,6 +103,9 @@ spec:
               type: string
             funcType:
               description: Function type such as HTTP or CloudEvent
+              type: string
+            funcVersion:
+              description: Function version in format like v1.0.0
               type: string
             image:
               description: Function image name
@@ -155,6 +212,7 @@ spec:
           - builder
           - funcName
           - funcType
+          - funcVersion
           - image
           - provider
           - registry
@@ -169,6 +227,60 @@ spec:
               type: string
             state:
               type: string
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.2.5
+  name: functionservings.openfunction.io
+spec:
+  group: openfunction.io
+  names:
+    kind: FunctionServing
+    listKind: FunctionServingList
+    plural: functionservings
+    singular: functionserving
+  scope: Namespaced
+  validation:
+    openAPIV3Schema:
+      description: FunctionServing is the Schema for the functionservings API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: FunctionServingSpec defines the desired state of FunctionServing
+          properties:
+            foo:
+              description: Foo is an example field of FunctionServing. Edit FunctionServing_types.go
+                to remove/update
+              type: string
+          type: object
+        status:
+          description: FunctionServingStatus defines the observed state of FunctionServing
           type: object
       type: object
   version: v1alpha1
@@ -239,6 +351,26 @@ rules:
 - apiGroups:
   - openfunction.io
   resources:
+  - functionbuilds
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - openfunction.io
+  resources:
+  - functionbuilds/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - openfunction.io
+  resources:
   - functions
   verbs:
   - create
@@ -252,6 +384,26 @@ rules:
   - openfunction.io
   resources:
   - functions/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - openfunction.io
+  resources:
+  - functionservings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - openfunction.io
+  resources:
+  - functionservings/status
   verbs:
   - get
   - patch

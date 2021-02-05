@@ -21,11 +21,10 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"strings"
 
-	openfunction "github.com/openfunction/pkg/apis/v1alpha1"
-	"github.com/openfunction/pkg/controllers"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+
 	ttv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	tekton "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/scheme"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -37,6 +36,9 @@ import (
 	knserving "knative.dev/serving/pkg/client/clientset/versioned/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	openfunction "github.com/openfunction/pkg/apis/v1alpha1"
+	"github.com/openfunction/pkg/controllers"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -157,6 +159,24 @@ func main() {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Function")
+		os.Exit(1)
+	}
+
+	if err = (&controllers.FunctionBuildReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("FunctionBuild"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "FunctionBuild")
+		os.Exit(1)
+	}
+
+	if err = (&controllers.FunctionServingReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("FunctionServing"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "FunctionServing")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

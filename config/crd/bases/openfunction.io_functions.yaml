@@ -48,6 +48,9 @@ spec:
             funcType:
               description: Function type such as HTTP or CloudEvent
               type: string
+            funcVersion:
+              description: Function version in format like v1.0.0
+              type: string
             image:
               description: Function image name
               type: string
@@ -153,6 +156,7 @@ spec:
           - builder
           - funcName
           - funcType
+          - funcVersion
           - image
           - provider
           - registry
