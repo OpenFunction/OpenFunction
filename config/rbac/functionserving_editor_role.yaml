@@ -1,0 +1,24 @@
+# permissions for end users to edit functionservings.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: functionserving-editor-role
+rules:
+- apiGroups:
+  - openfunction.io.openfunction.io
+  resources:
+  - functionservings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - openfunction.io.openfunction.io
+  resources:
+  - functionservings/status
+  verbs:
+  - get

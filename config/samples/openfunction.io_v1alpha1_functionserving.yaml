@@ -1,0 +1,7 @@
+apiVersion: openfunction.io.openfunction.io/v1alpha1
+kind: FunctionServing
+metadata:
+  name: functionserving-sample
+spec:
+  # Add fields here
+  foo: bar
