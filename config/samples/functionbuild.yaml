@@ -1,7 +1,0 @@
-apiVersion: openfunction.io/v1alpha1
-kind: FunctionBuild
-metadata:
-  name: functionbuild-sample
-spec:
-  # Add fields here
-  foo: bar

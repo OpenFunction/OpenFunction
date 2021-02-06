@@ -3,8 +3,6 @@
 # It should be run by config/default
 resources:
 - bases/openfunction.io_functions.yaml
-- bases/openfunction.io_functionbuilds.yaml
-- bases/openfunction.io_functionservings.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:
