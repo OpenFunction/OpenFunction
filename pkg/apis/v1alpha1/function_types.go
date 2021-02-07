@@ -62,13 +62,13 @@ type Registry struct {
 type Language string
 
 const (
-	Go        Language = "go"
-	Python    Language = "python"
-	Node      Language = "node"
-	Build              = "Build"
-	Serving            = "Serving"
-	Launching          = "Launching"
-	Launched           = "Launched"
+	Go           Language = "go"
+	Python       Language = "python"
+	Node         Language = "node"
+	BuildPhase            = "Build"
+	ServingPhase          = "Serving"
+	Launching             = "Launching"
+	Launched              = "Launched"
 )
 
 type Runtime struct {

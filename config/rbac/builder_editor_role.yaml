@@ -1,0 +1,24 @@
+# permissions for end users to edit builders.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: builder-editor-role
+rules:
+- apiGroups:
+  - openfunction.io
+  resources:
+  - builders
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - openfunction.io
+  resources:
+  - builders/status
+  verbs:
+  - get

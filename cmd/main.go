@@ -161,6 +161,22 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "Function")
 		os.Exit(1)
 	}
+	if err = (&controllers.BuilderReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("Builder"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Builder")
+		os.Exit(1)
+	}
+	if err = (&controllers.ServingReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("Serving"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Serving")
+		os.Exit(1)
+	}
 
 	// +kubebuilder:scaffold:builder
 

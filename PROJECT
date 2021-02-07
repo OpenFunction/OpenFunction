@@ -10,4 +10,10 @@ resources:
 - group: openfunction.io
   kind: FunctionServing
   version: v1alpha1
+- group: openfunction.io
+  kind: Builder
+  version: v1alpha1
+- group: openfunction.io
+  kind: Serving
+  version: v1alpha1
 version: "2"

@@ -24,6 +24,26 @@ rules:
 - apiGroups:
   - openfunction.io
   resources:
+  - builders
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - openfunction.io
+  resources:
+  - builders/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - openfunction.io
+  resources:
   - functions
   verbs:
   - create
@@ -37,6 +57,26 @@ rules:
   - openfunction.io
   resources:
   - functions/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - openfunction.io
+  resources:
+  - servings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - openfunction.io
+  resources:
+  - servings/status
   verbs:
   - get
   - patch

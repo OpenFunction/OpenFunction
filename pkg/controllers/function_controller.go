@@ -67,7 +67,7 @@ func (r *FunctionReconciler) createOrUpdateBuild(fn *openfunction.Function) (ctr
 		return ctrl.Result{}, nil
 	}
 
-	status := openfunction.FunctionStatus{Phase: openfunction.Build, State: openfunction.Launching}
+	status := openfunction.FunctionStatus{Phase: openfunction.BuildPhase, State: openfunction.Launching}
 	if err := r.updateStatus(fn, &status); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -112,7 +112,7 @@ func (r *FunctionReconciler) createOrUpdateBuild(fn *openfunction.Function) (ctr
 		return ctrl.Result{}, err
 	}
 
-	status = openfunction.FunctionStatus{Phase: openfunction.Build, State: openfunction.Launched}
+	status = openfunction.FunctionStatus{Phase: openfunction.BuildPhase, State: openfunction.Launched}
 	if err := r.updateStatus(fn, &status); err != nil {
 		return ctrl.Result{}, err
 	}
