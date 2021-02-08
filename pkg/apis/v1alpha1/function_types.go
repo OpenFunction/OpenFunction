@@ -52,11 +52,36 @@ type GitRepo struct {
 	GitInitImage *string `json:"gitInitImage,omitempty"`
 }
 
+func (gr *GitRepo) Init() {
+	var revision, refspec, subDir, sourceSubPath, deletingExisting, httpProxy, httpsProxy, noProxy, gitInitImage string
+	var submodules, sslVerify, verbose bool
+	var depth int8
+	gr.Revision = &revision
+	gr.Refspec = &refspec
+	gr.SubDirectory = &subDir
+	gr.SourceSubPath = &sourceSubPath
+	gr.DeleteExisting = &deletingExisting
+	gr.HttpProxy = &httpProxy
+	gr.HttpsProxy = &httpsProxy
+	gr.NoProxy = &noProxy
+	gr.GitInitImage = &gitInitImage
+	gr.Submodules = &submodules
+	gr.SslVerify = &sslVerify
+	gr.Verbose = &verbose
+	gr.Depth = &depth
+}
+
 type Registry struct {
 	// Image registry url
 	Url *string `json:"url,omitempty"`
 	// Image registry account including username and password
 	Account *v1.SecretKeySelector `json:"account,omitempty"`
+}
+
+func (r *Registry) Init() {
+	var url string
+	r.Url = &url
+	r.Account = &v1.SecretKeySelector{}
 }
 
 type Language string
@@ -67,6 +92,7 @@ const (
 	Node         Language = "node"
 	BuildPhase            = "Build"
 	ServingPhase          = "Serving"
+	Created               = "Created"
 	Launching             = "Launching"
 	Launched              = "Launched"
 )
@@ -102,7 +128,6 @@ type FunctionSpec struct {
 
 // FunctionStatus defines the observed state of Function
 type FunctionStatus struct {
-	// Building, Created, Published
 	Phase string `json:"phase,omitempty"`
 	State string `json:"state,omitempty"`
 }

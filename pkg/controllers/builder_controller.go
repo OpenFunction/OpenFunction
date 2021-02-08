@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"github.com/openfunction/pkg/util"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -32,18 +33,100 @@ type BuilderReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
+	ctx    context.Context
 }
 
 // +kubebuilder:rbac:groups=openfunction.io,resources=builders,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=openfunction.io,resources=builders/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=tekton.dev,resources=tasks;pipelineresources;pipelines;pipelineruns,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=configmaps;persistentvolumeclaims;serviceaccounts;secrets,verbs=get;list;watch;create;update;patch;delete
 
 func (r *BuilderReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
-	_ = r.Log.WithValues("builder", req.NamespacedName)
+	ctx := context.Background()
+	r.ctx = ctx
+	log := r.Log.WithValues("Builder", req.NamespacedName)
 
-	// your logic here
+	var builder openfunction.Builder
+
+	if err := r.Get(ctx, req.NamespacedName, &builder); err != nil {
+		log.V(10).Info("Builder deleted", "error", err)
+		return ctrl.Result{}, util.IgnoreNotFound(client.IgnoreNotFound(err))
+	}
+
+	if _, err := r.createOrUpdateBuild(&builder); err != nil {
+		log.Error(err, "Failed to create build", "Builder", req.NamespacedName.String())
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *BuilderReconciler) createOrUpdateBuild(builder *openfunction.Builder) (ctrl.Result, error) {
+	log := r.Log.WithName("createOrUpdate")
+
+	if builder.Status.Phase != "" && builder.Status.State != "" {
+		return ctrl.Result{}, nil
+	}
+
+	status := openfunction.BuilderStatus{Phase: openfunction.BuildPhase, State: openfunction.Launching}
+	if err := r.updateStatus(builder, &status); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if err := r.CreateOrUpdateTask(builder, gitCloneTask); err != nil {
+		log.Error(err, "Failed to create task", "task", gitCloneTask)
+		return ctrl.Result{}, err
+	}
+
+	if err := r.CreateOrUpdateTask(builder, buildTask); err != nil {
+		log.Error(err, "Failed to create task", "task", buildTask)
+		return ctrl.Result{}, err
+	}
+
+	if err := r.CreateOrUpdateConfigMap(builder); err != nil {
+		log.Error(err, "Failed to create configmap", "namaspace", builder.Namespace)
+		return ctrl.Result{}, err
+	}
+
+	if err := r.CreateOrUpdateBuildpackPVCs(builder); err != nil {
+		log.Error(err, "Failed to create buildpack pvcs", "namaspace", builder.Namespace)
+		return ctrl.Result{}, err
+	}
+
+	if err := r.CreateOrUpdateRegistryAuth(builder); err != nil {
+		log.Error(err, "Failed to create registry auth", "namaspace", builder.Namespace)
+		return ctrl.Result{}, err
+	}
+
+	if err := r.CreateOrUpdatePipelineResource(builder); err != nil {
+		log.Error(err, "Failed to create PipelineResource", "namaspace", builder.Namespace)
+		return ctrl.Result{}, err
+	}
+
+	if err := r.CreateOrUpdatePipeline(builder); err != nil {
+		log.Error(err, "Failed to create Pipeline", "namaspace", builder.Namespace)
+		return ctrl.Result{}, err
+	}
+
+	if err := r.CreateOrUpdatePipelineRun(builder); err != nil {
+		log.Error(err, "Failed to create PipelineRun", "namaspace", builder.Namespace)
+		return ctrl.Result{}, err
+	}
+
+	status = openfunction.BuilderStatus{Phase: openfunction.BuildPhase, State: openfunction.Launched}
+	if err := r.updateStatus(builder, &status); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{}, nil
+}
+
+func (r *BuilderReconciler) updateStatus(builder *openfunction.Builder, status *openfunction.BuilderStatus) error {
+	status.DeepCopyInto(&builder.Status)
+	if err := r.Status().Update(r.ctx, builder); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *BuilderReconciler) SetupWithManager(mgr ctrl.Manager) error {

@@ -20,22 +20,24 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+const (
+	Knative = "Knative"
+)
 
 // ServingSpec defines the desired state of Serving
 type ServingSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of Serving. Edit Serving_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// Function image name
+	Image string `json:"image"`
+	// The port on which the function will be invoked
+	Port *string `json:"port,omitempty"`
+	// The backend runtime to run a function, for example Knative
+	Runtime *string `json:"runtime,omitempty"`
 }
 
 // ServingStatus defines the observed state of Serving
 type ServingStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Phase string `json:"phase,omitempty"`
+	State string `json:"state,omitempty"`
 }
 
 // +kubebuilder:object:root=true

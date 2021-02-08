@@ -38,13 +38,25 @@ spec:
         spec:
           description: ServingSpec defines the desired state of Serving
           properties:
-            foo:
-              description: Foo is an example field of Serving. Edit Serving_types.go
-                to remove/update
+            image:
+              description: Function image name
               type: string
+            port:
+              description: The port on which the function will be invoked
+              type: string
+            runtime:
+              description: The backend runtime to run a function, for example Knative
+              type: string
+          required:
+          - image
           type: object
         status:
           description: ServingStatus defines the observed state of Serving
+          properties:
+            phase:
+              type: string
+            state:
+              type: string
           type: object
       type: object
   version: v1alpha1

@@ -1,4 +1,4 @@
-### Cloud native function-as-a-service Platform
+### Cloud native Functions-as-a-Service Platform
 
 <!--
 **OpenFunction/OpenFunction** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.

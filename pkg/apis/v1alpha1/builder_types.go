@@ -20,22 +20,28 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // BuilderSpec defines the desired state of Builder
 type BuilderSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of Builder. Edit Builder_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// The name of the exported function to be invoked in function code
+	FuncName string `json:"funcName"`
+	// Function type such as HTTP or CloudEvent
+	FuncType string `json:"funcType"`
+	// Function version in format like v1.0.0
+	FuncVersion string `json:"funcVersion"`
+	// Cloud Native Buildpacks builders
+	Builder string `json:"builder"`
+	// Git repository info of a function
+	Source *GitRepo `json:"source"`
+	// Function image name
+	Image string `json:"image"`
+	// Image registry of the function image
+	Registry *Registry `json:"registry"`
 }
 
 // BuilderStatus defines the observed state of Builder
 type BuilderStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Phase string `json:"phase,omitempty"`
+	State string `json:"state,omitempty"`
 }
 
 // +kubebuilder:object:root=true

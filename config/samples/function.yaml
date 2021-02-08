@@ -5,6 +5,7 @@ metadata:
 spec:
   funcName: "HelloWorld"
   funcType: "http"
+  funcVersion: "v1.0.0"
   port: "8080"
   provider: "google"
   runtime:

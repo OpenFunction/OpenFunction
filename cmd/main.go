@@ -20,6 +20,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"k8s.io/apimachinery/pkg/types"
 	"os"
 	"strings"
 
@@ -32,13 +33,13 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	kcache "k8s.io/client-go/tools/cache"
 	kneventing "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
-	knapis "knative.dev/pkg/apis"
 	knserving "knative.dev/serving/pkg/client/clientset/versioned/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	openfunction "github.com/openfunction/pkg/apis/v1alpha1"
 	"github.com/openfunction/pkg/controllers"
+	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -46,6 +47,7 @@ var (
 	scheme      = runtime.NewScheme()
 	setupLog    = ctrl.Log.WithName("setup")
 	tektonCache cache.Cache
+	client      crclient.Client
 )
 
 func init() {
@@ -57,7 +59,7 @@ func init() {
 	// +kubebuilder:scaffold:scheme
 }
 
-func watchBuildStatus() error {
+func watchBuilderStatus() error {
 	tektonScheme := runtime.NewScheme()
 	_ = tekton.AddToScheme(tektonScheme)
 	ctx := context.Background()
@@ -82,9 +84,9 @@ func watchBuildStatus() error {
 		return err
 	}
 	plrInf.AddEventHandler(kcache.ResourceEventHandlerFuncs{
-		AddFunc: onFuncBuildUpdate,
+		AddFunc: onBuilderUpdate,
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			onFuncBuildUpdate(newObj)
+			onBuilderUpdate(newObj)
 		},
 	})
 
@@ -97,28 +99,34 @@ func watchBuildStatus() error {
 	return ctx.Err()
 }
 
-func onFuncBuildUpdate(obj interface{}) {
+func onBuilderUpdate(obj interface{}) {
 	if plr, ok := obj.(*ttv1beta1.PipelineRun); ok {
-		if ok := strings.Contains(plr.Name, "-"+controllers.BuildPipelineRun); !ok {
+		if ok := strings.HasSuffix(plr.Name, "-"+controllers.BuildPipelineRun); !ok {
 			return
 		}
-		if plr.Status.CompletionTime != nil {
-			var plrResult ttv1beta1.PipelineRunResult
-			for _, plrResult = range plr.Status.PipelineResults {
-				setupLog.V(1).Info("PipelineResult", "PipelineRun Name", plr.Name,
-					"Result Name", plrResult.Name, "Result Value", plrResult.Value)
-			}
 
-			var condition knapis.Condition
-			for _, condition = range plr.Status.Conditions {
-				setupLog.V(1).Info("PipelineRun condition", "PipelineRun Name", plr.Name,
-					"Status", condition.Status, "Type", condition.Type, "LastTransitionTime", condition.LastTransitionTime,
-					"Message", condition.Message, "Reason", condition.Reason, "Severity", condition.Severity)
-			}
+		if plr.Status.CompletionTime != nil {
+			//			var plrResult ttv1beta1.PipelineRunResult
+			//			for _, plrResult = range plr.Status.PipelineResults {
+			//				setupLog.V(1).Info("PipelineResult", "PipelineRun Name", plr.Name,
+			//					"Result Name", plrResult.Name, "Result Value", plrResult.Value)
+			//			}
+			//
+			//			var condition knapis.Condition
+			//			for _, condition = range plr.Status.Conditions {
+			//				setupLog.V(1).Info("PipelineRun condition", "PipelineRun Name", plr.Name,
+			//					"Status", condition.Status, "Type", condition.Type, "LastTransitionTime", condition.LastTransitionTime,
+			//					"Message", condition.Message, "Reason", condition.Reason, "Severity", condition.Severity)
+			//			}
+
+			fn := strings.TrimSuffix(plr.Name, fmt.Sprintf("-%s-%s", "builder", controllers.BuildPipelineRun))
 
 			switch {
 			case plr.IsDone():
-				setupLog.V(1).Info("PipelineRun finished!")
+				if err := updateFuncStatus(plr.Namespace, fn); err != nil {
+					setupLog.Error(err, "Failed to update function status", "namespace", plr.Namespace, "name", fn)
+				}
+				setupLog.V(1).Info("Function build completed", "namespace", plr.Namespace, "name", fn)
 			case plr.IsCancelled():
 				setupLog.V(1).Info("PipelineRun cancelled!")
 			case plr.IsTimedOut():
@@ -128,6 +136,25 @@ func onFuncBuildUpdate(obj interface{}) {
 			}
 		}
 	}
+}
+
+func updateFuncStatus(ns string, name string) error {
+	var fn openfunction.Function
+	ctx := context.Background()
+
+	nsn := types.NamespacedName{Namespace: ns, Name: name}
+	if err := client.Get(ctx, nsn, &fn); err != nil {
+		setupLog.Error(err, "Unable to get function", "name", nsn.String())
+		return err
+	}
+
+	status := openfunction.FunctionStatus{Phase: openfunction.ServingPhase, State: ""}
+	status.DeepCopyInto(&fn.Status)
+	if err := client.Status().Update(ctx, &fn); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func main() {
@@ -180,7 +207,8 @@ func main() {
 
 	// +kubebuilder:scaffold:builder
 
-	if err := watchBuildStatus(); err != nil {
+	client = mgr.GetClient()
+	if err := watchBuilderStatus(); err != nil {
 		os.Exit(1)
 	}
 

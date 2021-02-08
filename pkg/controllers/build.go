@@ -53,7 +53,7 @@ func UnmarshalTask(task string) (*pipeline.Task, error) {
 	return &t, yaml.Unmarshal([]byte(task), &t)
 }
 
-func (r *FunctionReconciler) mutateTask(task *pipeline.Task, fn *openfunction.Function, name string) controllerutil.MutateFn {
+func (r *BuilderReconciler) mutateTask(task *pipeline.Task, builder *openfunction.Builder, name string) controllerutil.MutateFn {
 	return func() error {
 		tmpl := ""
 		ok := false
@@ -73,31 +73,24 @@ func (r *FunctionReconciler) mutateTask(task *pipeline.Task, fn *openfunction.Fu
 
 		expected.Spec.DeepCopyInto(&task.Spec)
 		task.SetOwnerReferences(nil)
-		return ctrl.SetControllerReference(fn, task, r.Scheme)
-		//		if len(task.Spec.Steps) == 0 {
-		//			task.Spec.Steps = make([]pipeline.Step, len(expected.Spec.Steps))
-		//			copy(task.Spec.Steps, expected.Spec.Steps)
-		//			task.SetOwnerReferences(nil)
-		//			return ctrl.SetControllerReference(fn, task, r.Scheme)
-		//		}
-		//		return nil
+		return ctrl.SetControllerReference(builder, task, r.Scheme)
 	}
 }
 
-func (r *FunctionReconciler) CreateOrUpdateTask(fn *openfunction.Function, name string) error {
+func (r *BuilderReconciler) CreateOrUpdateTask(builder *openfunction.Builder, name string) error {
 	log := r.Log.WithName("CreateOrUpdateTask")
 
 	task := pipeline.Task{}
-	task.Name = fmt.Sprintf("%s-%s", fn.Name, name)
-	task.Namespace = fn.Namespace
-	if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &task, r.mutateTask(&task, fn, name)); err != nil {
+	task.Name = fmt.Sprintf("%s-%s", builder.Name, name)
+	task.Namespace = builder.Namespace
+	if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &task, r.mutateTask(&task, builder, name)); err != nil {
 		log.Error(err, "Failed to CreateOrUpdate Task", "result", result)
 		return err
 	}
 	return nil
 }
 
-func (r *FunctionReconciler) mutateConfigMap(cm *v1.ConfigMap, fn *openfunction.Function) controllerutil.MutateFn {
+func (r *BuilderReconciler) mutateConfigMap(cm *v1.ConfigMap, builder *openfunction.Builder) controllerutil.MutateFn {
 	return func() error {
 		expected := v1.ConfigMap{
 			TypeMeta: metav1.TypeMeta{
@@ -106,11 +99,11 @@ func (r *FunctionReconciler) mutateConfigMap(cm *v1.ConfigMap, fn *openfunction.
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      cm.Name,
-				Namespace: fn.Namespace,
+				Namespace: builder.Namespace,
 			},
 			Data: map[string]string{
-				functionSignatureType: fn.Spec.FuncType,
-				functionTarget:        fn.Spec.FuncName,
+				functionSignatureType: builder.Spec.FuncType,
+				functionTarget:        builder.Spec.FuncName,
 			},
 		}
 
@@ -121,26 +114,26 @@ func (r *FunctionReconciler) mutateConfigMap(cm *v1.ConfigMap, fn *openfunction.
 			}
 			expected.DeepCopyInto(cm)
 			cm.SetOwnerReferences(nil)
-			return ctrl.SetControllerReference(fn, cm, r.Scheme)
+			return ctrl.SetControllerReference(builder, cm, r.Scheme)
 		}
 		return nil
 	}
 }
 
-func (r *FunctionReconciler) CreateOrUpdateConfigMap(fn *openfunction.Function) error {
+func (r *BuilderReconciler) CreateOrUpdateConfigMap(builder *openfunction.Builder) error {
 	log := r.Log.WithName("CreateOrUpdateConfigMap")
 
 	cm := v1.ConfigMap{}
-	cm.Name = fmt.Sprintf("%s-%s", fn.Name, platformEnv)
-	cm.Namespace = fn.Namespace
-	if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &cm, r.mutateConfigMap(&cm, fn)); err != nil {
+	cm.Name = fmt.Sprintf("%s-%s", builder.Name, platformEnv)
+	cm.Namespace = builder.Namespace
+	if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &cm, r.mutateConfigMap(&cm, builder)); err != nil {
 		log.Error(err, "Failed to CreateOrUpdate ConfigMap", "result", result)
 		return err
 	}
 	return nil
 }
 
-func (r *FunctionReconciler) mutatePVC(pvc *v1.PersistentVolumeClaim, fn *openfunction.Function) controllerutil.MutateFn {
+func (r *BuilderReconciler) mutatePVC(pvc *v1.PersistentVolumeClaim, builder *openfunction.Builder) controllerutil.MutateFn {
 	return func() error {
 		expected := v1.PersistentVolumeClaim{
 			TypeMeta: metav1.TypeMeta{
@@ -149,7 +142,7 @@ func (r *FunctionReconciler) mutatePVC(pvc *v1.PersistentVolumeClaim, fn *openfu
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      pvc.Name,
-				Namespace: fn.Namespace,
+				Namespace: builder.Namespace,
 			},
 			Spec: v1.PersistentVolumeClaimSpec{
 				AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
@@ -166,19 +159,19 @@ func (r *FunctionReconciler) mutatePVC(pvc *v1.PersistentVolumeClaim, fn *openfu
 		}
 		expected.Spec.Resources.Requests.DeepCopyInto(&pvc.Spec.Resources.Requests)
 		pvc.SetOwnerReferences(nil)
-		return ctrl.SetControllerReference(fn, pvc, r.Scheme)
+		return ctrl.SetControllerReference(builder, pvc, r.Scheme)
 	}
 }
 
-func (r *FunctionReconciler) CreateOrUpdateBuildpackPVCs(fn *openfunction.Function) error {
+func (r *BuilderReconciler) CreateOrUpdateBuildpackPVCs(builder *openfunction.Builder) error {
 	log := r.Log.WithName("CreateBuildpackPVCs")
 
-	pvcs := []string{fmt.Sprintf("%s-%s", fn.Name, buildpackSourcePvc)}
+	pvcs := []string{fmt.Sprintf("%s-%s", builder.Name, buildpackSourcePvc)}
 	for _, v := range pvcs {
 		pvc := v1.PersistentVolumeClaim{}
 		pvc.Name = v
-		pvc.Namespace = fn.Namespace
-		if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &pvc, r.mutatePVC(&pvc, fn)); err != nil {
+		pvc.Namespace = builder.Namespace
+		if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &pvc, r.mutatePVC(&pvc, builder)); err != nil {
 			log.Error(err, "Failed to CreateOrUpdate PersistentVolumeClaim", "result", result)
 			return err
 		}
@@ -186,17 +179,17 @@ func (r *FunctionReconciler) CreateOrUpdateBuildpackPVCs(fn *openfunction.Functi
 	return nil
 }
 
-func (r *FunctionReconciler) mutateRegistryAuth(sa *v1.ServiceAccount, fn *openfunction.Function) controllerutil.MutateFn {
+func (r *BuilderReconciler) mutateRegistryAuth(sa *v1.ServiceAccount, builder *openfunction.Builder) controllerutil.MutateFn {
 	return func() error {
 		s := v1.Secret{}
-		if err := r.Client.Get(r.ctx, types.NamespacedName{Namespace: fn.Namespace, Name: fn.Spec.Registry.Account.Name}, &s); err != nil {
+		if err := r.Client.Get(r.ctx, types.NamespacedName{Namespace: builder.Namespace, Name: builder.Spec.Registry.Account.Name}, &s); err != nil {
 			return err
 		}
 		var url string
-		if fn.Spec.Registry.Url == nil {
+		if builder.Spec.Registry.Url == nil {
 			url = registryUrl
 		} else {
-			url = *fn.Spec.Registry.Url
+			url = *builder.Spec.Registry.Url
 		}
 		s.Annotations[registryUrlKey] = url
 		s.Type = "kubernetes.io/basic-auth"
@@ -211,38 +204,38 @@ func (r *FunctionReconciler) mutateRegistryAuth(sa *v1.ServiceAccount, fn *openf
 				Kind:       "ServiceAccount",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-%s", fn.Name, buildSa),
-				Namespace: fn.Namespace,
+				Name:      fmt.Sprintf("%s-%s", builder.Name, buildSa),
+				Namespace: builder.Namespace,
 			},
 			Secrets: []v1.ObjectReference{
 				v1.ObjectReference{
 					APIVersion: "v1",
 					Kind:       "Secret",
 					Name:       s.Name,
-					Namespace:  fn.Namespace,
+					Namespace:  builder.Namespace,
 				},
 			},
 		}
 
 		expected.DeepCopyInto(sa)
 		sa.SetOwnerReferences(nil)
-		return ctrl.SetControllerReference(fn, sa, r.Scheme)
+		return ctrl.SetControllerReference(builder, sa, r.Scheme)
 	}
 }
 
-func (r *FunctionReconciler) CreateOrUpdateRegistryAuth(fn *openfunction.Function) error {
+func (r *BuilderReconciler) CreateOrUpdateRegistryAuth(builder *openfunction.Builder) error {
 	log := r.Log.WithName("CreateOrUpdateRegistryAuth")
 	sa := v1.ServiceAccount{}
-	sa.Name = fmt.Sprintf("%s-%s", fn.Name, buildSa)
-	sa.Namespace = fn.Namespace
-	if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &sa, r.mutateRegistryAuth(&sa, fn)); err != nil {
+	sa.Name = fmt.Sprintf("%s-%s", builder.Name, buildSa)
+	sa.Namespace = builder.Namespace
+	if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &sa, r.mutateRegistryAuth(&sa, builder)); err != nil {
 		log.Error(err, "Failed to CreateOrUpdate ServiceAccount", "result", result)
 		return err
 	}
 	return nil
 }
 
-func (r *FunctionReconciler) mutatePipelineResource(res *pipelineres.PipelineResource, fn *openfunction.Function) controllerutil.MutateFn {
+func (r *BuilderReconciler) mutatePipelineResource(res *pipelineres.PipelineResource, builder *openfunction.Builder) controllerutil.MutateFn {
 	return func() error {
 		expected := pipelineres.PipelineResource{
 			Spec: pipelineres.PipelineResourceSpec{
@@ -250,7 +243,7 @@ func (r *FunctionReconciler) mutatePipelineResource(res *pipelineres.PipelineRes
 				Params: []pipelineres.ResourceParam{
 					pipelineres.ResourceParam{
 						Name:  url,
-						Value: fn.Spec.Image,
+						Value: builder.Spec.Image,
 					},
 				},
 			},
@@ -258,24 +251,24 @@ func (r *FunctionReconciler) mutatePipelineResource(res *pipelineres.PipelineRes
 
 		expected.Spec.DeepCopyInto(&res.Spec)
 		res.SetOwnerReferences(nil)
-		return ctrl.SetControllerReference(fn, res, r.Scheme)
+		return ctrl.SetControllerReference(builder, res, r.Scheme)
 	}
 }
 
-func (r *FunctionReconciler) CreateOrUpdatePipelineResource(fn *openfunction.Function) error {
+func (r *BuilderReconciler) CreateOrUpdatePipelineResource(builder *openfunction.Builder) error {
 	log := r.Log.WithName("CreatePipelineResource")
 
 	res := pipelineres.PipelineResource{}
-	res.Name = fmt.Sprintf("%s-%s", fn.Name, buildFuncImage)
-	res.Namespace = fn.Namespace
-	if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &res, r.mutatePipelineResource(&res, fn)); err != nil {
+	res.Name = fmt.Sprintf("%s-%s", builder.Name, buildFuncImage)
+	res.Namespace = builder.Namespace
+	if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &res, r.mutatePipelineResource(&res, builder)); err != nil {
 		log.Error(err, "Failed to CreateOrUpdate PipelineResource", "result", result)
 		return err
 	}
 	return nil
 }
 
-func (r *FunctionReconciler) mutatePipeline(p *pipeline.Pipeline, fn *openfunction.Function) controllerutil.MutateFn {
+func (r *BuilderReconciler) mutatePipeline(p *pipeline.Pipeline, builder *openfunction.Builder) controllerutil.MutateFn {
 	return func() error {
 		expected := pipeline.Pipeline{
 			Spec: pipeline.PipelineSpec{
@@ -293,7 +286,7 @@ func (r *FunctionReconciler) mutatePipeline(p *pipeline.Pipeline, fn *openfuncti
 			},
 		}
 
-		taskFetchSrcName := fmt.Sprintf("%s-%s", fn.Name, gitCloneTask)
+		taskFetchSrcName := fmt.Sprintf("%s-%s", builder.Name, gitCloneTask)
 		taskFetchSrc := pipeline.PipelineTask{
 			Name:    taskFetchSrcName,
 			TaskRef: &pipeline.TaskRef{Name: taskFetchSrcName},
@@ -308,23 +301,23 @@ func (r *FunctionReconciler) mutatePipeline(p *pipeline.Pipeline, fn *openfuncti
 					Name: url,
 					Value: pipeline.ArrayOrString{
 						Type:      pipeline.ParamTypeString,
-						StringVal: fn.Spec.Source.Url,
+						StringVal: builder.Spec.Source.Url,
 					},
 				},
 			},
 		}
-		if fn.Spec.Source.DeleteExisting != nil {
+		if builder.Spec.Source.DeleteExisting != nil {
 			param := pipeline.Param{
 				Name: subDirectory,
 				Value: pipeline.ArrayOrString{
 					Type:      pipeline.ParamTypeString,
-					StringVal: *fn.Spec.Source.DeleteExisting,
+					StringVal: *builder.Spec.Source.DeleteExisting,
 				},
 			}
 			taskFetchSrc.Params = append(taskFetchSrc.Params, param)
 		}
 
-		buildTaskName := fmt.Sprintf("%s-%s", fn.Name, buildTask)
+		buildTaskName := fmt.Sprintf("%s-%s", builder.Name, buildTask)
 		buildTask := pipeline.PipelineTask{
 			Name:    buildTaskName,
 			TaskRef: &pipeline.TaskRef{Name: buildTaskName},
@@ -342,7 +335,7 @@ func (r *FunctionReconciler) mutatePipeline(p *pipeline.Pipeline, fn *openfuncti
 					Name: builderImage,
 					Value: pipeline.ArrayOrString{
 						Type:      pipeline.ParamTypeString,
-						StringVal: fn.Spec.Builder,
+						StringVal: builder.Spec.Builder,
 					},
 				},
 				pipeline.Param{
@@ -369,12 +362,12 @@ func (r *FunctionReconciler) mutatePipeline(p *pipeline.Pipeline, fn *openfuncti
 				},
 			},
 		}
-		if fn.Spec.Source.SourceSubPath != nil {
+		if builder.Spec.Source.SourceSubPath != nil {
 			param := pipeline.Param{
 				Name: sourceSubpath,
 				Value: pipeline.ArrayOrString{
 					Type:      pipeline.ParamTypeString,
-					StringVal: *fn.Spec.Source.SourceSubPath,
+					StringVal: *builder.Spec.Source.SourceSubPath,
 				},
 			}
 			buildTask.Params = append(buildTask.Params, param)
@@ -383,17 +376,17 @@ func (r *FunctionReconciler) mutatePipeline(p *pipeline.Pipeline, fn *openfuncti
 
 		expected.Spec.DeepCopyInto(&p.Spec)
 		p.SetOwnerReferences(nil)
-		return ctrl.SetControllerReference(fn, p, r.Scheme)
+		return ctrl.SetControllerReference(builder, p, r.Scheme)
 	}
 }
 
-func (r *FunctionReconciler) CreateOrUpdatePipeline(fn *openfunction.Function) error {
+func (r *BuilderReconciler) CreateOrUpdatePipeline(builder *openfunction.Builder) error {
 	log := r.Log.WithName("CreateOrUpdatePipeline")
 
 	p := pipeline.Pipeline{}
-	p.Name = fmt.Sprintf("%s-%s", fn.Name, buildPipeline)
-	p.Namespace = fn.Namespace
-	if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &p, r.mutatePipeline(&p, fn)); err != nil {
+	p.Name = fmt.Sprintf("%s-%s", builder.Name, buildPipeline)
+	p.Namespace = builder.Namespace
+	if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &p, r.mutatePipeline(&p, builder)); err != nil {
 		log.Error(err, "Failed to CreateOrUpdate Pipeline", "result", result)
 		return err
 	}
@@ -401,7 +394,7 @@ func (r *FunctionReconciler) CreateOrUpdatePipeline(fn *openfunction.Function) e
 	return nil
 }
 
-func (r *FunctionReconciler) mutatePipelineRun(pr *pipeline.PipelineRun, fn *openfunction.Function) controllerutil.MutateFn {
+func (r *BuilderReconciler) mutatePipelineRun(pr *pipeline.PipelineRun, builder *openfunction.Builder) controllerutil.MutateFn {
 	return func() error {
 		cms := v1.ConfigMapVolumeSource{
 			Items: []v1.KeyToPath{
@@ -415,17 +408,17 @@ func (r *FunctionReconciler) mutatePipelineRun(pr *pipeline.PipelineRun, fn *ope
 				},
 			},
 		}
-		cms.Name = fmt.Sprintf("%s-%s", fn.Name, platformEnv)
+		cms.Name = fmt.Sprintf("%s-%s", builder.Name, platformEnv)
 
 		expected := pipeline.PipelineRun{
 			Spec: pipeline.PipelineRunSpec{
-				ServiceAccountName: fmt.Sprintf("%s-%s", fn.Name, buildSa),
-				PipelineRef:        &pipeline.PipelineRef{Name: fmt.Sprintf("%s-%s", fn.Name, buildPipeline)},
+				ServiceAccountName: fmt.Sprintf("%s-%s", builder.Name, buildSa),
+				PipelineRef:        &pipeline.PipelineRef{Name: fmt.Sprintf("%s-%s", builder.Name, buildPipeline)},
 				Workspaces: []pipeline.WorkspaceBinding{
 					pipeline.WorkspaceBinding{
 						Name: workspaceShare,
 						PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
-							ClaimName: fmt.Sprintf("%s-%s", fn.Name, buildpackSourcePvc),
+							ClaimName: fmt.Sprintf("%s-%s", builder.Name, buildpackSourcePvc),
 						},
 					},
 				},
@@ -433,7 +426,7 @@ func (r *FunctionReconciler) mutatePipelineRun(pr *pipeline.PipelineRun, fn *ope
 					pipeline.PipelineResourceBinding{
 						Name: buildImage,
 						ResourceRef: &pipeline.PipelineResourceRef{
-							Name: fmt.Sprintf("%s-%s", fn.Name, buildFuncImage),
+							Name: fmt.Sprintf("%s-%s", builder.Name, buildFuncImage),
 						},
 					},
 				},
@@ -458,25 +451,21 @@ func (r *FunctionReconciler) mutatePipelineRun(pr *pipeline.PipelineRun, fn *ope
 
 		expected.Spec.DeepCopyInto(&pr.Spec)
 		pr.SetOwnerReferences(nil)
-		return ctrl.SetControllerReference(fn, pr, r.Scheme)
+		return ctrl.SetControllerReference(builder, pr, r.Scheme)
 	}
 }
 
-func (r *FunctionReconciler) CreateOrUpdatePipelineRun(fn *openfunction.Function) error {
+func (r *BuilderReconciler) CreateOrUpdatePipelineRun(builder *openfunction.Builder) error {
 	log := r.Log.WithName("CreateOrUpdatePipelineRun")
 
 	pr := pipeline.PipelineRun{}
-	pr.Name = fmt.Sprintf("%s-%s", fn.Name, BuildPipelineRun)
-	pr.Namespace = fn.Namespace
+	pr.Name = fmt.Sprintf("%s-%s", builder.Name, BuildPipelineRun)
+	pr.Namespace = builder.Namespace
 
-	if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &pr, r.mutatePipelineRun(&pr, fn)); err != nil {
+	if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &pr, r.mutatePipelineRun(&pr, builder)); err != nil {
 		log.Error(err, "Failed to CreateOrUpdate PipelineRun", "result", result)
 		return err
 	}
 
 	return nil
-}
-
-func (r *FunctionReconciler) Cleanup() {
-
 }

@@ -167,7 +167,6 @@ spec:
           description: FunctionStatus defines the observed state of Function
           properties:
             phase:
-              description: Building, Created, Published
               type: string
             state:
               type: string
