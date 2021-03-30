@@ -1,19 +1,13 @@
 domain: openfunction.io
 repo: github.com/openfunction
 resources:
-- group: openfunction.io
+- group: core
+  kind: Serving
+  version: v1alpha1
+- group: core
   kind: Function
   version: v1alpha1
-- group: openfunction.io
-  kind: FunctionBuild
-  version: v1alpha1
-- group: openfunction.io
-  kind: FunctionServing
-  version: v1alpha1
-- group: openfunction.io
+- group: core
   kind: Builder
-  version: v1alpha1
-- group: openfunction.io
-  kind: Serving
   version: v1alpha1
 version: "2"

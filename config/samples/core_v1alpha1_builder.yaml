@@ -1,4 +1,4 @@
-apiVersion: openfunction.io/v1alpha1
+apiVersion: core.openfunction.io/v1alpha1
 kind: Builder
 metadata:
   name: builder-sample

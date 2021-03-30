@@ -1,6 +1,6 @@
 module github.com/openfunction
 
-go 1.13
+go 1.15
 
 require (
 	cloud.google.com/go v0.74.0 // indirect
@@ -30,7 +30,7 @@ require (
 	k8s.io/klog/v2 v2.4.0 // indirect
 	k8s.io/utils v0.0.0-20201110183641-67b214c5f920 // indirect
 	knative.dev/eventing v0.19.4
-	knative.dev/pkg v0.0.0-20201215150143-89a9cc3e03a5
+	knative.dev/pkg v0.0.0-20201215150143-89a9cc3e03a5 // indirect
 	knative.dev/serving v0.19.0
 	sigs.k8s.io/controller-runtime v0.6.4
 )

@@ -37,8 +37,8 @@ type FunctionReconciler struct {
 	tektonCache cache.Cache
 }
 
-// +kubebuilder:rbac:groups=openfunction.io,resources=functions,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=openfunction.io,resources=functions/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=core.openfunction.io,resources=functions,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core.openfunction.io,resources=functions/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=tekton.dev,resources=tasks;pipelineresources;pipelines;pipelineruns,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=configmaps;persistentvolumeclaims;serviceaccounts;secrets,verbs=get;list;watch;create;update;patch;delete
 

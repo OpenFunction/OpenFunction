@@ -34,8 +34,8 @@ type ServingReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=openfunction.io,resources=servings,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=openfunction.io,resources=servings/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=core.openfunction.io,resources=servings,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core.openfunction.io,resources=servings/status,verbs=get;update;patch
 
 func (r *ServingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
