@@ -480,7 +480,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - openfunction.io
+  - core.openfunction.io
   resources:
   - builders
   verbs:
@@ -492,7 +492,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - openfunction.io
+  - core.openfunction.io
   resources:
   - builders/status
   verbs:
@@ -500,7 +500,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - openfunction.io
+  - core.openfunction.io
   resources:
   - functions
   verbs:
@@ -512,7 +512,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - openfunction.io
+  - core.openfunction.io
   resources:
   - functions/status
   verbs:
@@ -520,7 +520,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - openfunction.io
+  - core.openfunction.io
   resources:
   - servings
   verbs:
@@ -532,7 +532,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - openfunction.io
+  - core.openfunction.io
   resources:
   - servings/status
   verbs:
