@@ -18,13 +18,16 @@ package controllers
 
 import (
 	"context"
-
+	"fmt"
 	"github.com/go-logr/logr"
+	openfunction "github.com/openfunction/pkg/apis/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	kservingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	openfunction "github.com/openfunction/pkg/apis/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // ServingReconciler reconciles a Serving object
@@ -32,18 +35,102 @@ type ServingReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
+	ctx    context.Context
 }
 
 // +kubebuilder:rbac:groups=core.openfunction.io,resources=servings,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core.openfunction.io,resources=servings/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=serving.knative.dev,resources=services,verbs=get;list;watch;create;update;patch;delete
 
 func (r *ServingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
-	_ = r.Log.WithValues("serving", req.NamespacedName)
+	ctx := context.Background()
+	r.ctx = ctx
+	log := r.Log.WithValues("serving", req.NamespacedName)
 
-	// your logic here
+	var s openfunction.Serving
+
+	if err := r.Get(ctx, req.NamespacedName, &s); err != nil {
+		log.V(10).Info("Serving deleted", "error", err)
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	if _, err := r.createOrUpdateServing(&s); err != nil {
+		log.Error(err, "Failed to create serving", "Serving", req.NamespacedName.String())
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *ServingReconciler) mutateKsvc(ksvc *kservingv1.Service, s *openfunction.Serving) controllerutil.MutateFn {
+	return func() error {
+		expected := kservingv1.Service{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "serving.knative.dev/v1",
+				Kind:       "Service",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      s.Name,
+				Namespace: s.Namespace,
+			},
+			Spec: kservingv1.ServiceSpec{
+				ConfigurationSpec: kservingv1.ConfigurationSpec{
+					Template: kservingv1.RevisionTemplateSpec{
+						Spec: kservingv1.RevisionSpec{
+							PodSpec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									corev1.Container{
+										Image: s.Spec.Image,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		expected.Spec.DeepCopyInto(&ksvc.Spec)
+		ksvc.SetOwnerReferences(nil)
+		return ctrl.SetControllerReference(s, ksvc, r.Scheme)
+	}
+}
+
+func (r *ServingReconciler) createOrUpdateServing(s *openfunction.Serving) (ctrl.Result, error) {
+	if s.Status.Phase != "" && s.Status.State != "" {
+		return ctrl.Result{}, nil
+	}
+
+	log := r.Log.WithName("createOrUpdateServing")
+
+	status := openfunction.ServingStatus{Phase: openfunction.ServingPhase, State: openfunction.Launching}
+	if err := r.updateStatus(s, &status); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	ksvc := kservingv1.Service{}
+	ksvc.Name = fmt.Sprintf("%s-%s", s.Name, "ksvc")
+	ksvc.Namespace = s.Namespace
+
+	if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &ksvc, r.mutateKsvc(&ksvc, s)); err != nil {
+		log.Error(err, "Failed to CreateOrUpdate knative service", "result", result)
+		return ctrl.Result{}, err
+	}
+
+	status = openfunction.ServingStatus{Phase: openfunction.ServingPhase, State: openfunction.Launched}
+	if err := r.updateStatus(s, &status); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{}, nil
+}
+
+func (r *ServingReconciler) updateStatus(s *openfunction.Serving, status *openfunction.ServingStatus) error {
+	status.DeepCopyInto(&s.Status)
+	if err := r.Status().Update(r.ctx, s); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *ServingReconciler) SetupWithManager(mgr ctrl.Manager) error {
