@@ -40,6 +40,7 @@ type ServingReconciler struct {
 
 // +kubebuilder:rbac:groups=core.openfunction.io,resources=servings,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core.openfunction.io,resources=servings/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=serving.knative.dev,resources=services,verbs=get;list;watch;create;update;patch;delete
 
 func (r *ServingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
@@ -96,7 +97,7 @@ func (r *ServingReconciler) mutateKsvc(ksvc *kservingv1.Service, s *openfunction
 }
 
 func (r *ServingReconciler) createOrUpdateServing(s *openfunction.Serving) (ctrl.Result, error) {
-	if s.Status.Phase != openfunction.ServingPhase && s.Status.State != openfunction.Created {
+	if s.Status.Phase != "" && s.Status.State != "" {
 		return ctrl.Result{}, nil
 	}
 
