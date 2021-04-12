@@ -106,3 +106,4 @@ git push -f ${your_remote_name} myfeature
 
 - Visit your fork at https://github.com/$user/OpenFunction
 - Click the` Compare & Pull Request` button next to your myfeature branch.
+- Check out the [pull request process](https://github.com/kubesphere/community/blob/master/developer-guide/development/pull-requests.md) for more details and advice.

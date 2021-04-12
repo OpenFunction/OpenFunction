@@ -43,3 +43,8 @@ kubectl edit deployments.apps -n openfunction openfunction-controller-manager
 
 随后Kubernetes会自动应用您更新后的controllers。
 
+## Development Workflow
+
+---
+
+您可以参考 [Development Workflow](docs/development/developmnet-workflow.md) 来获取开发流程相关的帮助。
