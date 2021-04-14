@@ -1,7 +1,5 @@
 # Development Workflow
 
----
-
 ## Step 1. Fork
 
 1. Visit https://github.com/OpenFunction/OpenFunction
@@ -9,7 +7,7 @@
 
 ## Step 2. Clone fork to local storage
 
-Per Go's [workspace instructions](https://golang.org/doc/code.html#Workspaces), place KubeSphere code on your `GOPATH` using the following cloning procedure.
+Per Go's [workspace instructions](https://golang.org/doc/code.html#Workspaces), place OpenFunction code on your `GOPATH` using the following cloning procedure.
 
 Define a local working directory:
 
