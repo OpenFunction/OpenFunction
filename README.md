@@ -76,7 +76,7 @@ If you have already installed the OpenFunction platform, follow the steps below 
     metadata:
       name: function-sample
     spec:
-      image: "<your registry name>/sample-go-func"
+      image: "<your registry name>/sample-go-func:latest"
     ```
 
     Use the following command to create this Function:
