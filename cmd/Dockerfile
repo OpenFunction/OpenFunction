@@ -18,7 +18,7 @@ RUN GOPROXY="https://goproxy.io" CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODU
 
 # Use distroless as minimal base image to package the openfunction binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM kubespheredev/distroless-static:nonroot
+FROM openfunction/distroless-static:nonroot
 WORKDIR /
 COPY --from=builder /workspace/openfunction .
 USER nonroot:nonroot
