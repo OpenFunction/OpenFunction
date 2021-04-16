@@ -24,7 +24,7 @@ import (
 	"github.com/openfunction/pkg/util"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
+	kcache "sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -34,7 +34,7 @@ type FunctionReconciler struct {
 	Log         logr.Logger
 	Scheme      *runtime.Scheme
 	ctx         context.Context
-	tektonCache cache.Cache
+	tektonCache kcache.Cache
 }
 
 // +kubebuilder:rbac:groups=core.openfunction.io,resources=functions,verbs=get;list;watch;create;update;patch;delete

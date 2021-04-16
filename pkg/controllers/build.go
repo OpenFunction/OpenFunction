@@ -6,7 +6,6 @@ import (
 	"github.com/ghodss/yaml"
 	openfunction "github.com/openfunction/pkg/apis/v1alpha1"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	pipelineres "github.com/tektoncd/pipeline/pkg/apis/resource/v1alpha1"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,15 +16,12 @@ import (
 
 const (
 	buildSa               = "build-service-account"
-	buildFuncImage        = "build-func-image"
 	builderImage          = "BUILDER_IMAGE"
-	buildCache            = "build-cache"
 	buildPipeline         = "build-pipeline"
 	BuildPipelineRun      = "build-pipelinerun"
-	buildImage            = "build-image"
-	buildpackSourcePvc    = "build-source-pvc"
-	platformEnv           = "platform-env"
-	image                 = "image"
+	buildpackPVC          = "buildpack-pvc"
+	envVars               = "ENV_VARS"
+	appImage              = "APP_IMAGE"
 	registryUrlKey        = "tekton.dev/docker-0"
 	registryUrl           = "https://index.docker.io/v1/"
 	sourceSubpath         = "SOURCE_SUBPATH"
@@ -33,12 +29,13 @@ const (
 	buildTask             = "build"
 	gitCloneTask          = "git-clone"
 	url                   = "url"
-	workspaceShare        = "shared-workspace"
-	workspaceOutput       = "output"
-	workspaceSource       = "source"
+	cacheWorkspace        = "cache-ws"
+	sourceWorkspace       = "shared-ws"
+	output                = "output"
+	cache                 = "cache"
+	source                = "source"
 	functionTarget        = "GOOGLE_FUNCTION_TARGET"
 	functionSignatureType = "GOOGLE_FUNCTION_SIGNATURE_TYPE"
-	platformDir           = "platform-dir"
 )
 
 var (
@@ -120,19 +117,6 @@ func (r *BuilderReconciler) mutateConfigMap(cm *v1.ConfigMap, builder *openfunct
 	}
 }
 
-func (r *BuilderReconciler) CreateOrUpdateConfigMap(builder *openfunction.Builder) error {
-	log := r.Log.WithName("CreateOrUpdateConfigMap")
-
-	cm := v1.ConfigMap{}
-	cm.Name = fmt.Sprintf("%s-%s", builder.Name, platformEnv)
-	cm.Namespace = builder.Namespace
-	if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &cm, r.mutateConfigMap(&cm, builder)); err != nil {
-		log.Error(err, "Failed to CreateOrUpdate ConfigMap", "result", result)
-		return err
-	}
-	return nil
-}
-
 func (r *BuilderReconciler) mutatePVC(pvc *v1.PersistentVolumeClaim, builder *openfunction.Builder) controllerutil.MutateFn {
 	return func() error {
 		expected := v1.PersistentVolumeClaim{
@@ -166,7 +150,7 @@ func (r *BuilderReconciler) mutatePVC(pvc *v1.PersistentVolumeClaim, builder *op
 func (r *BuilderReconciler) CreateOrUpdateBuildpackPVCs(builder *openfunction.Builder) error {
 	log := r.Log.WithName("CreateBuildpackPVCs")
 
-	pvcs := []string{fmt.Sprintf("%s-%s", builder.Name, buildpackSourcePvc)}
+	pvcs := []string{fmt.Sprintf("%s-%s", builder.Name, buildpackPVC)}
 	for _, v := range pvcs {
 		pvc := v1.PersistentVolumeClaim{}
 		pvc.Name = v
@@ -235,52 +219,16 @@ func (r *BuilderReconciler) CreateOrUpdateRegistryAuth(builder *openfunction.Bui
 	return nil
 }
 
-func (r *BuilderReconciler) mutatePipelineResource(res *pipelineres.PipelineResource, builder *openfunction.Builder) controllerutil.MutateFn {
-	return func() error {
-		expected := pipelineres.PipelineResource{
-			Spec: pipelineres.PipelineResourceSpec{
-				Type: pipelineres.PipelineResourceTypeImage,
-				Params: []pipelineres.ResourceParam{
-					pipelineres.ResourceParam{
-						Name:  url,
-						Value: builder.Spec.Image,
-					},
-				},
-			},
-		}
-
-		expected.Spec.DeepCopyInto(&res.Spec)
-		res.SetOwnerReferences(nil)
-		return ctrl.SetControllerReference(builder, res, r.Scheme)
-	}
-}
-
-func (r *BuilderReconciler) CreateOrUpdatePipelineResource(builder *openfunction.Builder) error {
-	log := r.Log.WithName("CreatePipelineResource")
-
-	res := pipelineres.PipelineResource{}
-	res.Name = fmt.Sprintf("%s-%s", builder.Name, buildFuncImage)
-	res.Namespace = builder.Namespace
-	if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &res, r.mutatePipelineResource(&res, builder)); err != nil {
-		log.Error(err, "Failed to CreateOrUpdate PipelineResource", "result", result)
-		return err
-	}
-	return nil
-}
-
 func (r *BuilderReconciler) mutatePipeline(p *pipeline.Pipeline, builder *openfunction.Builder) controllerutil.MutateFn {
 	return func() error {
 		expected := pipeline.Pipeline{
 			Spec: pipeline.PipelineSpec{
 				Workspaces: []pipeline.PipelineWorkspaceDeclaration{
 					pipeline.PipelineWorkspaceDeclaration{
-						Name: workspaceShare,
+						Name: sourceWorkspace,
 					},
-				},
-				Resources: []pipeline.PipelineDeclaredResource{
-					pipeline.PipelineDeclaredResource{
-						Name: buildImage,
-						Type: pipeline.PipelineResourceTypeImage,
+					pipeline.PipelineWorkspaceDeclaration{
+						Name: cacheWorkspace,
 					},
 				},
 			},
@@ -292,8 +240,8 @@ func (r *BuilderReconciler) mutatePipeline(p *pipeline.Pipeline, builder *openfu
 			TaskRef: &pipeline.TaskRef{Name: taskFetchSrcName},
 			Workspaces: []pipeline.WorkspacePipelineTaskBinding{
 				pipeline.WorkspacePipelineTaskBinding{
-					Name:      workspaceOutput,
-					Workspace: workspaceShare,
+					Name:      output,
+					Workspace: sourceWorkspace,
 				},
 			},
 			Params: []pipeline.Param{
@@ -326,11 +274,22 @@ func (r *BuilderReconciler) mutatePipeline(p *pipeline.Pipeline, builder *openfu
 			},
 			Workspaces: []pipeline.WorkspacePipelineTaskBinding{
 				pipeline.WorkspacePipelineTaskBinding{
-					Name:      workspaceSource,
-					Workspace: workspaceShare,
+					Name:      source,
+					Workspace: sourceWorkspace,
+				},
+				pipeline.WorkspacePipelineTaskBinding{
+					Name:      cache,
+					Workspace: cacheWorkspace,
 				},
 			},
 			Params: []pipeline.Param{
+				pipeline.Param{
+					Name: appImage,
+					Value: pipeline.ArrayOrString{
+						Type:      pipeline.ParamTypeString,
+						StringVal: builder.Spec.Image,
+					},
+				},
 				pipeline.Param{
 					Name: builderImage,
 					Value: pipeline.ArrayOrString{
@@ -339,25 +298,11 @@ func (r *BuilderReconciler) mutatePipeline(p *pipeline.Pipeline, builder *openfu
 					},
 				},
 				pipeline.Param{
-					Name: "CACHE",
+					Name: envVars,
 					Value: pipeline.ArrayOrString{
-						Type:      pipeline.ParamTypeString,
-						StringVal: buildCache,
-					},
-				},
-				pipeline.Param{
-					Name: "PLATFORM_DIR",
-					Value: pipeline.ArrayOrString{
-						Type:      pipeline.ParamTypeString,
-						StringVal: platformDir,
-					},
-				},
-			},
-			Resources: &pipeline.PipelineTaskResources{
-				Outputs: []pipeline.PipelineTaskOutputResource{
-					pipeline.PipelineTaskOutputResource{
-						Name:     image,
-						Resource: buildImage,
+						Type: pipeline.ParamTypeArray,
+						ArrayVal: []string{fmt.Sprintf("%s=%s", functionTarget, builder.Spec.FuncName),
+							fmt.Sprintf("%s=%s", functionSignatureType, builder.Spec.FuncType)},
 					},
 				},
 			},
@@ -396,53 +341,23 @@ func (r *BuilderReconciler) CreateOrUpdatePipeline(builder *openfunction.Builder
 
 func (r *BuilderReconciler) mutatePipelineRun(pr *pipeline.PipelineRun, builder *openfunction.Builder) controllerutil.MutateFn {
 	return func() error {
-		cms := v1.ConfigMapVolumeSource{
-			Items: []v1.KeyToPath{
-				v1.KeyToPath{
-					Key:  functionTarget,
-					Path: "env/" + functionTarget,
-				},
-				v1.KeyToPath{
-					Key:  functionSignatureType,
-					Path: "env/" + functionSignatureType,
-				},
-			},
-		}
-		cms.Name = fmt.Sprintf("%s-%s", builder.Name, platformEnv)
-
 		expected := pipeline.PipelineRun{
 			Spec: pipeline.PipelineRunSpec{
 				ServiceAccountName: fmt.Sprintf("%s-%s", builder.Name, buildSa),
 				PipelineRef:        &pipeline.PipelineRef{Name: fmt.Sprintf("%s-%s", builder.Name, buildPipeline)},
 				Workspaces: []pipeline.WorkspaceBinding{
 					pipeline.WorkspaceBinding{
-						Name: workspaceShare,
+						Name:    sourceWorkspace,
+						SubPath: source,
 						PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
-							ClaimName: fmt.Sprintf("%s-%s", builder.Name, buildpackSourcePvc),
+							ClaimName: fmt.Sprintf("%s-%s", builder.Name, buildpackPVC),
 						},
 					},
-				},
-				Resources: []pipeline.PipelineResourceBinding{
-					pipeline.PipelineResourceBinding{
-						Name: buildImage,
-						ResourceRef: &pipeline.PipelineResourceRef{
-							Name: fmt.Sprintf("%s-%s", builder.Name, buildFuncImage),
-						},
-					},
-				},
-				PodTemplate: &pipeline.PodTemplate{
-					Volumes: []v1.Volume{
-						v1.Volume{
-							Name: buildCache,
-							VolumeSource: v1.VolumeSource{
-								EmptyDir: &v1.EmptyDirVolumeSource{},
-							},
-						},
-						v1.Volume{
-							Name: platformDir,
-							VolumeSource: v1.VolumeSource{
-								ConfigMap: &cms,
-							},
+					pipeline.WorkspaceBinding{
+						Name:    cacheWorkspace,
+						SubPath: cache,
+						PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
+							ClaimName: fmt.Sprintf("%s-%s", builder.Name, buildpackPVC),
 						},
 					},
 				},
