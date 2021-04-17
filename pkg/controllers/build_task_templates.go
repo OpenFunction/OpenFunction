@@ -1,7 +1,7 @@
 package controllers
 
 const (
-	// Tekton build template from https://raw.githubusercontent.com/tektoncd/catalog/master/task/buildpacks/0.2/buildpacks.yaml
+	// Tekton build template from https://raw.githubusercontent.com/tektoncd/catalog/main/task/buildpacks/0.3/buildpacks.yaml
 	tmplBuild = `
 ---
 apiVersion: tekton.dev/v1beta1
@@ -9,81 +9,119 @@ kind: Task
 metadata:
   name: buildpacks
   labels:
-    app.kubernetes.io/version: "0.2"
+    app.kubernetes.io/version: "0.3"
   annotations:
-    tekton.dev/pipelines.minVersion: "0.12.1"
+    tekton.dev/pipelines.minVersion: "0.17.0"
     tekton.dev/tags: image-build
-    tekton.dev/displayName: "buildpacks"
+    tekton.dev/displayName: "Buildpacks"
 spec:
   description: >-
     The Buildpacks task builds source into a container image and pushes it to a registry,
     using Cloud Native Buildpacks.
-    Cloud Native Buildpacks are pluggable, modular tools that transform application source code
-    into OCI images. They replace Dockerfiles in the app development lifecycle, and allow for swift
-    rebasing of images, and give modular control over images through the use of builders, among other
-    benefits. This command uses a builder to construct the image, and pushes it to the registry provided.
+
+  workspaces:
+    - name: source
+      description: Directory where application source is located.
+    - name: cache
+      description: Directory where cache is stored (when no cache image is provided).
+      optional: true
+
   params:
+    - name: APP_IMAGE
+      description: The name of where to store the app image.
     - name: BUILDER_IMAGE
       description: The image on which builds will run (must include lifecycle and compatible buildpacks).
-    - name: CACHE
-      description: The name of the persistent app cache volume.
-      default: empty-dir
-    - name: CACHE_IMAGE
-      description: The name of the persistent app cache image.
+    - name: SOURCE_SUBPATH
+      description: A subpath within the source input where the source to build is located.
       default: ""
-    - name: PLATFORM_DIR
-      description: The name of the platform directory.
-      default: empty-dir
+    - name: ENV_VARS
+      type: array
+      description: Environment variables to set during _build-time_.
+      default: []
+    - name: PROCESS_TYPE
+      description: The default process type to set on the image.
+      default: "web"
+    - name: RUN_IMAGE
+      description: Reference to a run image to use.
+      default: ""
+    - name: CACHE_IMAGE
+      description: The name of the persistent app cache image (if no cache workspace is provided).
+      default: ""
+    - name: SKIP_RESTORE
+      description: Do not write layer metadata or restore cached layers.
+      default: "false"
     - name: USER_ID
       description: The user ID of the builder image user.
       default: "1000"
     - name: GROUP_ID
       description: The group ID of the builder image user.
       default: "1000"
-    - name: PROCESS_TYPE
-      description: The default process type to set on the image.
-      default: "web"
-    - name: SOURCE_SUBPATH
-      description: A subpath within the source input where the source to build is located.
-      default: ""
-    - name: SKIP_RESTORE
-      description: Do not write layer metadata or restore cached layers
-      default: "false"
-    - name: RUN_IMAGE
-      description: Reference to a run image to use
-      default: ""
+    - name: PLATFORM_DIR
+      description: The name of the platform directory.
+      default: empty-dir
 
-  resources:
-    outputs:
-      - name: image
-        type: image
-
-  workspaces:
-    - name: source
+  results:
+    - name: APP_IMAGE_DIGEST
+      description: The digest of the built APP_IMAGE.
 
   stepTemplate:
     env:
       - name: CNB_PLATFORM_API
-        value: "0.3"
+        value: "0.4"
 
   steps:
     - name: prepare
-      # Latest alpine as of Oct 22, 2020
-      image: docker.io/alpine@sha256:203ee936961c0f491f72ce9d3c3c67d9440cdb1d61b9783cf340baa09308ffc1
-      imagePullPolicy: Always
-      command: ["/bin/sh"]
+      image: docker.io/library/bash:5.1.4@sha256:b208215a4655538be652b2769d82e576bc4d0a2bb132144c060efc5be8c3f5d6
       args:
-        - "-c"
-        - |-
-          chown -R "$(params.USER_ID):$(params.GROUP_ID)" "/tekton/home" &&
-          chown -R "$(params.USER_ID):$(params.GROUP_ID)" "/layers" &&
-          chown -R "$(params.USER_ID):$(params.GROUP_ID)" "/cache" &&
-          chown -R "$(params.USER_ID):$(params.GROUP_ID)" "$(workspaces.source.path)"
+        - "--env-vars"
+        - "$(params.ENV_VARS[*])"
+      script: |
+        #!/usr/bin/env bash
+        set -e
+
+        if [[ "$(workspaces.cache.bound)" == "true" ]]; then
+          echo "> Setting permissions on '$(workspaces.cache.path)'..."
+          chown -R "$(params.USER_ID):$(params.GROUP_ID)" "$(workspaces.cache.path)"
+        fi
+
+        for path in "/tekton/home" "/layers" "$(workspaces.source.path)"; do
+          echo "> Setting permissions on '$path'..."
+          chown -R "$(params.USER_ID):$(params.GROUP_ID)" "$path"
+        done
+
+        echo "> Parsing additional configuration..."
+        parsing_flag=""
+        envs=()
+        for arg in "$@"; do
+            if [[ "$arg" == "--env-vars" ]]; then
+                echo "-> Parsing env variables..."
+                parsing_flag="env-vars"
+            elif [[ "$parsing_flag" == "env-vars" ]]; then
+                envs+=("$arg")
+            fi
+        done
+
+        echo "> Processing any environment variables..."
+        ENV_DIR="/platform/env"
+
+        echo "--> Creating 'env' directory: $ENV_DIR"
+        mkdir -p "$ENV_DIR"
+
+        for env in "${envs[@]}"; do
+            IFS='=' read -r key value string <<< "$env"
+            if [[ "$key" != "" && "$value" != "" ]]; then
+                path="${ENV_DIR}/${key}"
+                echo "--> Writing ${path}..."
+                echo -n "$value" > "$path"
+            fi
+        done
       volumeMounts:
         - name: layers-dir
           mountPath: /layers
-        - name: $(params.CACHE)
-          mountPath: /cache
+        - name: $(params.PLATFORM_DIR)
+          mountPath: /platform
+      securityContext:
+        privileged: true
 
     - name: create
       image: $(params.BUILDER_IMAGE)
@@ -91,27 +129,36 @@ spec:
       command: ["/cnb/lifecycle/creator"]
       args:
         - "-app=$(workspaces.source.path)/$(params.SOURCE_SUBPATH)"
-        - "-cache-dir=/cache"
+        - "-cache-dir=$(workspaces.cache.path)"
         - "-cache-image=$(params.CACHE_IMAGE)"
+        - "-uid=$(params.USER_ID)"
         - "-gid=$(params.GROUP_ID)"
         - "-layers=/layers"
         - "-platform=/platform"
+        - "-report=/layers/report.toml"
         - "-process-type=$(params.PROCESS_TYPE)"
         - "-skip-restore=$(params.SKIP_RESTORE)"
-        - "-previous-image=$(resources.outputs.image.url)"
+        - "-previous-image=$(params.APP_IMAGE)"
         - "-run-image=$(params.RUN_IMAGE)"
-        - "-uid=$(params.USER_ID)"
-        - "$(resources.outputs.image.url)"
+        - "$(params.APP_IMAGE)"
       volumeMounts:
         - name: layers-dir
           mountPath: /layers
-        - name: $(params.CACHE)
-          mountPath: /cache
         - name: $(params.PLATFORM_DIR)
           mountPath: /platform
       securityContext:
         runAsUser: 1000
         runAsGroup: 1000
+
+    - name: results
+      image: docker.io/library/bash:5.1.4@sha256:b208215a4655538be652b2769d82e576bc4d0a2bb132144c060efc5be8c3f5d6
+      script: |
+        #!/usr/bin/env bash
+        set -e
+        cat /layers/report.toml | grep "digest" | cut -d'"' -f2 | cut -d'"' -f2 | tr -d '\n' | tee $(results.APP_IMAGE_DIGEST.path)
+      volumeMounts:
+        - name: layers-dir
+          mountPath: /layers
 
   volumes:
     - name: empty-dir
@@ -119,16 +166,16 @@ spec:
     - name: layers-dir
       emptyDir: {}
 `
-	// Tekton GitClone task https://raw.githubusercontent.com/tektoncd/catalog/master/task/git-clone/0.2/git-clone.yaml
+	// Tekton GitClone task https://raw.githubusercontent.com/tektoncd/catalog/main/task/git-clone/0.3/git-clone.yaml
 	tmplGitClone = `
 apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
   name: git-clone
   labels:
-    app.kubernetes.io/version: "0.2"
+    app.kubernetes.io/version: "0.3"
   annotations:
-    tekton.dev/pipelines.minVersion: "0.12.1"
+    tekton.dev/pipelines.minVersion: "0.21.0"
     tekton.dev/tags: git
     tekton.dev/displayName: "git clone"
 spec:
@@ -139,7 +186,9 @@ spec:
     The git-clone Task will clone a repo from the provided url into the
     output Workspace. By default the repo will be cloned into the root of
     your Workspace. You can clone into a subdirectory by setting this Task's
-    subdirectory param.
+    subdirectory param. This Task also supports sparse checkouts. To perform
+    a sparse checkout, pass a list of comma separated directory patterns to
+    this Task's sparseCheckoutDirectories param.
 
   workspaces:
     - name: output
@@ -171,6 +220,10 @@ spec:
       description: subdirectory inside the "output" workspace to clone the git repo into
       type: string
       default: ""
+    - name: sparseCheckoutDirectories
+      description: defines which directories patterns to match or exclude when performing a sparse checkout
+      type: string
+      default: ""
     - name: deleteExisting
       description: clean out the contents of the repo's destination directory (if it already exists) before trying to clone the repo there
       type: string
@@ -194,7 +247,7 @@ spec:
     - name: gitInitImage
       description: the image used where the git-init binary is
       type: string
-      default: "gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init:v0.18.1"
+      default: "gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init:v0.21.0"
   results:
     - name: commit
       description: The precise commit SHA that was fetched by this Task
@@ -243,7 +296,8 @@ spec:
           -path "$CHECKOUT_DIR" \
           -sslVerify="$(params.sslVerify)" \
           -submodules="$(params.submodules)" \
-          -depth "$(params.depth)"
+          -depth "$(params.depth)" \
+          -sparseCheckoutDirectories "$(params.sparseCheckoutDirectories)"
         cd "$CHECKOUT_DIR"
         RESULT_SHA="$(git rev-parse HEAD)"
         EXIT_CODE="$?"

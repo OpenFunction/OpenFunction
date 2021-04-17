@@ -83,11 +83,6 @@ func (r *BuilderReconciler) createOrUpdateBuild(builder *openfunction.Builder) (
 		return ctrl.Result{}, err
 	}
 
-	if err := r.CreateOrUpdateConfigMap(builder); err != nil {
-		log.Error(err, "Failed to create configmap", "namaspace", builder.Namespace)
-		return ctrl.Result{}, err
-	}
-
 	if err := r.CreateOrUpdateBuildpackPVCs(builder); err != nil {
 		log.Error(err, "Failed to create buildpack pvcs", "namaspace", builder.Namespace)
 		return ctrl.Result{}, err
@@ -95,11 +90,6 @@ func (r *BuilderReconciler) createOrUpdateBuild(builder *openfunction.Builder) (
 
 	if err := r.CreateOrUpdateRegistryAuth(builder); err != nil {
 		log.Error(err, "Failed to create registry auth", "namaspace", builder.Namespace)
-		return ctrl.Result{}, err
-	}
-
-	if err := r.CreateOrUpdatePipelineResource(builder); err != nil {
-		log.Error(err, "Failed to create PipelineResource", "namaspace", builder.Namespace)
 		return ctrl.Result{}, err
 	}
 
