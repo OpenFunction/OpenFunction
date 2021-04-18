@@ -20,7 +20,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"knative.dev/pkg/apis"
 	"os"
 	"strings"
 
@@ -106,27 +108,19 @@ func onBuilderUpdate(obj interface{}) {
 		}
 
 		if plr.Status.CompletionTime != nil {
-			//			var plrResult ttv1beta1.PipelineRunResult
-			//			for _, plrResult = range plr.Status.PipelineResults {
-			//				setupLog.V(1).Info("PipelineResult", "PipelineRun Name", plr.Name,
-			//					"Result Name", plrResult.Name, "Result Value", plrResult.Value)
-			//			}
-			//
-			//			var condition knapis.Condition
-			//			for _, condition = range plr.Status.Conditions {
-			//				setupLog.V(1).Info("PipelineRun condition", "PipelineRun Name", plr.Name,
-			//					"Status", condition.Status, "Type", condition.Type, "LastTransitionTime", condition.LastTransitionTime,
-			//					"Message", condition.Message, "Reason", condition.Reason, "Severity", condition.Severity)
-			//			}
-
 			fn := strings.TrimSuffix(plr.Name, fmt.Sprintf("-%s-%s", "builder", controllers.BuildPipelineRun))
 
-			switch {
-			case plr.IsDone():
+			cond := plr.Status.GetCondition(apis.ConditionSucceeded)
+			// Enter Serving Phase only when the build is successful
+			if cond.Status == corev1.ConditionTrue {
 				if err := updateFuncStatus(plr.Namespace, fn); err != nil {
 					setupLog.Error(err, "Failed to update function status", "namespace", plr.Namespace, "name", fn)
 				}
-				setupLog.V(1).Info("Function build completed", "namespace", plr.Namespace, "name", fn)
+			}
+
+			switch {
+			case plr.IsDone():
+				setupLog.V(1).Info("Function build completed", "Succeeded", cond.Status, "namespace", plr.Namespace, "name", fn)
 			case plr.IsCancelled():
 				setupLog.V(1).Info("PipelineRun cancelled!")
 			case plr.IsTimedOut():
