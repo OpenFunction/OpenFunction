@@ -1,7 +1,7 @@
 # Setup OpenFunction Serving with Knative
 
 You can refer to the steps in [Knative docs](https://knative.dev/docs/install/any-kubernetes-cluster/) to install Knative or follow the steps below:
-> :grey_exclamation: Refer to [this section](#installation-with-poor-network-connections-to-githubgoogleapis) when you have **poor network connections to GitHub/Googleapis**.
+> :grey_exclamation: Refer to [this section](#installation-when-having-poor-network-connectivity-to-githubgoogleapis) when you have **poor network connections to GitHub/Googleapis**.
 
 ## Installation
 
