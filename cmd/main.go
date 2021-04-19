@@ -111,9 +111,14 @@ func onBuilderUpdate(obj interface{}) {
 			fn := strings.TrimSuffix(plr.Name, fmt.Sprintf("-%s-%s", "builder", controllers.BuildPipelineRun))
 
 			cond := plr.Status.GetCondition(apis.ConditionSucceeded)
-			// Enter Serving Phase only when the build is successful
+			// Enter Serving Phase only when the PipelineRun's 'Succeeded' condition is True which means the build is successful
 			if cond.Status == corev1.ConditionTrue {
-				if err := updateFuncStatus(plr.Namespace, fn); err != nil {
+				if err := UpdateFuncStatus(plr.Namespace, fn, openfunction.ServingPhase, ""); err != nil {
+					setupLog.Error(err, "Failed to update function status", "namespace", plr.Namespace, "name", fn)
+				}
+				// Mark build phase failed if the PipelineRun's 'Succeeded' condition is False or Unknown
+			} else {
+				if err := UpdateFuncStatus(plr.Namespace, fn, openfunction.BuildPhase, openfunction.Failed); err != nil {
 					setupLog.Error(err, "Failed to update function status", "namespace", plr.Namespace, "name", fn)
 				}
 			}
@@ -132,7 +137,7 @@ func onBuilderUpdate(obj interface{}) {
 	}
 }
 
-func updateFuncStatus(ns string, name string) error {
+func UpdateFuncStatus(ns string, name string, phase string, state string) error {
 	var fn openfunction.Function
 	ctx := context.Background()
 
@@ -142,7 +147,7 @@ func updateFuncStatus(ns string, name string) error {
 		return err
 	}
 
-	status := openfunction.FunctionStatus{Phase: openfunction.ServingPhase, State: ""}
+	status := openfunction.FunctionStatus{Phase: phase, State: state}
 	status.DeepCopyInto(&fn.Status)
 	if err := client.Status().Update(ctx, &fn); err != nil {
 		return err
