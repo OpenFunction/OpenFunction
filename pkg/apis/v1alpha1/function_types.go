@@ -95,6 +95,7 @@ const (
 	Created               = "Created"
 	Launching             = "Launching"
 	Launched              = "Launched"
+	Failed                = "Failed"
 )
 
 type Runtime struct {
