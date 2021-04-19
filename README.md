@@ -22,6 +22,8 @@ The current version of OpenFunction requires that you have a Kubernetes cluster 
 
 In addition, you need to deploy several dependencies for the OpenFunction ```Builder``` and ```Serving```.
 
+You can refer to the [Installation Guide](docs/installation/README.md) to setup OpenFunction ```Builder``` and ```Serving```.
+
 #### Builder
 
 You need to install at least one of the following options for builders:
@@ -144,5 +146,5 @@ kubectl delete -f config/bundle.yaml
 
 ## Development
 
-You can get help on developing this project by visiting [Development guide](docs/development/development-guide.md).
+You can get help on developing this project by visiting [Development Guide](docs/development/README.md).
 
