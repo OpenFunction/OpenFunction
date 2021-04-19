@@ -1,11 +1,11 @@
 # Setup OpenFunction Builder with Tekton
 
-You can refer to the installation steps on the [Tekon docs](https://tekton.dev/docs/getting-started/) for setup OpenFunction Builder. Or follow these steps:
-> :grey_exclamation: Refer to [this section](#installation-with-poor-network-connections-to-githubgoogleapis) when you are in a **poor network connections to GitHub/Googleapis**.
+You can refer to the steps in [Tekon docs](https://tekton.dev/docs/getting-started/) to install Tekton or follow the steps below:
+> :grey_exclamation: Refer to [this section](#installation-with-poor-network-connections-to-githubgoogleapis) when you have **poor network connections to GitHub/Googleapis**.
 
 ## Installation
 
-### Install tekton pipeline
+### Install Tekton pipeline
 
 ```bash
 kubectl apply --filename https://storage.googleapis.com/tekton-releases/pipeline/latest/release.yaml
@@ -21,23 +21,23 @@ tekton-pipelines-controller-6b94f5f96-hdjw5   1/1     Running   0          20m
 tekton-pipelines-webhook-5bfbbd6475-6fl2r     1/1     Running   0          20m
 ```
 
-### Install tekton CLI
+### Install Tekton CLI
 
-Choose a suitable installation of tekton CLI for your cluster by refer to thie [docs](https://tekton.dev/docs/cli/).
+Choose a suitable installation of Tekton CLI for your cluster by refer to thie [docs](https://tekton.dev/docs/cli/).
 
-### Install tekton triggers
+### Install Tekton triggers
 
 ```bash
 kubectl apply --filename https://storage.googleapis.com/tekton-releases/triggers/latest/release.yaml
 ```
 
-### Install tekton Dashboard
+### Install Tekton Dashboard
 
 ```bash
 kubectl apply --filename https://github.com/tektoncd/dashboard/releases/latest/download/tekton-dashboard-release.yaml
 ```
 
-If you want to use ```NodePort``` to expose the tekton dashboard service, you need to modify the ```spec``` fields of ```svc tekton-dashboard``` like below：
+If you want to use ```NodePort``` to expose the Tekton dashboard service, you need to modify the ```spec``` fields of ```svc tekton-dashboard``` like below：
 
 1. Use this command:
     ```bash
@@ -63,25 +63,11 @@ If you want to use ```NodePort``` to expose the tekton dashboard service, you ne
       type: NodePort # change to NodePort
     ```
 
-### Integration with Cloud Native Buildpacks
-
-#### Setup Buildpacks Task
-
-```bash
-kubectl apply -f https://raw.githubusercontent.com/tektoncd/catalog/master/task/buildpacks/0.3/buildpacks.yaml
-```
-
-#### Setup git-clone Task
-
-```bash
-kubectl apply -f https://raw.githubusercontent.com/tektoncd/catalog/master/task/git-clone/0.3/git-clone.yaml
-```
-
-## Installation with poor network connections to GitHub/Googleapis
+## Installation when having poor network connectivity to GitHub/Googleapis
 
 > We keep track of the latest versions by default, and you can request a specific version by submitting an issue.
 
-### Install tekton pipeline
+### Install Tekton pipeline
 
 ```bash
 kubectl apply --filename https://openfunction.sh1a.qingstor.com/tekton/pipeline/v0.23.0/release.yaml
@@ -97,23 +83,23 @@ tekton-pipelines-controller-6b94f5f96-hdjw5   1/1     Running   0          20m
 tekton-pipelines-webhook-5bfbbd6475-6fl2r     1/1     Running   0          20m
 ```
 
-### Install tekton CLI
+### Install Tekton CLI
 
-Choose a suitable installation of tekton CLI for your cluster by refer to thie [docs](https://tekton.dev/docs/cli/).
+Choose a suitable installation of Tekton CLI for your cluster by refer to thie [docs](https://tekton.dev/docs/cli/).
 
-### Install tekton triggers
+### Install Tekton triggers
 
 ```bash
 kubectl apply --filename https://openfunction.sh1a.qingstor.com/tekton/trigger/v0.13.0/release.yaml
 ```
 
-### Install tekton Dashboard
+### Install Tekton Dashboard
 
 ```bash
 kubectl apply --filename https://openfunction.sh1a.qingstor.com/tekton/dashboard/v0.16.0/release.yaml
 ```
 
-If you want to use ```NodePort``` to expose the tekton dashboard service, you need to modify the ```spec``` fields of ```svc tekton-dashboard``` like below：
+If you want to use ```NodePort``` to expose the Tekton dashboard service, you need to modify the ```spec``` fields of ```svc tekton-dashboard``` like below：
 
 1. Use this command:
     ```bash
@@ -138,17 +124,3 @@ If you want to use ```NodePort``` to expose the tekton dashboard service, you ne
       sessionAffinity: None
       type: NodePort # change to NodePort
     ```
-   
-### Integration with Cloud Native Buildpacks
-
-#### Setup Buildpacks Task
-
-```bash
-kubectl apply -f https://openfunction.sh1a.qingstor.com/tekton/task/buildpacks/0.3/buildpacks.yaml
-```
-
-#### Setup git-clone Task
-
-```bash
-kubectl apply -f https://openfunction.sh1a.qingstor.com/tekton/task/git-clone/0.3/git-clone.yaml
-```

@@ -2,7 +2,7 @@
 
 ## Overview
 
-You can follow this document for installation about ```Builder``` and ```Serving```.
+You can follow this guide to setup OpenFunction ```Builder``` and ```Serving```.
 
 ## Setup OpenFunction Builder
 

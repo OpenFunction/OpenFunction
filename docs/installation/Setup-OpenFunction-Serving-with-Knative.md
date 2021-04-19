@@ -1,15 +1,15 @@
 # Setup OpenFunction Serving with Knative
 
-You can refer to the installation steps on the [Knative docs](https://knative.dev/docs/install/any-kubernetes-cluster/) for setup OpenFunction Serving. Or follow these steps:
-> :grey_exclamation: Refer to [this section](#installation-with-poor-network-connections-to-githubgoogleapis) when you are in a **poor network connections to GitHub/Googleapis**.
+You can refer to the steps in [Knative docs](https://knative.dev/docs/install/any-kubernetes-cluster/) to install Knative or follow the steps below:
+> :grey_exclamation: Refer to [this section](#installation-with-poor-network-connections-to-githubgoogleapis) when you have **poor network connections to GitHub/Googleapis**.
 
 ## Installation
 
-### Install knative CLI
+### Install Knative CLI
 
-Choose a suitable installation of knative CLI for your cluster by refer to thie [docs](https://knative.dev/docs/client/install-kn/).
+Choose a suitable installation of Knative CLI for your cluster by refer to thie [docs](https://knative.dev/docs/client/install-kn/).
 
-### Install knative serving
+### Install Knative Serving
 
 #### Install the required custom resources
 
@@ -85,7 +85,7 @@ webhook-75f5d4845d-lg8j5                 1/1     Running   0          11m
     kubectl apply -f https://github.com/knative/serving/releases/download/v0.22.0/serving-default-domain.yaml
     ```
 
-### Install knative eventing
+### Install Knative Eventing
 
 #### Install the required custom resource definitions (CRDs)
 
@@ -111,11 +111,11 @@ eventing-webhook-778b6b8cf4-mgjtr      1/1     Running   0          23m
 
 ## Installation with poor network connections to GitHub/Googleapis
 
-### Install knative CLI
+### Install Knative CLI
 
-Choose a suitable installation of knative CLI for your cluster by refer to thie [docs](https://knative.dev/docs/client/install-kn/).
+Choose a suitable installation of Knative CLI for your cluster by refer to thie [docs](https://knative.dev/docs/client/install-kn/).
 
-### Install knative serving
+### Install Knative Serving
 
 #### Install the required custom resources
 
@@ -191,7 +191,7 @@ webhook-75f5d4845d-lg8j5                 1/1     Running   0          11m
     kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/serving/v0.22.0/serving-default-domain.yaml
     ```
 
-### Install knative eventing
+### Install Knative Eventing
 
 #### Install the required custom resource definitions (CRDs)
 
