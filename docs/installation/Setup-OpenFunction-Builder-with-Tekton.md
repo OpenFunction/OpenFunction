@@ -1,7 +1,7 @@
 # Setup OpenFunction Builder with Tekton
 
 You can refer to the installation steps on the [Tekon docs](https://tekton.dev/docs/getting-started/) for setup OpenFunction Builder. Or follow these steps:
-> :grey_exclamation: Refer to [this section](#Installation with poor network connections to GitHub/Googleapis) when you are in a **poor network connections to GitHub/Googleapis**.
+> :grey_exclamation: Refer to [this section](#installation-with-poor-network-connections-to-githubgoogleapis) when you are in a **poor network connections to GitHub/Googleapis**.
 
 ## Installation
 
