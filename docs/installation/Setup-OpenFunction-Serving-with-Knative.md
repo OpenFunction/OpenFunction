@@ -109,7 +109,7 @@ eventing-controller-d666b4657-jwsrk    1/1     Running   0          23m
 eventing-webhook-778b6b8cf4-mgjtr      1/1     Running   0          23m
 ```
 
-## Installation with poor network connections to GitHub/Googleapis
+## Installation when having poor network connectivity to GitHub/Googleapis
 
 ### Install Knative CLI
 
