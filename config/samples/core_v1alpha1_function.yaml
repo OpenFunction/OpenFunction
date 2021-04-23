@@ -15,6 +15,7 @@ spec:
   source:
     url: "https://github.com/OpenFunction/function-samples.git"
     sourceSubPath: "hello-world-go"
+    gitInitImage: ""
   image: "openfunction/sample-go-func:latest"
   registry:
     url: "https://index.docker.io/v1/"
