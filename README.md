@@ -70,7 +70,7 @@ If you have already installed the OpenFunction platform, follow the steps below 
 
 2. Creating functions
 
-    For sample function below, modify the ``spec.image`` field in ``config/samples/core_v1alpha1_function.yaml`` to your own container registry address: 
+    For sample function below, modify the ``spec.image`` field in ``config/samples/function-sample.yaml`` to your own container registry address: 
 
     ```yaml
     apiVersion: core.openfunction.io/v1alpha1
@@ -89,7 +89,7 @@ If you have already installed the OpenFunction platform, follow the steps below 
     Use the following command to create this Function:
 
     ```shell
-    kubectl apply -f config/samples/core_v1alpha1_function.yaml
+    kubectl apply -f config/samples/function-sample.yaml
     ```
 
 3. Result observation

@@ -6,19 +6,15 @@ spec:
   funcName: "HelloWorld"
   funcType: "http"
   funcVersion: "v1.0.0"
-  port: "8080"
-  provider: "google"
-  runtime:
-    type: "go"
-    version: "1.13"
   builder: "gcr.io/buildpacks/builder:v1"
   source:
     url: "https://github.com/OpenFunction/function-samples.git"
     sourceSubPath: "hello-world-go"
-    gitInitImage: ""
   image: "openfunction/sample-go-func:latest"
   registry:
     url: "https://index.docker.io/v1/"
     account:
       name: "basic-user-pass"
       key: "username"
+  runtime: "Knative"
+  port: "8080"

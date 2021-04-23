@@ -85,6 +85,7 @@ func (r *Registry) Init() {
 }
 
 type Language string
+type Runtime string
 
 const (
 	Go           Language = "go"
@@ -96,12 +97,9 @@ const (
 	Launching             = "Launching"
 	Launched              = "Launched"
 	Failed                = "Failed"
+	Knative      Runtime  = "Knative"
+	KEDA         Runtime  = "KEDA"
 )
-
-type Runtime struct {
-	Type    *Language `json:"type,omitempty"`
-	Version *string   `json:"version,omitempty"`
-}
 
 // FunctionSpec defines the desired state of Function
 type FunctionSpec struct {
@@ -111,12 +109,6 @@ type FunctionSpec struct {
 	FuncType string `json:"funcType"`
 	// Function version in format like v1.0.0
 	FuncVersion string `json:"funcVersion"`
-	// The port on which the function will be invoked
-	Port *string `json:"port,omitempty"`
-	// Function provider such as google, aws, azure
-	Provider string `json:"provider"`
-	// Function language runtime such as go 1.13, python 3.6
-	Runtime *Runtime `json:"runtime"`
 	// Cloud Native Buildpacks builders
 	Builder string `json:"builder"`
 	// Git repository info of a function
@@ -125,6 +117,10 @@ type FunctionSpec struct {
 	Image string `json:"image"`
 	// Image registry of the function image
 	Registry *Registry `json:"registry"`
+	// Function runtime such as Knative or KEDA
+	Runtime *Runtime `json:"runtime,omitempty"`
+	// The port on which the function will be invoked
+	Port *string `json:"port,omitempty"`
 }
 
 // FunctionStatus defines the observed state of Function
