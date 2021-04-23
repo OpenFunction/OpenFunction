@@ -80,7 +80,12 @@ If you have already installed the OpenFunction platform, follow the steps below 
     spec:
       image: "<your registry name>/sample-go-func:latest"
     ```
-
+   > When having poor network connectivity to GitHub/Googleapis, follow these changes:
+   > 
+   > ```spec.builder``` : "openfunction/buildpacks-builder:v1"
+   > 
+   > ```spec.source.gitInitImage``` : "openfunction/tektoncd-pipeline-cmd-git-init:v0.21.0"
+   
     Use the following command to create this Function:
 
     ```shell
