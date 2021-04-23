@@ -20,10 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	Knative = "Knative"
-)
-
 // ServingSpec defines the desired state of Serving
 type ServingSpec struct {
 	// Function image name

@@ -57,9 +57,6 @@ spec:
               port:
                 description: The port on which the function will be invoked
                 type: string
-              provider:
-                description: Function provider such as google, aws, azure
-                type: string
               registry:
                 description: Image registry of the function image
                 properties:
@@ -86,13 +83,8 @@ spec:
                     type: string
                 type: object
               runtime:
-                description: Function language runtime such as go 1.13, python 3.6
-                properties:
-                  type:
-                    type: string
-                  version:
-                    type: string
-                type: object
+                description: Function runtime such as Knative or KEDA
+                type: string
               source:
                 description: Git repository info of a function
                 properties:
@@ -161,9 +153,7 @@ spec:
             - funcType
             - funcVersion
             - image
-            - provider
             - registry
-            - runtime
             - source
             type: object
           status:
