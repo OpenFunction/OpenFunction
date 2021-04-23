@@ -29,6 +29,7 @@ const (
 	buildTask             = "build"
 	gitCloneTask          = "git-clone"
 	url                   = "url"
+	gitInitImage          = "gitInitImage"
 	cacheWorkspace        = "cache-ws"
 	sourceWorkspace       = "shared-ws"
 	output                = "output"
@@ -250,6 +251,13 @@ func (r *BuilderReconciler) mutatePipeline(p *pipeline.Pipeline, builder *openfu
 					Value: pipeline.ArrayOrString{
 						Type:      pipeline.ParamTypeString,
 						StringVal: builder.Spec.Source.Url,
+					},
+				},
+				pipeline.Param{
+					Name: gitInitImage,
+					Value: pipeline.ArrayOrString{
+						Type:      pipeline.ParamTypeString,
+						StringVal: *builder.Spec.Source.GitInitImage,
 					},
 				},
 			},
