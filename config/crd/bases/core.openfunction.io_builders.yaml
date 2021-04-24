@@ -54,6 +54,10 @@ spec:
               image:
                 description: Function image name
                 type: string
+              port:
+                description: The port on which the function will be invoked
+                format: int32
+                type: integer
               registry:
                 description: Image registry of the function image
                 properties:

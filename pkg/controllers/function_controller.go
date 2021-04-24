@@ -97,6 +97,7 @@ func (r *FunctionReconciler) createOrUpdateBuilder(fn *openfunction.Function) (c
 	builder.Spec.FuncVersion = fn.Spec.FuncVersion
 	builder.Spec.Builder = fn.Spec.Builder
 	builder.Spec.Image = fn.Spec.Image
+	builder.Spec.Port = fn.Spec.Port
 
 	gitRepo := openfunction.GitRepo{}
 	gitRepo.Init()
@@ -144,6 +145,13 @@ func (r *FunctionReconciler) createOrUpdateServing(fn *openfunction.Function) (c
 	if fn.Spec.Port != nil {
 		port := *fn.Spec.Port
 		serving.Spec.Port = &port
+	}
+
+	if fn.Spec.Runtime != nil {
+		serving.Spec.Runtime = fn.Spec.Runtime
+	} else {
+		runtime := openfunction.Knative
+		serving.Spec.Runtime = &runtime
 	}
 
 	serving.SetOwnerReferences(nil)

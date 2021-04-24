@@ -36,6 +36,8 @@ type BuilderSpec struct {
 	Image string `json:"image"`
 	// Image registry of the function image
 	Registry *Registry `json:"registry"`
+	// The port on which the function will be invoked
+	Port *int32 `json:"port,omitempty"`
 }
 
 // BuilderStatus defines the observed state of Builder

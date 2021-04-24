@@ -25,9 +25,9 @@ type ServingSpec struct {
 	// Function image name
 	Image string `json:"image"`
 	// The port on which the function will be invoked
-	Port *string `json:"port,omitempty"`
+	Port *int32 `json:"port,omitempty"`
 	// The backend runtime to run a function, for example Knative
-	Runtime *string `json:"runtime,omitempty"`
+	Runtime *Runtime `json:"runtime,omitempty"`
 }
 
 // ServingStatus defines the observed state of Serving
