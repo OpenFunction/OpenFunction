@@ -247,7 +247,7 @@ spec:
     - name: gitInitImage
       description: the image used where the git-init binary is
       type: string
-      default: "gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init:v0.21.0"
+      default: "openfunction/tektoncd-pipeline-cmd-git-init:v0.21.0"
   results:
     - name: commit
       description: The precise commit SHA that was fetched by this Task

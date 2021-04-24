@@ -118,7 +118,7 @@ type FunctionSpec struct {
 	// Image registry of the function image
 	Registry *Registry `json:"registry"`
 	// Function runtime such as Knative or KEDA
-	Runtime *Runtime `json:"runtime,omitempty"`
+	Runtime Runtime `json:"runtime,omitempty"`
 	// The port on which the function will be invoked
 	Port *string `json:"port,omitempty"`
 }
