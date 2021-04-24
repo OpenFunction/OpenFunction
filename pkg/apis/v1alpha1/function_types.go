@@ -120,7 +120,7 @@ type FunctionSpec struct {
 	// Function runtime such as Knative or KEDA
 	Runtime *Runtime `json:"runtime,omitempty"`
 	// The port on which the function will be invoked
-	Port *string `json:"port,omitempty"`
+	Port *int32 `json:"port,omitempty"`
 }
 
 // FunctionStatus defines the observed state of Function

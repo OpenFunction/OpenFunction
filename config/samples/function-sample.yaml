@@ -17,4 +17,4 @@ spec:
       name: "basic-user-pass"
       key: "username"
   runtime: "Knative"
-  port: "8080"
+  port: 8081

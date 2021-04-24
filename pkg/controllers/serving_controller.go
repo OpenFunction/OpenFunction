@@ -64,6 +64,15 @@ func (r *ServingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 func (r *ServingReconciler) mutateKsvc(ksvc *kservingv1.Service, s *openfunction.Serving) controllerutil.MutateFn {
 	return func() error {
+		container := corev1.Container{
+			Image: s.Spec.Image,
+		}
+		port := corev1.ContainerPort{}
+		if s.Spec.Port != nil {
+			port.ContainerPort = *s.Spec.Port
+			container.Ports = append(container.Ports, port)
+		}
+
 		expected := kservingv1.Service{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "serving.knative.dev/v1",
@@ -79,9 +88,7 @@ func (r *ServingReconciler) mutateKsvc(ksvc *kservingv1.Service, s *openfunction
 						Spec: kservingv1.RevisionSpec{
 							PodSpec: corev1.PodSpec{
 								Containers: []corev1.Container{
-									corev1.Container{
-										Image: s.Spec.Image,
-									},
+									container,
 								},
 							},
 						},

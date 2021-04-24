@@ -43,7 +43,8 @@ spec:
                 type: string
               port:
                 description: The port on which the function will be invoked
-                type: string
+                format: int32
+                type: integer
               runtime:
                 description: The backend runtime to run a function, for example Knative
                 type: string

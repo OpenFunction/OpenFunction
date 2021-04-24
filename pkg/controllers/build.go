@@ -265,6 +265,12 @@ func (r *BuilderReconciler) mutatePipeline(p *pipeline.Pipeline, builder *openfu
 			taskFetchSrc.Params = append(taskFetchSrc.Params, param)
 		}
 
+		funcEnv := []string{fmt.Sprintf("%s=%s", functionTarget, builder.Spec.FuncName),
+			fmt.Sprintf("%s=%s", functionSignatureType, builder.Spec.FuncType)}
+		if builder.Spec.Port != nil && *builder.Spec.Port > 0 {
+			funcEnv = append(funcEnv, fmt.Sprintf("%s=%d", "PORT", *builder.Spec.Port))
+		}
+
 		buildTaskName := fmt.Sprintf("%s-%s", builder.Name, buildTask)
 		buildTask := pipeline.PipelineTask{
 			Name:    buildTaskName,
@@ -300,9 +306,8 @@ func (r *BuilderReconciler) mutatePipeline(p *pipeline.Pipeline, builder *openfu
 				pipeline.Param{
 					Name: envVars,
 					Value: pipeline.ArrayOrString{
-						Type: pipeline.ParamTypeArray,
-						ArrayVal: []string{fmt.Sprintf("%s=%s", functionTarget, builder.Spec.FuncName),
-							fmt.Sprintf("%s=%s", functionSignatureType, builder.Spec.FuncType)},
+						Type:     pipeline.ParamTypeArray,
+						ArrayVal: funcEnv,
 					},
 				},
 			},
