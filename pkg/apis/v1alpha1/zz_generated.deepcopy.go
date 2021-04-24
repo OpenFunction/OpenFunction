@@ -196,11 +196,6 @@ func (in *FunctionSpec) DeepCopyInto(out *FunctionSpec) {
 		*out = new(Registry)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.Runtime != nil {
-		in, out := &in.Runtime, &out.Runtime
-		*out = new(Runtime)
-		**out = **in
-	}
 	if in.Port != nil {
 		in, out := &in.Port, &out.Port
 		*out = new(string)
