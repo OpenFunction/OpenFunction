@@ -151,3 +151,6 @@ kubectl delete -f config/bundle.yaml
 
 You can get help on developing this project by visiting [Development Guide](docs/development/README.md).
 
+## Roadmap
+
+[Here](docs/roadmap.md) you can find OpenFunction roadmap.
