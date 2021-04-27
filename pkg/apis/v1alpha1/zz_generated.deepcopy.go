@@ -92,6 +92,13 @@ func (in *BuilderSpec) DeepCopyInto(out *BuilderSpec) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.Params != nil {
+		in, out := &in.Params, &out.Params
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	if in.GitRepo != nil {
 		in, out := &in.GitRepo, &out.GitRepo
 		*out = new(GitRepo)
@@ -200,6 +207,13 @@ func (in *FunctionSpec) DeepCopyInto(out *FunctionSpec) {
 		in, out := &in.Version, &out.Version
 		*out = new(string)
 		**out = **in
+	}
+	if in.Params != nil {
+		in, out := &in.Params, &out.Params
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
 	}
 	if in.GitRepo != nil {
 		in, out := &in.GitRepo, &out.GitRepo

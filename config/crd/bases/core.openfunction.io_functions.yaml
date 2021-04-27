@@ -106,10 +106,11 @@ spec:
               image:
                 description: Function image name
                 type: string
-              name:
-                description: The name of the exported function to be invoked in function
-                  code
-                type: string
+              params:
+                additionalProperties:
+                  type: string
+                description: Environment variables to pass to the builder or serving
+                type: object
               port:
                 description: The port on which the function will be invoked
                 format: int32
@@ -142,12 +143,6 @@ spec:
               runtime:
                 description: Function runtime such as Knative or KEDA
                 type: string
-              source:
-                description: Function source file such as main.py for python
-                type: string
-              type:
-                description: Function type such as HTTP or CloudEvent
-                type: string
               version:
                 description: Function version in format like v1.0.0
                 type: string
@@ -155,9 +150,7 @@ spec:
             - builder
             - gitRepo
             - image
-            - name
             - registry
-            - type
             type: object
           status:
             description: FunctionStatus defines the observed state of Function
