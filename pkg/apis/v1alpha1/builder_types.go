@@ -29,7 +29,7 @@ type BuilderSpec struct {
 	// FuncSource source such as main.py for python
 	FuncSource string `json:"funcSource,omitempty"`
 	// Function version in format like v1.0.0
-	FuncVersion string `json:"funcVersion"`
+	FuncVersion *string `json:"funcVersion,omitempty"`
 	// Cloud Native Buildpacks builders
 	Builder string `json:"builder"`
 	// Git repository info of a function

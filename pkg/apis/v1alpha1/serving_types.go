@@ -22,6 +22,8 @@ import (
 
 // ServingSpec defines the desired state of Serving
 type ServingSpec struct {
+	// Function version in format like v1.0.0
+	FuncVersion *string `json:"funcVersion,omitempty"`
 	// Function image name
 	Image string `json:"image"`
 	// The port on which the function will be invoked

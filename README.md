@@ -153,4 +153,4 @@ You can get help on developing this project by visiting [Development Guide](docs
 
 ## Roadmap
 
-[Here](docs/roadmap.md) you can find OpenFunction roadmap.
+[Here](docs/roadmap.md) you can find OpenFunction's roadmap.

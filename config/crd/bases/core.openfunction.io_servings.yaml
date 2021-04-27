@@ -38,6 +38,9 @@ spec:
           spec:
             description: ServingSpec defines the desired state of Serving
             properties:
+              funcVersion:
+                description: Function version in format like v1.0.0
+                type: string
               image:
                 description: Function image name
                 type: string
