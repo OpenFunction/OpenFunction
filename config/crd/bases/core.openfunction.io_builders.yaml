@@ -48,6 +48,9 @@ spec:
               funcType:
                 description: Function type such as HTTP or CloudEvent
                 type: string
+              funcSource:
+                description: Function source such as main.py for python
+                type: string
               funcVersion:
                 description: Function version in format like v1.0.0
                 type: string

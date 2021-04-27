@@ -94,6 +94,7 @@ func (r *FunctionReconciler) createOrUpdateBuilder(fn *openfunction.Function) (c
 
 	builder.Spec.FuncName = fn.Spec.FuncName
 	builder.Spec.FuncType = fn.Spec.FuncType
+	builder.Spec.FuncSource = fn.Spec.FuncSource
 	builder.Spec.FuncVersion = fn.Spec.FuncVersion
 	builder.Spec.Builder = fn.Spec.Builder
 	builder.Spec.Image = fn.Spec.Image
