@@ -38,9 +38,6 @@ spec:
           spec:
             description: ServingSpec defines the desired state of Serving
             properties:
-              funcVersion:
-                description: Function version in format like v1.0.0
-                type: string
               image:
                 description: Function image name
                 type: string
@@ -50,6 +47,9 @@ spec:
                 type: integer
               runtime:
                 description: The backend runtime to run a function, for example Knative
+                type: string
+              version:
+                description: Function version in format like v1.0.0
                 type: string
             required:
             - image

@@ -77,8 +77,8 @@ func (r *ServingReconciler) mutateKsvc(ksvc *kservingv1.Service, s *openfunction
 		objectMeta := metav1.ObjectMeta{
 			Namespace: s.Namespace,
 		}
-		if s.Spec.FuncVersion != nil {
-			objectMeta.Name = fmt.Sprintf("%s-%s", ksvc.Name, strings.ReplaceAll(*s.Spec.FuncVersion, ".", ""))
+		if s.Spec.Version != nil {
+			objectMeta.Name = fmt.Sprintf("%s-%s", ksvc.Name, strings.ReplaceAll(*s.Spec.Version, ".", ""))
 		}
 
 		expected := kservingv1.Service{
