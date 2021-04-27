@@ -36,6 +36,7 @@ const (
 	source                = "source"
 	functionTarget        = "GOOGLE_FUNCTION_TARGET"
 	functionSignatureType = "GOOGLE_FUNCTION_SIGNATURE_TYPE"
+	functionSource        = "GOOGLE_FUNCTION_SOURCE"
 )
 
 var (
@@ -85,36 +86,6 @@ func (r *BuilderReconciler) CreateOrUpdateTask(builder *openfunction.Builder, na
 		return err
 	}
 	return nil
-}
-
-func (r *BuilderReconciler) mutateConfigMap(cm *v1.ConfigMap, builder *openfunction.Builder) controllerutil.MutateFn {
-	return func() error {
-		expected := v1.ConfigMap{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "ConfigMap",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      cm.Name,
-				Namespace: builder.Namespace,
-			},
-			Data: map[string]string{
-				functionSignatureType: builder.Spec.FuncType,
-				functionTarget:        builder.Spec.FuncName,
-			},
-		}
-
-		if len(cm.Data) == 0 {
-			cm.Data = map[string]string{
-				functionSignatureType: expected.Data[functionSignatureType],
-				functionTarget:        expected.Data[functionTarget],
-			}
-			expected.DeepCopyInto(cm)
-			cm.SetOwnerReferences(nil)
-			return ctrl.SetControllerReference(builder, cm, r.Scheme)
-		}
-		return nil
-	}
 }
 
 func (r *BuilderReconciler) mutatePVC(pvc *v1.PersistentVolumeClaim, builder *openfunction.Builder) controllerutil.MutateFn {
@@ -267,6 +238,9 @@ func (r *BuilderReconciler) mutatePipeline(p *pipeline.Pipeline, builder *openfu
 
 		funcEnv := []string{fmt.Sprintf("%s=%s", functionTarget, builder.Spec.FuncName),
 			fmt.Sprintf("%s=%s", functionSignatureType, builder.Spec.FuncType)}
+		if builder.Spec.FuncSource != "" {
+			funcEnv = append(funcEnv, fmt.Sprintf("%s=%s", functionSource, builder.Spec.FuncSource))
+		}
 		if builder.Spec.Port != nil && *builder.Spec.Port > 0 {
 			funcEnv = append(funcEnv, fmt.Sprintf("%s=%d", "PORT", *builder.Spec.Port))
 		}

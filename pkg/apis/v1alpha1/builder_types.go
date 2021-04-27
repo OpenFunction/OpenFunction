@@ -26,6 +26,8 @@ type BuilderSpec struct {
 	FuncName string `json:"funcName"`
 	// Function type such as HTTP or CloudEvent
 	FuncType string `json:"funcType"`
+	// FuncSource source such as main.py for python
+	FuncSource string `json:"funcSource,omitempty"`
 	// Function version in format like v1.0.0
 	FuncVersion string `json:"funcVersion"`
 	// Cloud Native Buildpacks builders
