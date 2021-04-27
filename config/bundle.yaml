@@ -47,11 +47,11 @@ spec:
                 description: The name of the exported function to be invoked in function
                   code
                 type: string
+              funcSource:
+                description: FuncSource source such as main.py for python
+                type: string
               funcType:
                 description: Function type such as HTTP or CloudEvent
-                type: string
-              funcSource:
-                description: Function source such as main.py for python
                 type: string
               funcVersion:
                 description: Function version in format like v1.0.0
@@ -154,7 +154,6 @@ spec:
             - builder
             - funcName
             - funcType
-            - funcVersion
             - image
             - registry
             - source
@@ -223,11 +222,11 @@ spec:
                 description: The name of the exported function to be invoked in function
                   code
                 type: string
-              funcType:
-                description: Function type such as HTTP or CloudEvent
-                type: string
               funcSource:
                 description: FuncSource source such as main.py for python
+                type: string
+              funcType:
+                description: Function type such as HTTP or CloudEvent
                 type: string
               funcVersion:
                 description: Function version in format like v1.0.0
@@ -333,7 +332,6 @@ spec:
             - builder
             - funcName
             - funcType
-            - funcVersion
             - image
             - registry
             - source
@@ -395,6 +393,9 @@ spec:
           spec:
             description: ServingSpec defines the desired state of Serving
             properties:
+              funcVersion:
+                description: Function version in format like v1.0.0
+                type: string
               image:
                 description: Function image name
                 type: string

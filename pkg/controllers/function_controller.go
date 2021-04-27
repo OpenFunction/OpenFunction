@@ -142,7 +142,9 @@ func (r *FunctionReconciler) createOrUpdateServing(fn *openfunction.Function) (c
 		return ctrl.Result{}, err
 	}
 
+	serving.Spec.FuncVersion = fn.Spec.FuncVersion
 	serving.Spec.Image = fn.Spec.Image
+
 	if fn.Spec.Port != nil {
 		port := *fn.Spec.Port
 		serving.Spec.Port = &port

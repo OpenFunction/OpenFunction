@@ -28,6 +28,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"strings"
 )
 
 // ServingReconciler reconciles a Serving object
@@ -73,6 +74,13 @@ func (r *ServingReconciler) mutateKsvc(ksvc *kservingv1.Service, s *openfunction
 			container.Ports = append(container.Ports, port)
 		}
 
+		objectMeta := metav1.ObjectMeta{
+			Namespace: s.Namespace,
+		}
+		if s.Spec.FuncVersion != nil {
+			objectMeta.Name = fmt.Sprintf("%s-%s", ksvc.Name, strings.ReplaceAll(*s.Spec.FuncVersion, ".", ""))
+		}
+
 		expected := kservingv1.Service{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "serving.knative.dev/v1",
@@ -85,6 +93,7 @@ func (r *ServingReconciler) mutateKsvc(ksvc *kservingv1.Service, s *openfunction
 			Spec: kservingv1.ServiceSpec{
 				ConfigurationSpec: kservingv1.ConfigurationSpec{
 					Template: kservingv1.RevisionTemplateSpec{
+						ObjectMeta: objectMeta,
 						Spec: kservingv1.RevisionSpec{
 							PodSpec: corev1.PodSpec{
 								Containers: []corev1.Container{
