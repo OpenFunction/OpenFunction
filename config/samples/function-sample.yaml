@@ -3,9 +3,11 @@ kind: Function
 metadata:
   name: function-sample
 spec:
-  name: "HelloWorld"
-  type: "http"
   version: "v1.0.0"
+  params:
+    GOOGLE_FUNCTION_TARGET: "HelloWorld"
+    GOOGLE_FUNCTION_SIGNATURE_TYPE: "http"
+    #GOOGLE_FUNCTION_SOURCE: "main.py"
   builder: "gcr.io/buildpacks/builder:v1"
   gitRepo:
     url: "https://github.com/OpenFunction/function-samples.git"

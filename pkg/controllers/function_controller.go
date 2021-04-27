@@ -92,9 +92,7 @@ func (r *FunctionReconciler) createOrUpdateBuilder(fn *openfunction.Function) (c
 		return ctrl.Result{}, err
 	}
 
-	builder.Spec.Name = fn.Spec.Name
-	builder.Spec.Type = fn.Spec.Type
-	builder.Spec.Source = fn.Spec.Source
+	builder.Spec.Params = fn.Spec.Params
 	builder.Spec.Version = fn.Spec.Version
 	builder.Spec.Builder = fn.Spec.Builder
 	builder.Spec.Image = fn.Spec.Image

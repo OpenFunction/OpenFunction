@@ -22,14 +22,10 @@ import (
 
 // BuilderSpec defines the desired state of Builder
 type BuilderSpec struct {
-	// The name of the exported function to be invoked in function code
-	Name string `json:"name"`
-	// Function type such as HTTP or CloudEvent
-	Type string `json:"type"`
 	// Function version in format like v1.0.0
 	Version *string `json:"version,omitempty"`
-	// Function source file such as main.py for python
-	Source string `json:"source,omitempty"`
+	// Environment variables to pass to the build process
+	Params map[string]string `json:"params,omitempty"`
 	// Cloud Native Buildpacks builders
 	Builder string `json:"builder"`
 	// Git repository info of a function

@@ -15,28 +15,25 @@ import (
 )
 
 const (
-	buildSa               = "build-service-account"
-	builderImage          = "BUILDER_IMAGE"
-	buildPipeline         = "build-pipeline"
-	BuildPipelineRun      = "build-pipelinerun"
-	buildpackPVC          = "buildpack-pvc"
-	envVars               = "ENV_VARS"
-	appImage              = "APP_IMAGE"
-	registryUrlKey        = "tekton.dev/docker-0"
-	registryUrl           = "https://index.docker.io/v1/"
-	sourceSubpath         = "SOURCE_SUBPATH"
-	subDirectory          = "subdirectory"
-	buildTask             = "build"
-	gitCloneTask          = "git-clone"
-	url                   = "url"
-	cacheWorkspace        = "cache-ws"
-	sourceWorkspace       = "shared-ws"
-	output                = "output"
-	cache                 = "cache"
-	source                = "source"
-	functionTarget        = "GOOGLE_FUNCTION_TARGET"
-	functionSignatureType = "GOOGLE_FUNCTION_SIGNATURE_TYPE"
-	functionSource        = "GOOGLE_FUNCTION_SOURCE"
+	buildSa          = "build-service-account"
+	builderImage     = "BUILDER_IMAGE"
+	buildPipeline    = "build-pipeline"
+	BuildPipelineRun = "build-pipelinerun"
+	buildpackPVC     = "buildpack-pvc"
+	envVars          = "ENV_VARS"
+	appImage         = "APP_IMAGE"
+	registryUrlKey   = "tekton.dev/docker-0"
+	registryUrl      = "https://index.docker.io/v1/"
+	sourceSubpath    = "SOURCE_SUBPATH"
+	subDirectory     = "subdirectory"
+	buildTask        = "build"
+	gitCloneTask     = "git-clone"
+	url              = "url"
+	cacheWorkspace   = "cache-ws"
+	sourceWorkspace  = "shared-ws"
+	output           = "output"
+	cache            = "cache"
+	source           = "source"
 )
 
 var (
@@ -236,11 +233,11 @@ func (r *BuilderReconciler) mutatePipeline(p *pipeline.Pipeline, builder *openfu
 			taskFetchSrc.Params = append(taskFetchSrc.Params, param)
 		}
 
-		funcEnv := []string{fmt.Sprintf("%s=%s", functionTarget, builder.Spec.Name),
-			fmt.Sprintf("%s=%s", functionSignatureType, builder.Spec.Type)}
-		if builder.Spec.Source != "" {
-			funcEnv = append(funcEnv, fmt.Sprintf("%s=%s", functionSource, builder.Spec.Source))
+		funcEnv := []string{}
+		for k, v := range builder.Spec.Params {
+			funcEnv = append(funcEnv, fmt.Sprintf("%s=%s", k, v))
 		}
+
 		if builder.Spec.Port != nil && *builder.Spec.Port > 0 {
 			funcEnv = append(funcEnv, fmt.Sprintf("%s=%d", "PORT", *builder.Spec.Port))
 		}
