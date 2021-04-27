@@ -3,11 +3,11 @@ kind: Function
 metadata:
   name: function-sample
 spec:
-  funcName: "HelloWorld"
-  funcType: "http"
-  funcVersion: "v1.0.0"
+  name: "HelloWorld"
+  type: "http"
+  version: "v1.0.0"
   builder: "gcr.io/buildpacks/builder:v1"
-  source:
+  gitRepo:
     url: "https://github.com/OpenFunction/function-samples.git"
     sourceSubPath: "hello-world-go"
   image: "openfunction/sample-go-func:latest"
@@ -16,5 +16,5 @@ spec:
     account:
       name: "basic-user-pass"
       key: "username"
-  runtime: "Knative"
-  port: 8081
+# runtime: "Knative" # default to Knative
+# port: 8080 # default to 8080

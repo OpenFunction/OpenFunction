@@ -41,52 +41,7 @@ spec:
               builder:
                 description: Cloud Native Buildpacks builders
                 type: string
-              funcName:
-                description: The name of the exported function to be invoked in function
-                  code
-                type: string
-              funcSource:
-                description: FuncSource source such as main.py for python
-                type: string
-              funcType:
-                description: Function type such as HTTP or CloudEvent
-                type: string
-              funcVersion:
-                description: Function version in format like v1.0.0
-                type: string
-              image:
-                description: Function image name
-                type: string
-              port:
-                description: The port on which the function will be invoked
-                format: int32
-                type: integer
-              registry:
-                description: Image registry of the function image
-                properties:
-                  account:
-                    description: Image registry account including username and password
-                    properties:
-                      key:
-                        description: The key of the secret to select from.  Must be
-                          a valid secret key.
-                        type: string
-                      name:
-                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                          TODO: Add other useful fields. apiVersion, kind, uid?'
-                        type: string
-                      optional:
-                        description: Specify whether the Secret or its key must be
-                          defined
-                        type: boolean
-                    required:
-                    - key
-                    type: object
-                  url:
-                    description: Image registry url
-                    type: string
-                type: object
-              source:
+              gitRepo:
                 description: Git repository info of a function
                 properties:
                   deleteExisting:
@@ -148,13 +103,58 @@ spec:
                 required:
                 - url
                 type: object
+              image:
+                description: Function image name
+                type: string
+              name:
+                description: The name of the exported function to be invoked in function
+                  code
+                type: string
+              port:
+                description: The port on which the function will be invoked
+                format: int32
+                type: integer
+              registry:
+                description: Image registry of the function image
+                properties:
+                  account:
+                    description: Image registry account including username and password
+                    properties:
+                      key:
+                        description: The key of the secret to select from.  Must be
+                          a valid secret key.
+                        type: string
+                      name:
+                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                        type: string
+                      optional:
+                        description: Specify whether the Secret or its key must be
+                          defined
+                        type: boolean
+                    required:
+                    - key
+                    type: object
+                  url:
+                    description: Image registry url
+                    type: string
+                type: object
+              source:
+                description: Function source file such as main.py for python
+                type: string
+              type:
+                description: Function type such as HTTP or CloudEvent
+                type: string
+              version:
+                description: Function version in format like v1.0.0
+                type: string
             required:
             - builder
-            - funcName
-            - funcType
+            - gitRepo
             - image
+            - name
             - registry
-            - source
+            - type
             type: object
           status:
             description: BuilderStatus defines the observed state of Builder

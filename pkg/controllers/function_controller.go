@@ -92,18 +92,18 @@ func (r *FunctionReconciler) createOrUpdateBuilder(fn *openfunction.Function) (c
 		return ctrl.Result{}, err
 	}
 
-	builder.Spec.FuncName = fn.Spec.FuncName
-	builder.Spec.FuncType = fn.Spec.FuncType
-	builder.Spec.FuncSource = fn.Spec.FuncSource
-	builder.Spec.FuncVersion = fn.Spec.FuncVersion
+	builder.Spec.Name = fn.Spec.Name
+	builder.Spec.Type = fn.Spec.Type
+	builder.Spec.Source = fn.Spec.Source
+	builder.Spec.Version = fn.Spec.Version
 	builder.Spec.Builder = fn.Spec.Builder
 	builder.Spec.Image = fn.Spec.Image
 	builder.Spec.Port = fn.Spec.Port
 
 	gitRepo := openfunction.GitRepo{}
 	gitRepo.Init()
-	builder.Spec.Source = &gitRepo
-	fn.Spec.Source.DeepCopyInto(builder.Spec.Source)
+	builder.Spec.GitRepo = &gitRepo
+	fn.Spec.GitRepo.DeepCopyInto(builder.Spec.GitRepo)
 
 	registry := openfunction.Registry{}
 	registry.Init()
@@ -142,7 +142,7 @@ func (r *FunctionReconciler) createOrUpdateServing(fn *openfunction.Function) (c
 		return ctrl.Result{}, err
 	}
 
-	serving.Spec.FuncVersion = fn.Spec.FuncVersion
+	serving.Spec.Version = fn.Spec.Version
 	serving.Spec.Image = fn.Spec.Image
 
 	if fn.Spec.Port != nil {

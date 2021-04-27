@@ -220,26 +220,26 @@ func (r *BuilderReconciler) mutatePipeline(p *pipeline.Pipeline, builder *openfu
 					Name: url,
 					Value: pipeline.ArrayOrString{
 						Type:      pipeline.ParamTypeString,
-						StringVal: builder.Spec.Source.Url,
+						StringVal: builder.Spec.GitRepo.Url,
 					},
 				},
 			},
 		}
-		if builder.Spec.Source.DeleteExisting != nil {
+		if builder.Spec.GitRepo.DeleteExisting != nil {
 			param := pipeline.Param{
 				Name: subDirectory,
 				Value: pipeline.ArrayOrString{
 					Type:      pipeline.ParamTypeString,
-					StringVal: *builder.Spec.Source.DeleteExisting,
+					StringVal: *builder.Spec.GitRepo.DeleteExisting,
 				},
 			}
 			taskFetchSrc.Params = append(taskFetchSrc.Params, param)
 		}
 
-		funcEnv := []string{fmt.Sprintf("%s=%s", functionTarget, builder.Spec.FuncName),
-			fmt.Sprintf("%s=%s", functionSignatureType, builder.Spec.FuncType)}
-		if builder.Spec.FuncSource != "" {
-			funcEnv = append(funcEnv, fmt.Sprintf("%s=%s", functionSource, builder.Spec.FuncSource))
+		funcEnv := []string{fmt.Sprintf("%s=%s", functionTarget, builder.Spec.Name),
+			fmt.Sprintf("%s=%s", functionSignatureType, builder.Spec.Type)}
+		if builder.Spec.Source != "" {
+			funcEnv = append(funcEnv, fmt.Sprintf("%s=%s", functionSource, builder.Spec.Source))
 		}
 		if builder.Spec.Port != nil && *builder.Spec.Port > 0 {
 			funcEnv = append(funcEnv, fmt.Sprintf("%s=%d", "PORT", *builder.Spec.Port))
@@ -286,12 +286,12 @@ func (r *BuilderReconciler) mutatePipeline(p *pipeline.Pipeline, builder *openfu
 				},
 			},
 		}
-		if builder.Spec.Source.SourceSubPath != nil {
+		if builder.Spec.GitRepo.SourceSubPath != nil {
 			param := pipeline.Param{
 				Name: sourceSubpath,
 				Value: pipeline.ArrayOrString{
 					Type:      pipeline.ParamTypeString,
-					StringVal: *builder.Spec.Source.SourceSubPath,
+					StringVal: *builder.Spec.GitRepo.SourceSubPath,
 				},
 			}
 			buildTask.Params = append(buildTask.Params, param)
