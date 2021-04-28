@@ -217,17 +217,17 @@ func (r *BuilderReconciler) mutatePipeline(p *pipeline.Pipeline, builder *openfu
 					Name: url,
 					Value: pipeline.ArrayOrString{
 						Type:      pipeline.ParamTypeString,
-						StringVal: builder.Spec.GitRepo.Url,
+						StringVal: builder.Spec.SrcRepo.Url,
 					},
 				},
 			},
 		}
-		if builder.Spec.GitRepo.DeleteExisting != nil {
+		if builder.Spec.SrcRepo.DeleteExisting != nil {
 			param := pipeline.Param{
 				Name: subDirectory,
 				Value: pipeline.ArrayOrString{
 					Type:      pipeline.ParamTypeString,
-					StringVal: *builder.Spec.GitRepo.DeleteExisting,
+					StringVal: *builder.Spec.SrcRepo.DeleteExisting,
 				},
 			}
 			taskFetchSrc.Params = append(taskFetchSrc.Params, param)
@@ -283,12 +283,12 @@ func (r *BuilderReconciler) mutatePipeline(p *pipeline.Pipeline, builder *openfu
 				},
 			},
 		}
-		if builder.Spec.GitRepo.SourceSubPath != nil {
+		if builder.Spec.SrcRepo.SourceSubPath != nil {
 			param := pipeline.Param{
 				Name: sourceSubpath,
 				Value: pipeline.ArrayOrString{
 					Type:      pipeline.ParamTypeString,
-					StringVal: *builder.Spec.GitRepo.SourceSubPath,
+					StringVal: *builder.Spec.SrcRepo.SourceSubPath,
 				},
 			}
 			buildTask.Params = append(buildTask.Params, param)

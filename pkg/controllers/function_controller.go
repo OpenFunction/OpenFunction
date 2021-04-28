@@ -92,21 +92,21 @@ func (r *FunctionReconciler) createOrUpdateBuilder(fn *openfunction.Function) (c
 		return ctrl.Result{}, err
 	}
 
-	builder.Spec.Params = fn.Spec.Params
+	builder.Spec.Params = fn.Spec.Build.Params
 	builder.Spec.Version = fn.Spec.Version
-	builder.Spec.Builder = fn.Spec.Builder
+	builder.Spec.Builder = fn.Spec.Build.Builder
 	builder.Spec.Image = fn.Spec.Image
 	builder.Spec.Port = fn.Spec.Port
 
 	gitRepo := openfunction.GitRepo{}
 	gitRepo.Init()
-	builder.Spec.GitRepo = &gitRepo
-	fn.Spec.GitRepo.DeepCopyInto(builder.Spec.GitRepo)
+	builder.Spec.SrcRepo = &gitRepo
+	fn.Spec.Build.SrcRepo.DeepCopyInto(builder.Spec.SrcRepo)
 
 	registry := openfunction.Registry{}
 	registry.Init()
 	builder.Spec.Registry = &registry
-	fn.Spec.Registry.DeepCopyInto(builder.Spec.Registry)
+	fn.Spec.Build.Registry.DeepCopyInto(builder.Spec.Registry)
 
 	builder.SetOwnerReferences(nil)
 	if err := ctrl.SetControllerReference(fn, &builder, r.Scheme); err != nil {
@@ -148,8 +148,8 @@ func (r *FunctionReconciler) createOrUpdateServing(fn *openfunction.Function) (c
 		serving.Spec.Port = &port
 	}
 
-	if fn.Spec.Runtime != nil {
-		serving.Spec.Runtime = fn.Spec.Runtime
+	if fn.Spec.Serving != nil && fn.Spec.Serving.Runtime != nil {
+		serving.Spec.Runtime = fn.Spec.Serving.Runtime
 	} else {
 		runtime := openfunction.Knative
 		serving.Spec.Runtime = &runtime
