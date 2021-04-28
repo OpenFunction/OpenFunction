@@ -29,7 +29,7 @@ type BuilderSpec struct {
 	// Cloud Native Buildpacks builders
 	Builder string `json:"builder"`
 	// Git repository info of a function
-	GitRepo *GitRepo `json:"gitRepo"`
+	SrcRepo *GitRepo `json:"srcRepo"`
 	// Function image name
 	Image string `json:"image"`
 	// Image registry of the function image

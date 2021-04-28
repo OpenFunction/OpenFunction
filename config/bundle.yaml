@@ -43,7 +43,44 @@ spec:
               builder:
                 description: Cloud Native Buildpacks builders
                 type: string
-              gitRepo:
+              image:
+                description: Function image name
+                type: string
+              params:
+                additionalProperties:
+                  type: string
+                description: Environment variables to pass to the build process
+                type: object
+              port:
+                description: The port on which the function will be invoked
+                format: int32
+                type: integer
+              registry:
+                description: Image registry of the function image
+                properties:
+                  account:
+                    description: Image registry account including username and password
+                    properties:
+                      key:
+                        description: The key of the secret to select from.  Must be
+                          a valid secret key.
+                        type: string
+                      name:
+                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                        type: string
+                      optional:
+                        description: Specify whether the Secret or its key must be
+                          defined
+                        type: boolean
+                    required:
+                    - key
+                    type: object
+                  url:
+                    description: Image registry url
+                    type: string
+                type: object
+              srcRepo:
                 description: Git repository info of a function
                 properties:
                   deleteExisting:
@@ -105,51 +142,14 @@ spec:
                 required:
                 - url
                 type: object
-              image:
-                description: Function image name
-                type: string
-              params:
-                additionalProperties:
-                  type: string
-                description: Environment variables to pass to the build process
-                type: object
-              port:
-                description: The port on which the function will be invoked
-                format: int32
-                type: integer
-              registry:
-                description: Image registry of the function image
-                properties:
-                  account:
-                    description: Image registry account including username and password
-                    properties:
-                      key:
-                        description: The key of the secret to select from.  Must be
-                          a valid secret key.
-                        type: string
-                      name:
-                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                          TODO: Add other useful fields. apiVersion, kind, uid?'
-                        type: string
-                      optional:
-                        description: Specify whether the Secret or its key must be
-                          defined
-                        type: boolean
-                    required:
-                    - key
-                    type: object
-                  url:
-                    description: Image registry url
-                    type: string
-                type: object
               version:
                 description: Function version in format like v1.0.0
                 type: string
             required:
             - builder
-            - gitRepo
             - image
             - registry
+            - srcRepo
             type: object
           status:
             description: BuilderStatus defines the observed state of Builder
@@ -208,119 +208,130 @@ spec:
           spec:
             description: FunctionSpec defines the desired state of Function
             properties:
-              builder:
-                description: Cloud Native Buildpacks builders
-                type: string
-              gitRepo:
-                description: Git repository info of a function
+              build:
+                description: Information needed to build a function
                 properties:
-                  deleteExisting:
-                    description: 'Clean out the contents of the repo''s destination
-                      directory if it already exists before cloning the repo there
-                      (default: true)'
+                  builder:
+                    description: Cloud Native Buildpacks builders
                     type: string
-                  depth:
-                    description: 'Performs a shallow clone where only the most recent
-                      commit(s) will be fetched (default: 1)'
-                    type: integer
-                  gitInitImage:
-                    description: 'The image used where the git-init binary is (default:
-                      "gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init:v0.17.3")'
-                    type: string
-                  httpProxy:
-                    description: 'Git HTTP proxy server for non-SSL requests (default:
-                      "")'
-                    type: string
-                  httpsProxy:
-                    description: 'Git HTTPS proxy server for SSL requests (default:
-                      "")'
-                    type: string
-                  noProxy:
-                    description: 'Git no proxy - opt out of proxying HTTP/HTTPS requests
-                      (default: "")'
-                    type: string
-                  refspec:
-                    description: Git refspec to fetch before checking out revision
-                      (default:"")
-                    type: string
-                  revision:
-                    description: Git revision to checkout (branch, tag, sha, ref…)
-                      (default:"")
-                    type: string
-                  sourceSubPath:
-                    description: A subpath within the `source` input where the source
-                      to build is located.
-                    type: string
-                  sslVerify:
-                    description: 'Defines if http.sslVerify should be set to true
-                      or false in the global git config (default: true)'
-                    type: boolean
-                  subDirectory:
-                    description: 'Subdirectory inside the "output" workspace to clone
-                      the git repo into (default: "")'
-                    type: string
-                  submodules:
-                    description: 'Defines if the resource should initialize and fetch
-                      the submodules (default: true)'
-                    type: boolean
-                  url:
-                    description: Git url to clone
-                    type: string
-                  verbose:
-                    description: 'Log the commands that are executed during git-clone''s
-                      operation (default: true)'
-                    type: boolean
+                  params:
+                    additionalProperties:
+                      type: string
+                    description: Environment params to pass to the builder
+                    type: object
+                  registry:
+                    description: Image registry of the function image
+                    properties:
+                      account:
+                        description: Image registry account including username and
+                          password
+                        properties:
+                          key:
+                            description: The key of the secret to select from.  Must
+                              be a valid secret key.
+                            type: string
+                          name:
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            type: string
+                          optional:
+                            description: Specify whether the Secret or its key must
+                              be defined
+                            type: boolean
+                        required:
+                        - key
+                        type: object
+                      url:
+                        description: Image registry url
+                        type: string
+                    type: object
+                  srcRepo:
+                    description: Function Source code repository
+                    properties:
+                      deleteExisting:
+                        description: 'Clean out the contents of the repo''s destination
+                          directory if it already exists before cloning the repo there
+                          (default: true)'
+                        type: string
+                      depth:
+                        description: 'Performs a shallow clone where only the most
+                          recent commit(s) will be fetched (default: 1)'
+                        type: integer
+                      gitInitImage:
+                        description: 'The image used where the git-init binary is
+                          (default: "gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init:v0.17.3")'
+                        type: string
+                      httpProxy:
+                        description: 'Git HTTP proxy server for non-SSL requests (default:
+                          "")'
+                        type: string
+                      httpsProxy:
+                        description: 'Git HTTPS proxy server for SSL requests (default:
+                          "")'
+                        type: string
+                      noProxy:
+                        description: 'Git no proxy - opt out of proxying HTTP/HTTPS
+                          requests (default: "")'
+                        type: string
+                      refspec:
+                        description: Git refspec to fetch before checking out revision
+                          (default:"")
+                        type: string
+                      revision:
+                        description: Git revision to checkout (branch, tag, sha, ref…)
+                          (default:"")
+                        type: string
+                      sourceSubPath:
+                        description: A subpath within the `source` input where the
+                          source to build is located.
+                        type: string
+                      sslVerify:
+                        description: 'Defines if http.sslVerify should be set to true
+                          or false in the global git config (default: true)'
+                        type: boolean
+                      subDirectory:
+                        description: 'Subdirectory inside the "output" workspace to
+                          clone the git repo into (default: "")'
+                        type: string
+                      submodules:
+                        description: 'Defines if the resource should initialize and
+                          fetch the submodules (default: true)'
+                        type: boolean
+                      url:
+                        description: Git url to clone
+                        type: string
+                      verbose:
+                        description: 'Log the commands that are executed during git-clone''s
+                          operation (default: true)'
+                        type: boolean
+                    required:
+                    - url
+                    type: object
                 required:
-                - url
+                - builder
+                - registry
+                - srcRepo
                 type: object
               image:
                 description: Function image name
                 type: string
-              params:
-                additionalProperties:
-                  type: string
-                description: Environment variables to pass to the builder or serving
-                type: object
               port:
                 description: The port on which the function will be invoked
                 format: int32
                 type: integer
-              registry:
-                description: Image registry of the function image
+              serving:
+                description: Information needed to run a function
                 properties:
-                  account:
-                    description: Image registry account including username and password
-                    properties:
-                      key:
-                        description: The key of the secret to select from.  Must be
-                          a valid secret key.
-                        type: string
-                      name:
-                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                          TODO: Add other useful fields. apiVersion, kind, uid?'
-                        type: string
-                      optional:
-                        description: Specify whether the Secret or its key must be
-                          defined
-                        type: boolean
-                    required:
-                    - key
-                    type: object
-                  url:
-                    description: Image registry url
+                  runtime:
+                    description: Function runtime such as Knative or KEDA
                     type: string
                 type: object
-              runtime:
-                description: Function runtime such as Knative or KEDA
-                type: string
               version:
                 description: Function version in format like v1.0.0
                 type: string
             required:
-            - builder
-            - gitRepo
+            - build
             - image
-            - registry
             type: object
           status:
             description: FunctionStatus defines the observed state of Function

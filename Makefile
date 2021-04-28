@@ -2,6 +2,7 @@
 VERSION?=$(shell cat VERSION | tr -d " \t\n\r")
 # Image URL to use all building/pushing image targets
 IMG ?= openfunction/openfunction:$(VERSION)
+IMG_DEV ?= openfunctiondev/openfunction:$(VERSION)
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
 
@@ -64,8 +65,22 @@ build: test
 push:
 	docker push ${IMG}
 
+# Build the dev docker image
+build-dev: test
+	docker build -f cmd/Dockerfile . -t ${IMG_DEV}
+
+# Push the dev docker image
+push-dev:
+	docker push ${IMG_DEV}
+
+dev:
+	kubectl kustomize config/default | sed -e '/creationTimestamp/d' | sed -e 's/openfunction-system/openfunction/g' | sed -e 's/openfunction\/openfunction/openfunctiondev\/openfunction/g' > config/bundle.yaml
+	kubectl kustomize config/samples/ | sed -e 's/openfunction\/sample-go-func/openfunctiondev\/sample-go-func/g' > config/samples/function-sample-dev.yaml
+
 clean:
-	docker rmi `docker image ls|awk '{print $2,$3}'|grep none|awk '{print $2}'|tr "\n" " "`
+	git checkout config/bundle.yaml
+	rm -rf config/samples/function-sample-dev.yaml
+	docker rmi `docker image ls | sed -e 's/[ ][ ]*/\t/g' | cut -f 2,3 | grep none | cut -f 2 | tr "\n" " "`  2>/dev/null
 
 # find or download controller-gen
 # download controller-gen if necessary

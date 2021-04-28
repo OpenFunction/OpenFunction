@@ -101,24 +101,34 @@ const (
 	KEDA         Runtime  = "KEDA"
 )
 
+type BuildImpl struct {
+	// Cloud Native Buildpacks builders
+	Builder string `json:"builder"`
+	// Environment params to pass to the builder
+	Params map[string]string `json:"params,omitempty"`
+	// Function Source code repository
+	SrcRepo *GitRepo `json:"srcRepo"`
+	// Image registry of the function image
+	Registry *Registry `json:"registry"`
+}
+
+type ServingImpl struct {
+	// Function runtime such as Knative or KEDA
+	Runtime *Runtime `json:"runtime,omitempty"`
+}
+
 // FunctionSpec defines the desired state of Function
 type FunctionSpec struct {
 	// Function version in format like v1.0.0
 	Version *string `json:"version,omitempty"`
-	// Environment variables to pass to the builder or serving
-	Params map[string]string `json:"params,omitempty"`
-	// Cloud Native Buildpacks builders
-	Builder string `json:"builder"`
-	// Git repository info of a function
-	GitRepo *GitRepo `json:"gitRepo"`
 	// Function image name
 	Image string `json:"image"`
-	// Image registry of the function image
-	Registry *Registry `json:"registry"`
-	// Function runtime such as Knative or KEDA
-	Runtime *Runtime `json:"runtime,omitempty"`
 	// The port on which the function will be invoked
 	Port *int32 `json:"port,omitempty"`
+	// Information needed to build a function
+	Build *BuildImpl `json:"build"`
+	// Information needed to run a function
+	Serving *ServingImpl `json:"serving,omitempty"`
 }
 
 // FunctionStatus defines the observed state of Function
