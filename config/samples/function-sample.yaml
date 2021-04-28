@@ -7,7 +7,7 @@ spec:
   image: "openfunction/sample-go-func:latest"
   #port: 8080 # default to 8080
   build:
-    builder: "gcr.io/buildpacks/builder:v1"
+    builder: "openfunction/gcp-builder:v1"
     params:
       GOOGLE_FUNCTION_TARGET: "HelloWorld"
       GOOGLE_FUNCTION_SIGNATURE_TYPE: "http"
