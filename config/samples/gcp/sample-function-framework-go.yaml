@@ -1,0 +1,25 @@
+apiVersion: core.openfunction.io/v1alpha1
+kind: Function
+metadata:
+  name: sample-function-framework-go
+spec:
+  version: "v1.0.0"
+  image: "openfunction/gcp-sample-go-func:latest"
+  #port: 8080 # default to 8080
+  build:
+    # same as the original gcp builder "gcr.io/buildpacks/builder:v1"
+    builder: "openfunction/gcp-builder:v1"
+    params:
+      GOOGLE_FUNCTION_TARGET: "HelloWorld"
+      GOOGLE_FUNCTION_SIGNATURE_TYPE: "http"
+      #GOOGLE_FUNCTION_SOURCE: "main.py"
+    srcRepo:
+      url: "https://github.com/GoogleCloudPlatform/buildpack-samples.git"
+      sourceSubPath: "sample-functions-framework-go"
+    registry:
+      url: "https://index.docker.io/v1/"
+      account:
+        name: "basic-user-pass"
+        key: "username"
+    #serving:
+    #runtime: "Knative" # default to Knative
