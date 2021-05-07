@@ -7,11 +7,11 @@ spec:
   image: "openfunction/sample-go-func:latest"
   #port: 8080 # default to 8080
   build:
-    builder: "openfunction/gcp-builder:v1"
+    builder: "openfunction/builder:v1"
     params:
-      GOOGLE_FUNCTION_TARGET: "HelloWorld"
-      GOOGLE_FUNCTION_SIGNATURE_TYPE: "http"
-      #GOOGLE_FUNCTION_SOURCE: "main.py"
+      FUNC_NAME: "HelloWorld"
+      FUNC_TYPE: "http"
+      #FUNC_SRC: "main.py"
     srcRepo:
       url: "https://github.com/OpenFunction/function-samples.git"
       sourceSubPath: "hello-world-go"
