@@ -81,6 +81,8 @@ webhook-75f5d4845d-lg8j5                 1/1     Running   0          11m
 
 - **Magic DNS (xip.io)**
 
+    > :grey_exclamation: Here is a known [issue](https://github.com/OpenFunction/OpenFunction/issues/33#issue-881676421) when use `xip.io` as DNS
+
     ```bash
     kubectl apply -f https://github.com/knative/serving/releases/download/v0.22.0/serving-default-domain.yaml
     ```
@@ -186,6 +188,8 @@ webhook-75f5d4845d-lg8j5                 1/1     Running   0          11m
 #### Configure DNS
 
 - **Magic DNS (xip.io)**
+
+    > :grey_exclamation: Here is a known [issue](https://github.com/OpenFunction/OpenFunction/issues/33#issue-881676421) when use `xip.io` as DNS
 
     ```bash
     kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/serving/v0.22.0/serving-default-domain.yaml
