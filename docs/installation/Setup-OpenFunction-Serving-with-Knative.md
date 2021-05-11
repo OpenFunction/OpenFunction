@@ -7,7 +7,7 @@ You can refer to the steps in [Knative docs](https://knative.dev/docs/install/an
 
 ### Install Knative CLI
 
-Choose a suitable installation of Knative CLI for your cluster by refer to thie [docs](https://knative.dev/docs/client/install-kn/).
+Choose a suitable installation of Knative CLI for your cluster by refer to this [docs](https://knative.dev/docs/client/install-kn/).
 
 ### Install Knative Serving
 
@@ -115,7 +115,7 @@ eventing-webhook-778b6b8cf4-mgjtr      1/1     Running   0          23m
 
 ### Install Knative CLI
 
-Choose a suitable installation of Knative CLI for your cluster by refer to thie [docs](https://knative.dev/docs/client/install-kn/).
+Choose a suitable installation of Knative CLI for your cluster by refer to this [docs](https://knative.dev/docs/client/install-kn/).
 
 ### Install Knative Serving
 
