@@ -20,13 +20,14 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"knative.dev/pkg/apis"
 	"os"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"knative.dev/pkg/apis"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	ttv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	tekton "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/scheme"
@@ -61,7 +62,7 @@ func init() {
 	// +kubebuilder:scaffold:scheme
 }
 
-func watchBuilderStatus() error {
+func watchBuilderStatus(mgr manager.Manager) error {
 	tektonScheme := runtime.NewScheme()
 	_ = tekton.AddToScheme(tektonScheme)
 	ctx := context.Background()
@@ -78,6 +79,8 @@ func watchBuilderStatus() error {
 	go func() {
 		_ = tektonCache.Start(ctx.Done())
 	}()
+
+	mgr.GetCache().WaitForCacheSync(ctx.Done())
 
 	// Setup informer for PipelineRun
 	plrInf, err := tektonCache.GetInformer(ctx, &ttv1beta1.PipelineRun{})
@@ -207,9 +210,11 @@ func main() {
 	// +kubebuilder:scaffold:builder
 
 	client = mgr.GetClient()
-	if err := watchBuilderStatus(); err != nil {
-		os.Exit(1)
-	}
+	go func() {
+		if err := watchBuilderStatus(mgr); err != nil {
+			os.Exit(1)
+		}
+	}()
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

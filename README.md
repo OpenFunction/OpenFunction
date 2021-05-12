@@ -24,17 +24,36 @@ In addition, you need to deploy several dependencies for the OpenFunction ```Bui
 
 You can refer to the [Installation Guide](docs/installation/README.md) to setup OpenFunction ```Builder``` and ```Serving```.
 
-#### Builder
+### Builder
 
 You need to install at least one of the following options for builders:
 
 - Currently, OpenFunction Builder uses Tekton and Cloud Native Buildpacks to build container images, you need to [install Tekton](https://tekton.dev/docs/getting-started/#installation).
     
-#### Serving
+### Serving
 
 You need to install at least one of the following options for the serving component:
 
 - Currently, OpenFunction Serving relies on Knative, so you need to [install Knative](https://knative.dev/docs/install/).
+
+### Tekton and Knative
+
+You can deploy Tekton and Knative follow this command.
+
+```bash
+sh hack/deploy-tekon-and-knative.sh
+```
+You deploy Tekton and Knative follow this command if you having poor network connectivity to GitHub/Googleapis.
+
+```bash
+sh hack/deploy-tekon-and-knative.sh --poor-network
+```
+
+If you want to use NodePort to expose the Tekton dashboard service, follow this command.
+
+```bash
+sh hack/deploy-tekon-and-knative.sh --tekton-dashboard-nodeport <port>
+```
 
 ## CustomResourceDefinitions
 
