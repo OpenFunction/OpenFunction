@@ -23,7 +23,7 @@ tekton-pipelines-webhook-5bfbbd6475-6fl2r     1/1     Running   0          20m
 
 ### Install Tekton CLI
 
-Choose a suitable installation of Tekton CLI for your cluster by refer to thie [docs](https://tekton.dev/docs/cli/).
+Choose a suitable installation of Tekton CLI for your cluster by refer to this [docs](https://tekton.dev/docs/cli/).
 
 ### Install Tekton triggers
 
@@ -70,7 +70,7 @@ If you want to use ```NodePort``` to expose the Tekton dashboard service, you ne
 ### Install Tekton pipeline
 
 ```bash
-kubectl apply --filename https://openfunction.sh1a.qingstor.com/tekton/pipeline/v0.23.0/release.yaml
+kubectl apply --filename https://openfunction.sh1a.qingstor.com/tekton/pipeline/v0.24.0/release.yaml
 ```
 
 #### Confirm that every component listed has the status Running
@@ -85,7 +85,7 @@ tekton-pipelines-webhook-5bfbbd6475-6fl2r     1/1     Running   0          20m
 
 ### Install Tekton CLI
 
-Choose a suitable installation of Tekton CLI for your cluster by refer to thie [docs](https://tekton.dev/docs/cli/).
+Choose a suitable installation of Tekton CLI for your cluster by refer to this [docs](https://tekton.dev/docs/cli/).
 
 ### Install Tekton triggers
 
