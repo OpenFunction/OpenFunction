@@ -1,4 +1,4 @@
-# OpenFunction
+# ![OpenFunction](docs/images/logo.png)
 
 ## Overview
 
