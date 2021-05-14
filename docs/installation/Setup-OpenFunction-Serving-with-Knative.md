@@ -89,12 +89,6 @@ webhook-75f5d4845d-lg8j5                 1/1     Running   0          11m
 
 ### Install Knative Eventing
 
-#### Install the required custom resource definitions (CRDs)
-
-```bash
-kubectl apply -f https://github.com/knative/eventing/releases/download/v0.22.0/eventing-crds.yaml
-```
-
 #### Install the core components of Eventing
 
 ```bash
@@ -196,12 +190,6 @@ webhook-75f5d4845d-lg8j5                 1/1     Running   0          11m
     ```
 
 ### Install Knative Eventing
-
-#### Install the required custom resource definitions (CRDs)
-
-```bash
-kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/eventing/v0.22.0/eventing-crds.yaml
-```
 
 #### Install the core components of Eventing
 
