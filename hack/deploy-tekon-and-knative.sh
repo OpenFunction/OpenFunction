@@ -54,7 +54,9 @@ if [ "$poor_network" = "false" ]; then
     --type merge \
     --patch '{"data":{"ingress.class":"kourier.ingress.networking.knative.dev"}}'
   # Configure DNS
-  kubectl apply -f https://github.com/knative/serving/releases/download/v0.22.0/serving-default-domain.yaml
+  tempfile=`mktemp tmpd.XXXXXX.yaml`
+  wget -O- https://github.com/knative/serving/releases/download/v0.22.0/serving-default-domain.yaml | sed "s/xip.io/nip.io/g" > $tempfile
+  kubectl apply -f $tempfile && rm -f $tempfile 2 > /dev/null
   # Install Knative Eventing
   # Install the required custom resource definitions (CRDs)
   #kubectl apply -f https://github.com/knative/eventing/releases/download/v0.22.0/eventing-crds.yaml
