@@ -34,7 +34,8 @@ You need to install at least one of the following options for builders:
 
 You need to install at least one of the following options for the serving component:
 
-- Currently, OpenFunction Serving relies on Knative, so you need to [install Knative](https://knative.dev/docs/install/).
+- Currently, OpenFunction Serving relies on Knative, so you need to [install Knative Serving](https://knative.dev/docs/install/).
+- Another Serving runtime Dapr + KEDA will be supported soon.
 
 ### Tekton and Knative
 
