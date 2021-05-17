@@ -4,7 +4,7 @@
 - [x] Support using existing function framework & buildpacks such as Google Cloud Function to build functions
 - [x] Support using Tekton and Cloud Native Buildpacks as Builder backend to build functions
 - [x] Support Knative as Serving backend
-- [ ] Optimize and localize existing function framework & buildpacks
+- [x] Optimize and localize existing function framework & buildpacks
 - [ ] Support Dapr + KEDA + Deployment/Job as Serving backend
 - [ ] Add Input CRD field to route events to a specific function service
 - [ ] Add Output CRD field to send function result to a specific sink
