@@ -683,7 +683,7 @@ spec:
         - --enable-leader-election
         command:
         - /openfunction
-        image: openfunction/openfunction:latest
+        image: openfunction/openfunction:v0.1.0
         name: openfunction
         resources:
           limits:
