@@ -70,8 +70,16 @@ The core function of OpenFunction is to enable users to develop, run, and manage
 
 You can install the OpenFunction platform by the following command:
 
+- Install the latest stable version
+
 ```shell
-kubectl apply -f config/bundle.yaml
+https://github.com/OpenFunction/OpenFunction/releases/download/v0.1.0/release.yaml
+```
+
+- Install the development version
+
+```shell
+kubectl apply -f https://raw.githubusercontent.com/OpenFunction/OpenFunction/main/config/bundle.yaml
 ```
 
 > Note: When using non-default namespaces, make sure that the ClusterRoleBinding in the namespace is adapted.
