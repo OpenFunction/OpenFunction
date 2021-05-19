@@ -42,26 +42,24 @@ if [ "$poor_network" = "false" ]; then
   # Install Tekton Dashboard
   kubectl apply --filename https://github.com/tektoncd/dashboard/releases/latest/download/tekton-dashboard-release.yaml
   # Install the required custom resources
-  kubectl apply -f https://github.com/knative/serving/releases/download/v0.22.0/serving-crds.yaml
+  kubectl apply -f https://github.com/knative/serving/releases/download/v0.23.0/serving-crds.yaml
   # Install the core components of Serving
-  kubectl apply -f https://github.com/knative/serving/releases/download/v0.22.0/serving-core.yaml
+  kubectl apply -f https://github.com/knative/serving/releases/download/v0.23.0/serving-core.yaml
   # Install a networking layer
   # Install the Knative Kourier controller
-  kubectl apply -f https://github.com/knative/net-kourier/releases/download/v0.22.0/kourier.yaml
+  kubectl apply -f https://github.com/knative/net-kourier/releases/download/v0.23.0/kourier.yaml
   # To configure Knative Serving to use Kourier by default
   kubectl patch configmap/config-network \
     --namespace knative-serving \
     --type merge \
     --patch '{"data":{"ingress.class":"kourier.ingress.networking.knative.dev"}}'
   # Configure DNS
-  tempfile=`mktemp tmpd.XXXXXX.yaml`
-  wget -O- https://github.com/knative/serving/releases/download/v0.22.0/serving-default-domain.yaml | sed "s/xip.io/nip.io/g" > $tempfile
-  kubectl apply -f $tempfile && rm -f $tempfile 2 > /dev/null
+  kubectl apply -f https://github.com/knative/serving/releases/download/v0.23.0/serving-default-domain.yaml
   # Install Knative Eventing
   # Install the required custom resource definitions (CRDs)
-  #kubectl apply -f https://github.com/knative/eventing/releases/download/v0.22.0/eventing-crds.yaml
+  kubectl apply -f https://github.com/knative/eventing/releases/download/v0.23.0/eventing-crds.yaml
   # Install the core components of Eventing
-  kubectl apply -f https://github.com/knative/eventing/releases/download/v0.22.0/eventing-core.yaml
+  kubectl apply -f https://github.com/knative/eventing/releases/download/v0.23.0/eventing-core.yaml
 else
   # Install Tekton pipeline
   kubectl apply --filename https://openfunction.sh1a.qingstor.com/tekton/pipeline/v0.23.0/release.yaml
@@ -70,23 +68,23 @@ else
   # Install Tekton Dashboard
   kubectl apply --filename https://openfunction.sh1a.qingstor.com/tekton/dashboard/v0.16.0/release.yaml
   # Install the required custom resources
-  kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/serving/v0.22.0/serving-crds.yaml
+  kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/serving/v0.23.0/serving-crds.yaml
   # Install the core components of Serving
-  kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/serving/v0.22.0/serving-core.yaml
+  kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/serving/v0.23.0/serving-core.yaml
   # Install a networking layer
   # Install the Knative Kourier controller
-  kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/net-kourier/v0.22.0/kourier.yaml
+  kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/net-kourier/v0.23.0/kourier.yaml
   # To configure Knative Serving to use Kourier by default
   kubectl patch configmap/config-network \
     --namespace knative-serving \
     --type merge \
     --patch '{"data":{"ingress.class":"kourier.ingress.networking.knative.dev"}}'
   # Configure DNS
-  kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/serving/v0.22.0/serving-default-domain.yaml
+  kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/serving/v0.23.0/serving-default-domain.yaml
   # Install the required custom resource definitions (CRDs)
-  #kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/eventing/v0.22.0/eventing-crds.yaml
+  #kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/eventing/v0.23.0/eventing-crds.yaml
   # Install the core components of Eventing
-  kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/eventing/v0.22.0/eventing-core.yaml
+  kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/eventing/v0.23.0/eventing-core.yaml
 fi
 
 patch=$(echo "{\"spec\":{\"ports\":[{\"name\":\"http\",\"nodePort\":$tekton_dashboard_nodeport,\"port\":9097,\"protocol\":\"TCP\",\"targetPort\":9097}],\"type\":\"NodePort\"}}")

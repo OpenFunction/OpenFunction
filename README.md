@@ -142,8 +142,8 @@ If you have already installed the OpenFunction platform, follow the steps below 
     ```shell
     kubectl get ksvc
      
-    NAME                           URL                                                                 LATESTCREATED                        LATESTREADY                          READY   REASON
-    function-sample-serving-ksvc   http://function-sample-serving-ksvc.default.<external-ip>.nip.io   function-sample-serving-ksvc-00001   function-sample-serving-ksvc-00001   True
+    NAME                           URL                                                                  LATESTCREATED                        LATESTREADY                          READY   REASON
+    function-sample-serving-ksvc   http://function-sample-serving-ksvc.default.<external-ip>.sslip.io   function-sample-serving-ksvc-00001   function-sample-serving-ksvc-00001   True
     ```
 
     Or get the service address directly with the following command:
@@ -153,13 +153,13 @@ If you have already installed the OpenFunction platform, follow the steps below 
     ```shell
     kubectl get ksvc function-sample-serving-ksvc -o jsonpath={.status.url}
      
-    http://function-sample-serving-ksvc.default.<external-ip>.nip.io
+    http://function-sample-serving-ksvc.default.<external-ip>.sslip.io
     ```
 
     Access the above service address via commands such as ``curl``:
 
     ```shell
-    curl http://function-sample-serving-ksvc.default.<external-ip>.nip.io
+    curl http://function-sample-serving-ksvc.default.<external-ip>.sslip.io
      
     Hello, World!
     ```
