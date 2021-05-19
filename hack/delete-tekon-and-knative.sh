@@ -5,23 +5,22 @@ if [ $1 ]; then
     version=$1
 fi
 
-# delete Tekton pipeline
-kubectl delete --filename https://openfunction.sh1a.qingstor.com/tekton/pipeline/${version}/release.yaml
+kubectl delete --filename https://storage.googleapis.com/tekton-releases/pipeline/latest/release.yaml
 # delete Tekton triggers
-kubectl delete --filename https://openfunction.sh1a.qingstor.com/tekton/trigger/${version}/release.yaml
+kubectl delete --filename https://storage.googleapis.com/tekton-releases/triggers/latest/release.yaml
 # delete Tekton Dashboard
-kubectl delete --filename https://openfunction.sh1a.qingstor.com/tekton/dashboard/${version}/release.yaml
+kubectl delete --filename https://github.com/tektoncd/dashboard/releases/latest/download/tekton-dashboard-release.yaml
 # delete the required custom resources
-kubectl delete -f https://openfunction.sh1a.qingstor.com/knative/serving/${version}/serving-crds.yaml
+kubectl delete -f https://github.com/knative/serving/releases/download/$version/serving-crds.yaml
 # delete the core components of Serving
-kubectl delete -f https://openfunction.sh1a.qingstor.com/knative/serving/${version}/serving-core.yaml
+kubectl delete -f https://github.com/knative/serving/releases/download/$version/serving-core.yaml
 # delete a networking layer
 # delete the Knative Kourier controller
-kubectl delete -f https://openfunction.sh1a.qingstor.com/knative/net-kourier/${version}/kourier.yaml
-# To configure Knative Serving to use Kourier by default
+kubectl delete -f https://github.com/knative/net-kourier/releases/download/$version/kourier.yaml
 # Configure DNS
-kubectl delete -f https://openfunction.sh1a.qingstor.com/knative/serving/${version}/serving-default-domain.yaml
+kubectl delete -f https://github.com/knative/serving/releases/download/$version/serving-default-domain.yaml
+# delete Knative Eventing
 # delete the required custom resource definitions (CRDs)
-#kubectl delete -f https://openfunction.sh1a.qingstor.com/knative/eventing/v0.23.0/eventing-crds.yaml
+kubectl delete -f https://github.com/knative/eventing/releases/download/$version/eventing-crds.yaml
 # delete the core components of Eventing
-kubectl delete -f https://openfunction.sh1a.qingstor.com/knative/eventing/${version}/eventing-core.yaml
+kubectl delete -f https://github.com/knative/eventing/releases/download/$version/eventing-core.yaml
