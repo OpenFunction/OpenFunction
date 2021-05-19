@@ -14,13 +14,13 @@ Choose a suitable installation of Knative CLI for your cluster by refer to this 
 #### Install the required custom resources
 
 ```bash
-kubectl apply -f https://github.com/knative/serving/releases/download/v0.22.0/serving-crds.yaml
+kubectl apply -f https://github.com/knative/serving/releases/download/v0.23.0/serving-crds.yaml
 ```
 
 #### Install the core components of Serving
 
 ```bash
-kubectl apply -f https://github.com/knative/serving/releases/download/v0.22.0/serving-core.yaml
+kubectl apply -f https://github.com/knative/serving/releases/download/v0.23.0/serving-core.yaml
 ```
 
 #### Install a networking layer
@@ -30,7 +30,7 @@ kubectl apply -f https://github.com/knative/serving/releases/download/v0.22.0/se
 1. Install the Knative Kourier controller
    
     ```bash
-    kubectl apply -f https://github.com/knative/net-kourier/releases/download/v0.22.0/kourier.yaml
+    kubectl apply -f https://github.com/knative/net-kourier/releases/download/v0.23.0/kourier.yaml
     ```
 2. To configure Knative Serving to use Kourier by default
    
@@ -79,12 +79,10 @@ webhook-75f5d4845d-lg8j5                 1/1     Running   0          11m
 
 #### Configure DNS
 
-- **Magic DNS (xip.io)**
-
-    > :grey_exclamation: Here is a known [issue](https://github.com/OpenFunction/OpenFunction/issues/33#issue-881676421) when use `xip.io` as DNS
+- **Magic DNS (sslip.io)**
 
     ```bash
-    kubectl apply -f https://github.com/knative/serving/releases/download/v0.22.0/serving-default-domain.yaml
+    kubectl apply -f https://github.com/knative/serving/releases/download/v0.23.0/serving-default-domain.yaml
     ```
 
 ### Install Knative Eventing
@@ -92,7 +90,7 @@ webhook-75f5d4845d-lg8j5                 1/1     Running   0          11m
 #### Install the core components of Eventing
 
 ```bash
-kubectl apply -f https://github.com/knative/eventing/releases/download/v0.22.0/eventing-core.yaml
+kubectl apply -f https://github.com/knative/eventing/releases/download/v0.23.0/eventing-core.yaml
 ```
 
 #### Verify the installation
@@ -116,13 +114,13 @@ Choose a suitable installation of Knative CLI for your cluster by refer to this 
 #### Install the required custom resources
 
 ```bash
-kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/serving/v0.22.0/serving-crds.yaml
+kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/serving/v0.23.0/serving-crds.yaml
 ```
 
 #### Install the core components of Serving
 
 ```bash
-kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/serving/v0.22.0/serving-core.yaml
+kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/serving/v0.23.0/serving-core.yaml
 ```
 
 #### Install a networking layer
@@ -132,7 +130,7 @@ kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/serving/v0.22.0/
 1. Install the Knative Kourier controller
 
     ```bash
-    kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/net-kourier/v0.22.0/kourier.yaml
+    kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/net-kourier/v0.23.0/kourier.yaml
     ```
 2. To configure Knative Serving to use Kourier by default
 
@@ -181,12 +179,10 @@ webhook-75f5d4845d-lg8j5                 1/1     Running   0          11m
 
 #### Configure DNS
 
-- **Magic DNS (xip.io)**
-
-    > :grey_exclamation: Here is a known [issue](https://github.com/OpenFunction/OpenFunction/issues/33#issue-881676421) when use `xip.io` as DNS
+- **Magic DNS (sslip.io)**
 
     ```bash
-    kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/serving/v0.22.0/serving-default-domain.yaml
+    kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/serving/v0.23.0/serving-default-domain.yaml
     ```
 
 ### Install Knative Eventing
@@ -194,7 +190,7 @@ webhook-75f5d4845d-lg8j5                 1/1     Running   0          11m
 #### Install the core components of Eventing
 
 ```bash
-kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/eventing/v0.22.0/eventing-core.yaml
+kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/eventing/v0.23.0/eventing-core.yaml
 ```
 
 #### Verify the installation
