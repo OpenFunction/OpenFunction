@@ -148,7 +148,17 @@ If you have already installed the OpenFunction platform, follow the steps below 
 
     Or get the service address directly with the following command:
 
-    where``` <external-ip> ```indicates the external address of your gateway service
+    > where` <external-ip> `indicates the external address of your gateway service. 
+    >
+    > You can do a simple configuration to use the node ip as the `<external-ip>` as follows  (Assuming you are using Kourier as network layer of Knative). Where `1.2.3.4` can be replaced by your node ip.
+    >
+    > ```shell
+    > kubectl patch svc -n kourier-system kourier \
+    >   -p '{"spec": {"type": "LoadBalancer", "externalIPs": ["1.2.3.4"]}}'
+    > 
+    > kubectl patch configmap/config-domain -n knative-serving \
+    >   --type merge --patch '{"data":{"1.2.3.4.sslip.io":""}}'
+    > ```
 
     ```shell
     kubectl get ksvc function-sample-serving-ksvc -o jsonpath={.status.url}
