@@ -3,10 +3,13 @@ package controllers
 import (
 	goerrors "errors"
 	"fmt"
+	"github.com/openfunction/pkg/util"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/ghodss/yaml"
 	openfunction "github.com/openfunction/pkg/apis/v1alpha1"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -53,7 +56,7 @@ func (r *BuilderReconciler) mutateTask(task *pipeline.Task, builder *openfunctio
 		tmpl := ""
 		ok := false
 		if tmpl, ok = taskTmplDict[name]; !ok {
-			err := goerrors.New("Doesn't exist")
+			err := goerrors.New("doesn't exist")
 			return err
 		}
 
@@ -62,7 +65,7 @@ func (r *BuilderReconciler) mutateTask(task *pipeline.Task, builder *openfunctio
 			return err
 		}
 
-		for i, _ := range expected.Spec.Steps {
+		for i := range expected.Spec.Steps {
 			expected.Spec.Steps[i].ImagePullPolicy = v1.PullIfNotPresent
 		}
 
@@ -78,6 +81,12 @@ func (r *BuilderReconciler) CreateOrUpdateTask(builder *openfunction.Builder, na
 	task := pipeline.Task{}
 	task.Name = fmt.Sprintf("%s-%s", builder.Name, name)
 	task.Namespace = builder.Namespace
+
+	if err := r.Delete(r.ctx, &task); util.IgnoreNotFound(client.IgnoreNotFound(err)) != nil {
+		log.Error(err, "Failed to delete builder Task", "name", task.Name, "namespace", task.Namespace)
+		return err
+	}
+
 	if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &task, r.mutateTask(&task, builder, name)); err != nil {
 		log.Error(err, "Failed to CreateOrUpdate Task", "result", result)
 		return err
@@ -160,7 +169,7 @@ func (r *BuilderReconciler) mutateRegistryAuth(sa *v1.ServiceAccount, builder *o
 				Namespace: builder.Namespace,
 			},
 			Secrets: []v1.ObjectReference{
-				v1.ObjectReference{
+				{
 					APIVersion: "v1",
 					Kind:       "Secret",
 					Name:       s.Name,
@@ -192,10 +201,10 @@ func (r *BuilderReconciler) mutatePipeline(p *pipeline.Pipeline, builder *openfu
 		expected := pipeline.Pipeline{
 			Spec: pipeline.PipelineSpec{
 				Workspaces: []pipeline.PipelineWorkspaceDeclaration{
-					pipeline.PipelineWorkspaceDeclaration{
+					{
 						Name: sourceWorkspace,
 					},
-					pipeline.PipelineWorkspaceDeclaration{
+					{
 						Name: cacheWorkspace,
 					},
 				},
@@ -207,13 +216,13 @@ func (r *BuilderReconciler) mutatePipeline(p *pipeline.Pipeline, builder *openfu
 			Name:    taskFetchSrcName,
 			TaskRef: &pipeline.TaskRef{Name: taskFetchSrcName},
 			Workspaces: []pipeline.WorkspacePipelineTaskBinding{
-				pipeline.WorkspacePipelineTaskBinding{
+				{
 					Name:      output,
 					Workspace: sourceWorkspace,
 				},
 			},
 			Params: []pipeline.Param{
-				pipeline.Param{
+				{
 					Name: url,
 					Value: pipeline.ArrayOrString{
 						Type:      pipeline.ParamTypeString,
@@ -233,7 +242,7 @@ func (r *BuilderReconciler) mutatePipeline(p *pipeline.Pipeline, builder *openfu
 			taskFetchSrc.Params = append(taskFetchSrc.Params, param)
 		}
 
-		funcEnv := []string{}
+		var funcEnv []string
 		for k, v := range builder.Spec.Params {
 			funcEnv = append(funcEnv, fmt.Sprintf("%s=%s", k, v))
 		}
@@ -250,31 +259,31 @@ func (r *BuilderReconciler) mutatePipeline(p *pipeline.Pipeline, builder *openfu
 				taskFetchSrcName,
 			},
 			Workspaces: []pipeline.WorkspacePipelineTaskBinding{
-				pipeline.WorkspacePipelineTaskBinding{
+				{
 					Name:      source,
 					Workspace: sourceWorkspace,
 				},
-				pipeline.WorkspacePipelineTaskBinding{
+				{
 					Name:      cache,
 					Workspace: cacheWorkspace,
 				},
 			},
 			Params: []pipeline.Param{
-				pipeline.Param{
+				{
 					Name: appImage,
 					Value: pipeline.ArrayOrString{
 						Type:      pipeline.ParamTypeString,
 						StringVal: builder.Spec.Image,
 					},
 				},
-				pipeline.Param{
+				{
 					Name: builderImage,
 					Value: pipeline.ArrayOrString{
 						Type:      pipeline.ParamTypeString,
 						StringVal: builder.Spec.Builder,
 					},
 				},
-				pipeline.Param{
+				{
 					Name: envVars,
 					Value: pipeline.ArrayOrString{
 						Type:     pipeline.ParamTypeArray,
@@ -322,14 +331,14 @@ func (r *BuilderReconciler) mutatePipelineRun(pr *pipeline.PipelineRun, builder 
 				ServiceAccountName: fmt.Sprintf("%s-%s", builder.Name, buildSa),
 				PipelineRef:        &pipeline.PipelineRef{Name: fmt.Sprintf("%s-%s", builder.Name, buildPipeline)},
 				Workspaces: []pipeline.WorkspaceBinding{
-					pipeline.WorkspaceBinding{
+					{
 						Name:    sourceWorkspace,
 						SubPath: source,
 						PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
 							ClaimName: fmt.Sprintf("%s-%s", builder.Name, buildpackPVC),
 						},
 					},
-					pipeline.WorkspaceBinding{
+					{
 						Name:    cacheWorkspace,
 						SubPath: cache,
 						PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{

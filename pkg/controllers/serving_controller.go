@@ -19,6 +19,9 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/openfunction/pkg/util"
+	"strings"
+
 	"github.com/go-logr/logr"
 	openfunction "github.com/openfunction/pkg/apis/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -28,7 +31,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"strings"
 )
 
 // ServingReconciler reconciles a Serving object
@@ -113,20 +115,25 @@ func (r *ServingReconciler) mutateKsvc(ksvc *kservingv1.Service, s *openfunction
 }
 
 func (r *ServingReconciler) createOrUpdateServing(s *openfunction.Serving) (ctrl.Result, error) {
-	if s.Status.Phase != "" && s.Status.State != "" {
+	if s.Status.Phase == openfunction.ServingPhase && s.Status.State == openfunction.Launched {
 		return ctrl.Result{}, nil
 	}
 
 	log := r.Log.WithName("createOrUpdateServing")
-
-	status := openfunction.ServingStatus{Phase: openfunction.ServingPhase, State: openfunction.Launching}
-	if err := r.updateStatus(s, &status); err != nil {
-		return ctrl.Result{}, err
-	}
-
 	ksvc := kservingv1.Service{}
 	ksvc.Name = fmt.Sprintf("%s-%s", s.Name, "ksvc")
 	ksvc.Namespace = s.Namespace
+
+	if err := r.Delete(r.ctx, &ksvc); util.IgnoreNotFound(client.IgnoreNotFound(err)) != nil {
+		log.Error(err, "Failed to delete old knative service", "name", ksvc.Name, "namespace", ksvc.Namespace)
+		return ctrl.Result{}, err
+	}
+
+	status := openfunction.ServingStatus{Phase: openfunction.ServingPhase, State: openfunction.Launching}
+	if err := r.updateStatus(s, &status); err != nil {
+		log.Error(err, "Failed to update serving status", "name", s.Name, "namespace", s.Namespace)
+		return ctrl.Result{}, err
+	}
 
 	if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &ksvc, r.mutateKsvc(&ksvc, s)); err != nil {
 		log.Error(err, "Failed to CreateOrUpdate knative service", "result", result)
@@ -135,6 +142,7 @@ func (r *ServingReconciler) createOrUpdateServing(s *openfunction.Serving) (ctrl
 
 	status = openfunction.ServingStatus{Phase: openfunction.ServingPhase, State: openfunction.Launched}
 	if err := r.updateStatus(s, &status); err != nil {
+		log.Error(err, "Failed to update serving status", "name", s.Name, "namespace", s.Namespace)
 		return ctrl.Result{}, err
 	}
 
@@ -142,8 +150,13 @@ func (r *ServingReconciler) createOrUpdateServing(s *openfunction.Serving) (ctrl
 }
 
 func (r *ServingReconciler) updateStatus(s *openfunction.Serving, status *openfunction.ServingStatus) error {
-	status.DeepCopyInto(&s.Status)
-	if err := r.Status().Update(r.ctx, s); err != nil {
+	serving := openfunction.Serving{}
+	if err := r.Get(r.ctx, client.ObjectKey{Namespace: s.Namespace, Name: s.Name}, &serving); err != nil {
+		return err
+	}
+
+	status.DeepCopyInto(&serving.Status)
+	if err := r.Status().Update(r.ctx, &serving); err != nil {
 		return err
 	}
 	return nil

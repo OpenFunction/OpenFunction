@@ -18,14 +18,13 @@ package controllers
 
 import (
 	"context"
-	"github.com/openfunction/pkg/util"
 
 	"github.com/go-logr/logr"
+	openfunction "github.com/openfunction/pkg/apis/v1alpha1"
+	"github.com/openfunction/pkg/util"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	openfunction "github.com/openfunction/pkg/apis/v1alpha1"
 )
 
 // BuilderReconciler reconciles a Builder object
@@ -64,12 +63,13 @@ func (r *BuilderReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 func (r *BuilderReconciler) createOrUpdateBuild(builder *openfunction.Builder) (ctrl.Result, error) {
 	log := r.Log.WithName("createOrUpdate")
 
-	if builder.Status.Phase != "" && builder.Status.State != "" {
+	if builder.Status.Phase == openfunction.BuildPhase && builder.Status.State == openfunction.Launched {
 		return ctrl.Result{}, nil
 	}
 
 	status := openfunction.BuilderStatus{Phase: openfunction.BuildPhase, State: openfunction.Launching}
 	if err := r.updateStatus(builder, &status); err != nil {
+		log.Error(err, "Failed to update builder status", "name", builder.Name, "namespace", builder.Namespace)
 		return ctrl.Result{}, err
 	}
 
@@ -105,6 +105,7 @@ func (r *BuilderReconciler) createOrUpdateBuild(builder *openfunction.Builder) (
 
 	status = openfunction.BuilderStatus{Phase: openfunction.BuildPhase, State: openfunction.Launched}
 	if err := r.updateStatus(builder, &status); err != nil {
+		log.Error(err, "Failed to update builder status", "name", builder.Name, "namespace", builder.Namespace)
 		return ctrl.Result{}, err
 	}
 
@@ -112,8 +113,14 @@ func (r *BuilderReconciler) createOrUpdateBuild(builder *openfunction.Builder) (
 }
 
 func (r *BuilderReconciler) updateStatus(builder *openfunction.Builder, status *openfunction.BuilderStatus) error {
-	status.DeepCopyInto(&builder.Status)
-	if err := r.Status().Update(r.ctx, builder); err != nil {
+
+	b := openfunction.Builder{}
+	if err := r.Get(r.ctx, client.ObjectKey{Namespace: builder.Namespace, Name: builder.Name}, &b); err != nil {
+		return err
+	}
+
+	status.DeepCopyInto(&b.Status)
+	if err := r.Status().Update(r.ctx, &b); err != nil {
 		return err
 	}
 	return nil
