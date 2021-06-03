@@ -20,6 +20,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"go.uber.org/zap/zapcore"
 	"os"
 	"strings"
 
@@ -160,15 +161,33 @@ func UpdateFuncStatus(ns string, name string, phase string, state string) error 
 }
 
 func main() {
+	var logLevel string
 	var metricsAddr string
 	var enableLeaderElection bool
+
+	flag.StringVar(&logLevel, "log-level", "info", "The log level, known values are, debug, info, warn, error")
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	var level zapcore.LevelEnabler
+	switch logLevel {
+	case "debug":
+		level = zapcore.DebugLevel
+	case "info":
+		level = zapcore.InfoLevel
+	case "warn":
+		level = zapcore.WarnLevel
+	case "error":
+		level = zapcore.ErrorLevel
+	default:
+		fmt.Printf("unkonw log level %s", logLevel)
+		os.Exit(1)
+	}
+
+	ctrl.SetLogger(zap.New(zap.UseDevMode(true), zap.Level(level)))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
