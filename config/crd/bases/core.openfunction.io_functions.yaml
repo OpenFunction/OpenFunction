@@ -152,6 +152,13 @@ spec:
               serving:
                 description: Information needed to run a function
                 properties:
+                  params:
+                    additionalProperties:
+                      type: string
+                    description: Parameters to pass to the serving. All parameters
+                      will be injected into the pod as environment variables. Function
+                      code can use these parameters by getting environment variables
+                    type: object
                   runtime:
                     description: Function runtime such as Knative or KEDA
                     type: string

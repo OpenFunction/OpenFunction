@@ -41,6 +41,13 @@ spec:
               image:
                 description: Function image name
                 type: string
+              params:
+                additionalProperties:
+                  type: string
+                description: Parameters to pass to the serving. All parameters will
+                  be injected into the pod as environment variables. Function code
+                  can use these parameters by getting environment variables
+                type: object
               port:
                 description: The port on which the function will be invoked
                 format: int32

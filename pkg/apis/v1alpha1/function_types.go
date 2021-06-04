@@ -115,6 +115,10 @@ type BuildImpl struct {
 type ServingImpl struct {
 	// Function runtime such as Knative or KEDA
 	Runtime *Runtime `json:"runtime,omitempty"`
+	// Parameters to pass to the serving.
+	// All parameters will be injected into the pod as environment variables.
+	// Function code can use these parameters by getting environment variables
+	Params map[string]string `json:"params,omitempty"`
 }
 
 // FunctionSpec defines the desired state of Function
@@ -140,6 +144,7 @@ type FunctionStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:shortName=fn
 // +kubebuilder:subresource:status
+
 // Function is the Schema for the functions API
 type Function struct {
 	metav1.TypeMeta   `json:",inline"`

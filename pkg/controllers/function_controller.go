@@ -212,6 +212,10 @@ func (r *FunctionReconciler) createServingSpec(fn *openfunction.Function) openfu
 		spec.Port = &port
 	}
 
+	if fn.Spec.Serving != nil {
+		spec.Params = fn.Spec.Serving.Params
+	}
+
 	if fn.Spec.Serving != nil && fn.Spec.Serving.Runtime != nil {
 		spec.Runtime = fn.Spec.Serving.Runtime
 	} else {
