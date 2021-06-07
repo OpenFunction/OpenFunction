@@ -76,6 +76,18 @@ func (r *ServingReconciler) mutateKsvc(ksvc *kservingv1.Service, s *openfunction
 			container.Ports = append(container.Ports, port)
 		}
 
+		if s.Spec.Params != nil {
+			var env []corev1.EnvVar
+			for k, v := range s.Spec.Params {
+				env = append(env, corev1.EnvVar{
+					Name:  k,
+					Value: v,
+				})
+			}
+
+			container.Env = env
+		}
+
 		objectMeta := metav1.ObjectMeta{
 			Namespace: s.Namespace,
 		}

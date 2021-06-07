@@ -30,6 +30,10 @@ type ServingSpec struct {
 	Port *int32 `json:"port,omitempty"`
 	// The backend runtime to run a function, for example Knative
 	Runtime *Runtime `json:"runtime,omitempty"`
+	// Parameters to pass to the serving.
+	// All parameters will be injected into the pod as environment variables.
+	// Function code can use these parameters by getting environment variables
+	Params map[string]string `json:"params,omitempty"`
 }
 
 // ServingStatus defines the observed state of Serving
