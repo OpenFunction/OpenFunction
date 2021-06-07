@@ -53,7 +53,7 @@ func (r *ServingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	var s openfunction.Serving
 
 	if err := r.Get(ctx, req.NamespacedName, &s); err != nil {
-		log.V(10).Info("Serving deleted", "error", err)
+		log.V(1).Info("Serving deleted", "error", err)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -162,13 +162,9 @@ func (r *ServingReconciler) createOrUpdateServing(s *openfunction.Serving) (ctrl
 }
 
 func (r *ServingReconciler) updateStatus(s *openfunction.Serving, status *openfunction.ServingStatus) error {
-	serving := openfunction.Serving{}
-	if err := r.Get(r.ctx, client.ObjectKey{Namespace: s.Namespace, Name: s.Name}, &serving); err != nil {
-		return err
-	}
 
-	status.DeepCopyInto(&serving.Status)
-	if err := r.Status().Update(r.ctx, &serving); err != nil {
+	status.DeepCopyInto(&s.Status)
+	if err := r.Status().Update(r.ctx, s); err != nil {
 		return err
 	}
 	return nil

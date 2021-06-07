@@ -48,7 +48,7 @@ func (r *BuilderReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	var builder openfunction.Builder
 
 	if err := r.Get(ctx, req.NamespacedName, &builder); err != nil {
-		log.V(10).Info("Builder deleted", "error", err)
+		log.V(1).Info("Builder deleted", "error", err)
 		return ctrl.Result{}, util.IgnoreNotFound(client.IgnoreNotFound(err))
 	}
 
@@ -84,22 +84,22 @@ func (r *BuilderReconciler) createOrUpdateBuild(builder *openfunction.Builder) (
 	}
 
 	if err := r.CreateOrUpdateBuildpackPVCs(builder); err != nil {
-		log.Error(err, "Failed to create buildpack pvcs", "namaspace", builder.Namespace)
+		log.Error(err, "Failed to create buildpack pvcs", "namespace", builder.Namespace)
 		return ctrl.Result{}, err
 	}
 
 	if err := r.CreateOrUpdateRegistryAuth(builder); err != nil {
-		log.Error(err, "Failed to create registry auth", "namaspace", builder.Namespace)
+		log.Error(err, "Failed to create registry auth", "namespace", builder.Namespace)
 		return ctrl.Result{}, err
 	}
 
 	if err := r.CreateOrUpdatePipeline(builder); err != nil {
-		log.Error(err, "Failed to create Pipeline", "namaspace", builder.Namespace)
+		log.Error(err, "Failed to create Pipeline", "namespace", builder.Namespace)
 		return ctrl.Result{}, err
 	}
 
 	if err := r.CreateOrUpdatePipelineRun(builder); err != nil {
-		log.Error(err, "Failed to create PipelineRun", "namaspace", builder.Namespace)
+		log.Error(err, "Failed to create PipelineRun", "namespace", builder.Namespace)
 		return ctrl.Result{}, err
 	}
 
@@ -114,13 +114,8 @@ func (r *BuilderReconciler) createOrUpdateBuild(builder *openfunction.Builder) (
 
 func (r *BuilderReconciler) updateStatus(builder *openfunction.Builder, status *openfunction.BuilderStatus) error {
 
-	b := openfunction.Builder{}
-	if err := r.Get(r.ctx, client.ObjectKey{Namespace: builder.Namespace, Name: builder.Name}, &b); err != nil {
-		return err
-	}
-
-	status.DeepCopyInto(&b.Status)
-	if err := r.Status().Update(r.ctx, &b); err != nil {
+	status.DeepCopyInto(&builder.Status)
+	if err := r.Status().Update(r.ctx, builder); err != nil {
 		return err
 	}
 	return nil

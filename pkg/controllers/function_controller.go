@@ -39,8 +39,7 @@ type FunctionReconciler struct {
 	ctx         context.Context
 	tektonCache kcache.Cache
 
-	builders map[string]*openfunction.Builder
-	servings map[string]*openfunction.Serving
+	functions map[string]*openfunction.Function
 }
 
 // +kubebuilder:rbac:groups=core.openfunction.io,resources=functions,verbs=get;list;watch;create;update;patch;delete
@@ -56,7 +55,16 @@ func (r *FunctionReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	var fn openfunction.Function
 
 	if err := r.Get(ctx, req.NamespacedName, &fn); err != nil {
-		log.V(10).Info("Function deleted", "error", err)
+
+		if errors.IsNotFound(err) {
+			log.V(1).Info("Function deleted", "name", req.Name, "namespace", req.Namespace)
+
+			if r.functions != nil {
+				r.deleteFunctionCache(req.Name, req.Namespace)
+				log.V(1).Info("Function deleted, delete cache", "name", req.Name, "namespace", req.Namespace)
+			}
+		}
+
 		return ctrl.Result{}, util.IgnoreNotFound(client.IgnoreNotFound(err))
 	}
 
@@ -85,6 +93,8 @@ func (r *FunctionReconciler) createOrUpdateFunc(fn *openfunction.Function) (ctrl
 		}
 	}
 
+	r.updateFunctionCache(fn)
+
 	return ctrl.Result{}, nil
 }
 
@@ -105,6 +115,12 @@ func (r *FunctionReconciler) createOrUpdateBuilder(fn *openfunction.Function) (c
 		return ctrl.Result{}, err
 	}
 
+	status := openfunction.FunctionStatus{Phase: "", State: ""}
+	if err := r.updateStatus(fn, &status); err != nil {
+		log.Error(err, "Failed to update function build status", "namespace", fn.Namespace, "name", fn.Name)
+		return ctrl.Result{}, err
+	}
+
 	builder.Spec = r.createBuilderSpec(fn)
 
 	builder.SetOwnerReferences(nil)
@@ -118,16 +134,12 @@ func (r *FunctionReconciler) createOrUpdateBuilder(fn *openfunction.Function) (c
 		return ctrl.Result{}, err
 	}
 
-	status := openfunction.FunctionStatus{Phase: openfunction.BuildPhase, State: openfunction.Created}
+	status = openfunction.FunctionStatus{Phase: openfunction.BuildPhase, State: openfunction.Created}
 	if err := r.updateStatus(fn, &status); err != nil {
 		log.Error(err, "Failed to update function build status", "namespace", fn.Namespace, "name", fn.Name)
 		return ctrl.Result{}, err
 	}
 
-	if r.builders == nil {
-		r.builders = make(map[string]*openfunction.Builder)
-	}
-	r.builders[fmt.Sprintf("%s/%s", builder.Name, builder.Namespace)] = builder.DeepCopy()
 	log.V(1).Info("Builder created", "namespace", builder.Namespace, "name", builder.Name)
 	return ctrl.Result{}, nil
 }
@@ -192,10 +204,6 @@ func (r *FunctionReconciler) createOrUpdateServing(fn *openfunction.Function) (c
 		return ctrl.Result{}, err
 	}
 
-	if r.servings == nil {
-		r.servings = make(map[string]*openfunction.Serving)
-	}
-	r.servings[fmt.Sprintf("%s/%s", serving.Name, serving.Namespace)] = serving.DeepCopy()
 	log.V(1).Info("Function serving created", "namespace", serving.Namespace, "name", serving.Name)
 	return ctrl.Result{}, nil
 }
@@ -232,9 +240,8 @@ func (r *FunctionReconciler) cleanupBuilder(fn *openfunction.Function) (ctrl.Res
 	builder.Name = fmt.Sprintf("%s-%s", fn.Name, "builder")
 	builder.Namespace = fn.Namespace
 
-	if err := r.Delete(r.ctx, &builder); err != nil {
-		log.V(1).Info("Failed to delete builder", "namespace", builder.Namespace, "name", builder.Name, "error", err)
-		return ctrl.Result{}, util.IgnoreNotFound(client.IgnoreNotFound(err))
+	if err := r.Delete(r.ctx, &builder); util.IgnoreNotFound(client.IgnoreNotFound(err)) != nil {
+		return ctrl.Result{}, err
 	}
 
 	log.V(1).Info("Function builder deleted", "namespace", builder.Namespace, "name", builder.Name)
@@ -242,44 +249,61 @@ func (r *FunctionReconciler) cleanupBuilder(fn *openfunction.Function) (ctrl.Res
 }
 
 func (r *FunctionReconciler) updateStatus(fn *openfunction.Function, status *openfunction.FunctionStatus) error {
-	f := openfunction.Function{}
 
-	if err := r.Get(r.ctx, client.ObjectKey{Name: fn.Name, Namespace: fn.Namespace}, &f); err != nil {
-		return err
-	}
-
-	status.DeepCopyInto(&f.Status)
-	if err := r.Status().Update(r.ctx, &f); err != nil {
+	status.DeepCopyInto(&fn.Status)
+	if err := r.Status().Update(r.ctx, fn); err != nil {
 		return err
 	}
 	return nil
 }
 
+func (r *FunctionReconciler) updateFunctionCache(fn *openfunction.Function) {
+
+	if r.functions == nil {
+		r.functions = make(map[string]*openfunction.Function)
+	}
+
+	r.functions[fmt.Sprintf("%s/%s", fn.Name, fn.Namespace)] = fn
+}
+
+func (r *FunctionReconciler) getFunctionCache(name, namespace string) *openfunction.Function {
+
+	if r.functions == nil {
+		r.functions = make(map[string]*openfunction.Function)
+	}
+
+	return r.functions[fmt.Sprintf("%s/%s", name, namespace)]
+}
+
+func (r *FunctionReconciler) deleteFunctionCache(name, namespace string) {
+
+	if r.functions == nil {
+		r.functions = make(map[string]*openfunction.Function)
+	}
+
+	delete(r.functions, fmt.Sprintf("%s/%s", name, namespace))
+}
+
 func (r *FunctionReconciler) needToCreateOrUpdateBuilder(fn *openfunction.Function) bool {
 
-	var old *openfunction.Builder
-	if r.builders == nil {
-		r.builders = make(map[string]*openfunction.Builder)
-	}
-	old = r.builders[fmt.Sprintf("%s-builder/%s", fn.Name, fn.Namespace)]
-
-	// Builder had not created, or the operator just startd.
+	old := r.getFunctionCache(fn.Name, fn.Namespace)
+	// There are two cases where the cache will be nil, one is that the function has just added,
+	// the other is that the operator just started.
 	if old == nil {
-		var builder openfunction.Builder
-		key := client.ObjectKey{Namespace: fn.Namespace, Name: fmt.Sprintf("%s-%s", fn.Name, "builder")}
-		if err := r.Get(context.Background(), key, &builder); err == nil {
-			// Get the exsit  builder as old builder.
-			old = builder.DeepCopy()
-			r.builders[fmt.Sprintf("%s/%s", builder.Name, builder.Namespace)] = old
-		} else {
-			return fn.Status.Phase != openfunction.ServingPhase
+		// The function has just added, need to create builder.
+		if fn.Status.Phase == "" && fn.Status.State == "" {
+			return true
 		}
+
+		// The operator just started, use the current function as cache.
+		old = fn
 	}
 
 	needToCreateOrUpdate := false
 
-	newSpec := r.createBuilderSpec(fn)
-	if !equality.Semantic.DeepEqual(old.Spec, newSpec) {
+	newBuilderSpec := r.createBuilderSpec(fn)
+	oldBuilderSpec := r.createBuilderSpec(old)
+	if !equality.Semantic.DeepEqual(newBuilderSpec, oldBuilderSpec) {
 		needToCreateOrUpdate = true
 	}
 
@@ -304,25 +328,10 @@ func (r *FunctionReconciler) needToCreateOrUpdateServing(fn *openfunction.Functi
 		return false
 	}
 
-	var old *openfunction.Serving
-	if r.servings == nil {
-		r.servings = make(map[string]*openfunction.Serving)
-	}
-	old = r.servings[fmt.Sprintf("%s-serving/%s", fn.Name, fn.Namespace)]
-
-	// Serving had not created, or the operator just startd.
+	old := r.getFunctionCache(fn.Name, fn.Namespace)
+	// Cache is nil meaning the operator just started, use the current function as cache.
 	if old == nil {
-
-		var serving openfunction.Serving
-		key := client.ObjectKey{Namespace: fn.Namespace, Name: fmt.Sprintf("%s-%s", fn.Name, "serving")}
-		// Get the exsit serving as old serving.
-		if err := r.Get(context.Background(), key, &serving); err == nil {
-			old = serving.DeepCopy()
-			r.servings[fmt.Sprintf("%s/%s", serving.Name, serving.Namespace)] = old
-		} else {
-			// Serving dose not exist, need to create.
-			return true
-		}
+		old = fn
 	}
 
 	// Build had completed, need to create serving.
@@ -332,6 +341,13 @@ func (r *FunctionReconciler) needToCreateOrUpdateServing(fn *openfunction.Functi
 
 	needToCreateOrUpdate := false
 
+	// Serving changed, need to update.
+	oldServingSpec := r.createServingSpec(old)
+	newServingSpec := r.createServingSpec(fn)
+	if !equality.Semantic.DeepEqual(oldServingSpec, newServingSpec) {
+		needToCreateOrUpdate = true
+	}
+
 	var serving openfunction.Serving
 	key := client.ObjectKey{Namespace: fn.Namespace, Name: fmt.Sprintf("%s-%s", fn.Name, "serving")}
 	if err := r.Get(context.Background(), key, &serving); err != nil {
@@ -339,12 +355,6 @@ func (r *FunctionReconciler) needToCreateOrUpdateServing(fn *openfunction.Functi
 			// If the serving is deleted, need to be recreated.
 			needToCreateOrUpdate = true
 		}
-	}
-
-	// Serving changed, need to update.
-	newSpec := r.createServingSpec(fn)
-	if !equality.Semantic.DeepEqual(old.Spec, newSpec) {
-		needToCreateOrUpdate = true
 	}
 
 	return needToCreateOrUpdate
