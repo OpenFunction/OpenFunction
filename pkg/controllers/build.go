@@ -3,11 +3,10 @@ package controllers
 import (
 	goerrors "errors"
 	"fmt"
-	"github.com/openfunction/pkg/util"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/ghodss/yaml"
 	openfunction "github.com/openfunction/pkg/apis/v1alpha1"
+	"github.com/openfunction/pkg/util"
 	pipeline "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -82,15 +81,22 @@ func (r *BuilderReconciler) CreateOrUpdateTask(builder *openfunction.Builder, na
 	task.Name = fmt.Sprintf("%s-%s", builder.Name, name)
 	task.Namespace = builder.Namespace
 
-	if err := r.Delete(r.ctx, &task); util.IgnoreNotFound(client.IgnoreNotFound(err)) != nil {
+	if err := r.Delete(r.ctx, &task); util.IgnoreNotFound(err) != nil {
 		log.Error(err, "Failed to delete builder Task", "name", task.Name, "namespace", task.Namespace)
 		return err
 	}
 
-	if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &task, r.mutateTask(&task, builder, name)); err != nil {
-		log.Error(err, "Failed to CreateOrUpdate Task", "result", result)
+	if err := r.mutateTask(&task, builder, name)(); err != nil {
+		log.Error(err, "Failed to mutate builder Task", "name", task.Name, "namespace", task.Namespace)
 		return err
 	}
+
+	if err := r.Create(r.ctx, &task); err != nil {
+		log.Error(err, "Failed to create builder Task", "name", task.Name, "namespace", task.Namespace)
+		return err
+	}
+
+	log.V(1).Info("Create Task", "name", task.Name, "namespace", task.Namespace)
 	return nil
 }
 
@@ -132,10 +138,23 @@ func (r *BuilderReconciler) CreateOrUpdateBuildpackPVCs(builder *openfunction.Bu
 		pvc := v1.PersistentVolumeClaim{}
 		pvc.Name = v
 		pvc.Namespace = builder.Namespace
-		if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &pvc, r.mutatePVC(&pvc, builder)); err != nil {
-			log.Error(err, "Failed to CreateOrUpdate PersistentVolumeClaim", "result", result)
+
+		if err := r.Delete(r.ctx, &pvc); util.IgnoreNotFound(err) != nil {
+			log.Error(err, "Failed to delete PersistentVolumeClaim", "name", pvc.Name, "namespace", pvc.Namespace)
 			return err
 		}
+
+		if err := r.mutatePVC(&pvc, builder)(); err != nil {
+			log.Error(err, "Failed to mutate PersistentVolumeClaim", "name", pvc.Name, "namespace", pvc.Namespace)
+			return err
+		}
+
+		if err := r.Create(r.ctx, &pvc); err != nil {
+			log.Error(err, "Failed to create PersistentVolumeClaim", "name", pvc.Name, "namespace", pvc.Namespace)
+			return err
+		}
+
+		log.V(1).Info("Create PersistentVolumeClaim", "name", pvc.Name, "namespace", pvc.Namespace)
 	}
 	return nil
 }
@@ -189,10 +208,13 @@ func (r *BuilderReconciler) CreateOrUpdateRegistryAuth(builder *openfunction.Bui
 	sa := v1.ServiceAccount{}
 	sa.Name = fmt.Sprintf("%s-%s", builder.Name, buildSa)
 	sa.Namespace = builder.Namespace
-	if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &sa, r.mutateRegistryAuth(&sa, builder)); err != nil {
+	result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &sa, r.mutateRegistryAuth(&sa, builder))
+	if err != nil {
 		log.Error(err, "Failed to CreateOrUpdate ServiceAccount", "result", result)
 		return err
 	}
+
+	log.V(1).Info("CreateOrUpdate ServiceAccount", "name", sa.Name, "namespace", sa.Namespace, "operator", result)
 	return nil
 }
 
@@ -316,11 +338,13 @@ func (r *BuilderReconciler) CreateOrUpdatePipeline(builder *openfunction.Builder
 	p := pipeline.Pipeline{}
 	p.Name = fmt.Sprintf("%s-%s", builder.Name, buildPipeline)
 	p.Namespace = builder.Namespace
-	if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &p, r.mutatePipeline(&p, builder)); err != nil {
+	result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &p, r.mutatePipeline(&p, builder))
+	if err != nil {
 		log.Error(err, "Failed to CreateOrUpdate Pipeline", "result", result)
 		return err
 	}
 
+	log.V(1).Info("CreateOrUpdate Pipeline", "name", p.Name, "namespace", p.Namespace, "operator", result)
 	return nil
 }
 
@@ -362,10 +386,12 @@ func (r *BuilderReconciler) CreateOrUpdatePipelineRun(builder *openfunction.Buil
 	pr.Name = fmt.Sprintf("%s-%s", builder.Name, BuildPipelineRun)
 	pr.Namespace = builder.Namespace
 
-	if result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &pr, r.mutatePipelineRun(&pr, builder)); err != nil {
+	result, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, &pr, r.mutatePipelineRun(&pr, builder))
+	if err != nil {
 		log.Error(err, "Failed to CreateOrUpdate PipelineRun", "result", result)
 		return err
 	}
 
+	log.V(1).Info("CreateOrUpdate PipelineRun", "name", pr.Name, "namespace", pr.Namespace, "operator", result)
 	return nil
 }

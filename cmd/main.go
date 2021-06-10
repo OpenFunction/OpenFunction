@@ -187,7 +187,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true), zap.Level(level)))
+	ctrl.SetLogger(zap.New(zap.UseDevMode(true), zap.Level(level), zap.StacktraceLevel(zapcore.PanicLevel)))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,

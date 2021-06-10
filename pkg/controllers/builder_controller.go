@@ -49,7 +49,7 @@ func (r *BuilderReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	if err := r.Get(ctx, req.NamespacedName, &builder); err != nil {
 		log.V(1).Info("Builder deleted", "error", err)
-		return ctrl.Result{}, util.IgnoreNotFound(client.IgnoreNotFound(err))
+		return ctrl.Result{}, util.IgnoreNotFound(err)
 	}
 
 	if _, err := r.createOrUpdateBuild(&builder); err != nil {
@@ -69,7 +69,7 @@ func (r *BuilderReconciler) createOrUpdateBuild(builder *openfunction.Builder) (
 
 	status := openfunction.BuilderStatus{Phase: openfunction.BuildPhase, State: openfunction.Launching}
 	if err := r.updateStatus(builder, &status); err != nil {
-		log.Error(err, "Failed to update builder status", "name", builder.Name, "namespace", builder.Namespace)
+		log.Error(err, "Failed to update builder Launching status", "name", builder.Name, "namespace", builder.Namespace)
 		return ctrl.Result{}, err
 	}
 
@@ -105,7 +105,7 @@ func (r *BuilderReconciler) createOrUpdateBuild(builder *openfunction.Builder) (
 
 	status = openfunction.BuilderStatus{Phase: openfunction.BuildPhase, State: openfunction.Launched}
 	if err := r.updateStatus(builder, &status); err != nil {
-		log.Error(err, "Failed to update builder status", "name", builder.Name, "namespace", builder.Namespace)
+		log.Error(err, "Failed to update builder Launched status", "name", builder.Name, "namespace", builder.Namespace)
 		return ctrl.Result{}, err
 	}
 
