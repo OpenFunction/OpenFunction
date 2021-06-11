@@ -12,8 +12,23 @@ const (
 // IgnoreNotFound returns nil on 'not found' errors.
 // All other values that are not 'not found' errors or nil are returned unmodified.
 func IgnoreNotFound(err error) error {
-	if errors.ReasonForError(err) == CRNotFound {
+
+	if err == nil {
 		return nil
 	}
+
+	if errors.ReasonForError(err) == CRNotFound || errors.ReasonForError(err) == metav1.StatusReasonNotFound {
+		return nil
+	}
+
 	return err
+}
+
+func IsNotFound(err error) bool {
+
+	if err == nil {
+		return false
+	}
+
+	return errors.IsNotFound(err)
 }

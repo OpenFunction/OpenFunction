@@ -23,12 +23,15 @@ import (
 	"github.com/go-logr/logr"
 	openfunction "github.com/openfunction/pkg/apis/v1alpha1"
 	"github.com/openfunction/pkg/util"
-	"k8s.io/apimachinery/pkg/api/equality"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	kcache "sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	builderHash = "builder-hash"
+	servingHash = "serving-hash"
 )
 
 // FunctionReconciler reconciles a Function object
@@ -38,9 +41,6 @@ type FunctionReconciler struct {
 	Scheme      *runtime.Scheme
 	ctx         context.Context
 	tektonCache kcache.Cache
-
-	builders map[string]*openfunction.Builder
-	servings map[string]*openfunction.Serving
 }
 
 // +kubebuilder:rbac:groups=core.openfunction.io,resources=functions,verbs=get;list;watch;create;update;patch;delete
@@ -56,8 +56,12 @@ func (r *FunctionReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	var fn openfunction.Function
 
 	if err := r.Get(ctx, req.NamespacedName, &fn); err != nil {
-		log.V(10).Info("Function deleted", "error", err)
-		return ctrl.Result{}, util.IgnoreNotFound(client.IgnoreNotFound(err))
+
+		if util.IsNotFound(err) {
+			log.V(1).Info("Function deleted", "name", req.Name, "namespace", req.Namespace)
+		}
+
+		return ctrl.Result{}, util.IgnoreNotFound(err)
 	}
 
 	if _, err := r.createOrUpdateFunc(&fn); err != nil {
@@ -100,8 +104,14 @@ func (r *FunctionReconciler) createOrUpdateBuilder(fn *openfunction.Function) (c
 		return ctrl.Result{}, nil
 	}
 
-	if err := r.Delete(r.ctx, &builder); util.IgnoreNotFound(client.IgnoreNotFound(err)) != nil {
+	if err := r.Delete(r.ctx, &builder); util.IgnoreNotFound(err) != nil {
 		log.Error(err, "Failed to delete builder", "namespace", builder.Namespace, "name", builder.Name)
+		return ctrl.Result{}, err
+	}
+
+	status := openfunction.FunctionStatus{Phase: "", State: ""}
+	if err := r.updateStatus(fn, &status); err != nil {
+		log.Error(err, "Failed to update function build status", "namespace", fn.Namespace, "name", fn.Name)
 		return ctrl.Result{}, err
 	}
 
@@ -118,16 +128,17 @@ func (r *FunctionReconciler) createOrUpdateBuilder(fn *openfunction.Function) (c
 		return ctrl.Result{}, err
 	}
 
-	status := openfunction.FunctionStatus{Phase: openfunction.BuildPhase, State: openfunction.Created}
+	status = openfunction.FunctionStatus{Phase: openfunction.BuildPhase, State: openfunction.Created}
 	if err := r.updateStatus(fn, &status); err != nil {
 		log.Error(err, "Failed to update function build status", "namespace", fn.Namespace, "name", fn.Name)
 		return ctrl.Result{}, err
 	}
 
-	if r.builders == nil {
-		r.builders = make(map[string]*openfunction.Builder)
+	if err := r.updateHash(fn, builderHash, r.createBuilderSpec(fn)); err != nil {
+		log.Error(err, "Failed to update function build hash", "namespace", fn.Namespace, "name", fn.Name)
+		return ctrl.Result{}, err
 	}
-	r.builders[fmt.Sprintf("%s/%s", builder.Name, builder.Namespace)] = builder.DeepCopy()
+
 	log.V(1).Info("Builder created", "namespace", builder.Namespace, "name", builder.Name)
 	return ctrl.Result{}, nil
 }
@@ -168,7 +179,7 @@ func (r *FunctionReconciler) createOrUpdateServing(fn *openfunction.Function) (c
 		return ctrl.Result{}, nil
 	}
 
-	if err := r.Delete(r.ctx, &serving); util.IgnoreNotFound(client.IgnoreNotFound(err)) != nil {
+	if err := r.Delete(r.ctx, &serving); util.IgnoreNotFound(err) != nil {
 		log.Error(err, "Failed to delete serving", "namespace", serving.Namespace, "name", serving.Name)
 		return ctrl.Result{}, err
 	}
@@ -192,10 +203,11 @@ func (r *FunctionReconciler) createOrUpdateServing(fn *openfunction.Function) (c
 		return ctrl.Result{}, err
 	}
 
-	if r.servings == nil {
-		r.servings = make(map[string]*openfunction.Serving)
+	if err := r.updateHash(fn, servingHash, serving.Spec); err != nil {
+		log.Error(err, "Failed to update function serving hash", "namespace", fn.Namespace, "name", fn.Name)
+		return ctrl.Result{}, err
 	}
-	r.servings[fmt.Sprintf("%s/%s", serving.Name, serving.Namespace)] = serving.DeepCopy()
+
 	log.V(1).Info("Function serving created", "namespace", serving.Namespace, "name", serving.Name)
 	return ctrl.Result{}, nil
 }
@@ -233,8 +245,11 @@ func (r *FunctionReconciler) cleanupBuilder(fn *openfunction.Function) (ctrl.Res
 	builder.Namespace = fn.Namespace
 
 	if err := r.Delete(r.ctx, &builder); err != nil {
-		log.V(1).Info("Failed to delete builder", "namespace", builder.Namespace, "name", builder.Name, "error", err)
-		return ctrl.Result{}, util.IgnoreNotFound(client.IgnoreNotFound(err))
+		if util.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
+
+		return ctrl.Result{}, err
 	}
 
 	log.V(1).Info("Function builder deleted", "namespace", builder.Namespace, "name", builder.Name)
@@ -242,55 +257,65 @@ func (r *FunctionReconciler) cleanupBuilder(fn *openfunction.Function) (ctrl.Res
 }
 
 func (r *FunctionReconciler) updateStatus(fn *openfunction.Function, status *openfunction.FunctionStatus) error {
-	f := openfunction.Function{}
 
-	if err := r.Get(r.ctx, client.ObjectKey{Name: fn.Name, Namespace: fn.Namespace}, &f); err != nil {
-		return err
-	}
-
-	status.DeepCopyInto(&f.Status)
-	if err := r.Status().Update(r.ctx, &f); err != nil {
+	status.DeepCopyInto(&fn.Status)
+	if err := r.Status().Update(r.ctx, fn); err != nil {
 		return err
 	}
 	return nil
 }
 
+func (r *FunctionReconciler) updateHash(fn *openfunction.Function, key string, val interface{}) error {
+
+	if fn.Annotations == nil {
+		fn.Annotations = make(map[string]string)
+	}
+
+	fn.Annotations[key] = util.Hash(val)
+
+	if err := r.Update(r.ctx, fn); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *FunctionReconciler) getHash(fn *openfunction.Function, key string) string {
+
+	if fn.Annotations == nil {
+		return ""
+	}
+
+	return fn.Annotations[key]
+}
+
 func (r *FunctionReconciler) needToCreateOrUpdateBuilder(fn *openfunction.Function) bool {
 
-	var old *openfunction.Builder
-	if r.builders == nil {
-		r.builders = make(map[string]*openfunction.Builder)
-	}
-	old = r.builders[fmt.Sprintf("%s-builder/%s", fn.Name, fn.Namespace)]
+	log := r.Log.WithName("needToCreateOrUpdateBuilder")
 
-	// Builder had not created, or the operator just startd.
-	if old == nil {
-		var builder openfunction.Builder
-		key := client.ObjectKey{Namespace: fn.Namespace, Name: fmt.Sprintf("%s-%s", fn.Name, "builder")}
-		if err := r.Get(context.Background(), key, &builder); err == nil {
-			// Get the exsit  builder as old builder.
-			old = builder.DeepCopy()
-			r.builders[fmt.Sprintf("%s/%s", builder.Name, builder.Namespace)] = old
-		} else {
-			return fn.Status.Phase != openfunction.ServingPhase
-		}
+	oldHash := r.getHash(fn, builderHash)
+	// Builder had not created, need to create.
+	if oldHash == "" {
+		log.V(1).Info("builder hash is nil", "namespace", fn.Namespace, "name", fn.Name)
+		return true
 	}
 
 	needToCreateOrUpdate := false
 
-	newSpec := r.createBuilderSpec(fn)
-	if !equality.Semantic.DeepEqual(old.Spec, newSpec) {
+	newHash := util.Hash(r.createBuilderSpec(fn))
+	// Builder changed, need to update.
+	if newHash != oldHash {
+		log.V(1).Info("builder changed", "namespace", fn.Namespace, "name", fn.Name, "old", oldHash, "new", newHash)
 		needToCreateOrUpdate = true
 	}
 
 	var builder openfunction.Builder
 	key := client.ObjectKey{Namespace: fn.Namespace, Name: fmt.Sprintf("%s-%s", fn.Name, "builder")}
-	if err := r.Get(context.Background(), key, &builder); err != nil {
-		if errors.IsNotFound(err) {
-			// If the builder is deleted before the build is completed, the builder needs to be recreated.
-			if fn.Status.Phase == openfunction.BuildPhase {
-				needToCreateOrUpdate = true
-			}
+	if err := r.Get(r.ctx, key, &builder); util.IsNotFound(err) {
+		// If the builder is deleted before the build is completed, the builder needs to be recreated.
+		if fn.Status.Phase != openfunction.ServingPhase {
+			needToCreateOrUpdate = true
+			log.V(1).Info("builder does not exist", "namespace", fn.Namespace, "name", fn.Name)
 		}
 	}
 
@@ -299,30 +324,19 @@ func (r *FunctionReconciler) needToCreateOrUpdateBuilder(fn *openfunction.Functi
 
 func (r *FunctionReconciler) needToCreateOrUpdateServing(fn *openfunction.Function) bool {
 
+	log := r.Log.WithName("needToCreateOrUpdateServing")
+
 	// The build is not completed, no need to create or update serving.
 	if fn.Status.Phase != openfunction.ServingPhase {
+		log.V(1).Info("build not completed", "namespace", fn.Namespace, "name", fn.Name)
 		return false
 	}
 
-	var old *openfunction.Serving
-	if r.servings == nil {
-		r.servings = make(map[string]*openfunction.Serving)
-	}
-	old = r.servings[fmt.Sprintf("%s-serving/%s", fn.Name, fn.Namespace)]
-
-	// Serving had not created, or the operator just startd.
-	if old == nil {
-
-		var serving openfunction.Serving
-		key := client.ObjectKey{Namespace: fn.Namespace, Name: fmt.Sprintf("%s-%s", fn.Name, "serving")}
-		// Get the exsit serving as old serving.
-		if err := r.Get(context.Background(), key, &serving); err == nil {
-			old = serving.DeepCopy()
-			r.servings[fmt.Sprintf("%s/%s", serving.Name, serving.Namespace)] = old
-		} else {
-			// Serving dose not exist, need to create.
-			return true
-		}
+	oldHash := r.getHash(fn, servingHash)
+	// Serving had not created, need to create.
+	if oldHash == "" {
+		log.V(1).Info("Serving not create", "namespace", fn.Namespace, "name", fn.Name)
+		return true
 	}
 
 	// Build had completed, need to create serving.
@@ -332,19 +346,19 @@ func (r *FunctionReconciler) needToCreateOrUpdateServing(fn *openfunction.Functi
 
 	needToCreateOrUpdate := false
 
-	var serving openfunction.Serving
-	key := client.ObjectKey{Namespace: fn.Namespace, Name: fmt.Sprintf("%s-%s", fn.Name, "serving")}
-	if err := r.Get(context.Background(), key, &serving); err != nil {
-		if errors.IsNotFound(err) {
-			// If the serving is deleted, need to be recreated.
-			needToCreateOrUpdate = true
-		}
+	newHash := util.Hash(r.createServingSpec(fn))
+	// Serving changed, need to update.
+	if newHash != oldHash {
+		needToCreateOrUpdate = true
+		log.V(1).Info("serving changed", "namespace", fn.Namespace, "name", fn.Name, "old", oldHash, "new", newHash)
 	}
 
-	// Serving changed, need to update.
-	newSpec := r.createServingSpec(fn)
-	if !equality.Semantic.DeepEqual(old.Spec, newSpec) {
+	var serving openfunction.Serving
+	key := client.ObjectKey{Namespace: fn.Namespace, Name: fmt.Sprintf("%s-%s", fn.Name, "serving")}
+	if err := r.Get(r.ctx, key, &serving); util.IsNotFound(err) {
+		// If the serving is deleted, need to be recreated.
 		needToCreateOrUpdate = true
+		log.V(1).Info("serving does not exist", "namespace", fn.Namespace, "name", fn.Name)
 	}
 
 	return needToCreateOrUpdate

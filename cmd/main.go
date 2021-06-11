@@ -129,13 +129,13 @@ func onBuilderUpdate(obj interface{}) {
 
 			switch {
 			case plr.IsDone():
-				setupLog.V(1).Info("Function build completed", "Succeeded", cond.Status, "namespace", plr.Namespace, "name", fn)
+				setupLog.Info("Function build completed", "Succeeded", cond.Status, "namespace", plr.Namespace, "name", fn)
 			case plr.IsCancelled():
-				setupLog.V(1).Info("PipelineRun cancelled!")
+				setupLog.Info("PipelineRun cancelled!")
 			case plr.IsTimedOut():
-				setupLog.V(1).Info("PipelineRun timeout!")
+				setupLog.Info("PipelineRun timeout!")
 			default:
-				setupLog.V(1).Info("PipelineRun status unknown!")
+				setupLog.Info("PipelineRun status unknown!")
 			}
 		}
 	}
@@ -187,7 +187,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true), zap.Level(level)))
+	ctrl.SetLogger(zap.New(zap.UseDevMode(true), zap.Level(level), zap.StacktraceLevel(zapcore.PanicLevel)))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
