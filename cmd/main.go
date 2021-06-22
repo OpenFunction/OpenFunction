@@ -20,6 +20,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
+	subscriptionsv1alpha1 "github.com/dapr/dapr/pkg/apis/subscriptions/v1alpha1"
+	kedav1alpha1 "github.com/kedacore/keda/v2/api/v1alpha1"
 	"go.uber.org/zap/zapcore"
 	"os"
 	"strings"
@@ -60,6 +63,9 @@ func init() {
 	_ = kneventing.AddToScheme(scheme)
 	_ = tekton.AddToScheme(scheme)
 	_ = openfunction.AddToScheme(scheme)
+	_ = componentsv1alpha1.AddToScheme(scheme)
+	_ = subscriptionsv1alpha1.AddToScheme(scheme)
+	_ = kedav1alpha1.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
 }
 

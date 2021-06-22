@@ -4,7 +4,7 @@ metadata:
   name: function-sample
 spec:
   version: "v1.0.0"
-  image: "openfunction/sample-go-func:latest"
+  image: "openfunctiondev/sample-go-func:latest"
   #port: 8080 # default to 8080
   build:
     builder: "openfunction/builder:v1"

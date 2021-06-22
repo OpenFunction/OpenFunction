@@ -132,9 +132,6 @@ func (r *ServingReconciler) createOrUpdateServing(s *openfunction.Serving) (ctrl
 	}
 
 	log := r.Log.WithName("createOrUpdateServing")
-	ksvc := kservingv1.Service{}
-	ksvc.Name = fmt.Sprintf("%s-%s", s.Name, "ksvc")
-	ksvc.Namespace = s.Namespace
 
 	status := openfunction.ServingStatus{Phase: openfunction.ServingPhase, State: openfunction.Launching}
 	if err := r.updateStatus(s, &status); err != nil {
@@ -142,18 +139,22 @@ func (r *ServingReconciler) createOrUpdateServing(s *openfunction.Serving) (ctrl
 		return ctrl.Result{}, err
 	}
 
-	if err := r.Delete(r.ctx, &ksvc); util.IgnoreNotFound(err) != nil {
-		log.Error(err, "Failed to delete old knative service", "name", ksvc.Name, "namespace", ksvc.Namespace)
-		return ctrl.Result{}, err
-	}
-
-	if err := r.mutateKsvc(&ksvc, s)(); err != nil {
-		log.Error(err, "Failed to mutate knative service", "name", s.Name, "namespace", s.Namespace)
-		return ctrl.Result{}, err
-	}
-
-	if err := r.Create(r.ctx, &ksvc); err != nil {
-		log.Error(err, "Failed to Create knative service", "name", s.Name, "namespace", s.Namespace)
+	switch *s.Spec.Runtime {
+	case openfunction.Knative:
+		if err := r.createOrUpdateKnativeService(s); err != nil {
+			log.Error(err, "Failed to CreateOrUpdate knative service", "error", err.Error())
+			return ctrl.Result{}, err
+		}
+		break
+	case openfunction.DAPR:
+		if err := r.createOrUpdateDaprService(s); err != nil {
+			log.Error(err, "Failed to CreateOrUpdate dapr service", "error", err.Error())
+			return ctrl.Result{}, err
+		}
+		break
+	default:
+		err := fmt.Errorf("unknow runtime %s", *s.Spec.Runtime)
+		log.Error(err, "unknow runtime", "runtime", *s.Spec.Runtime)
 		return ctrl.Result{}, err
 	}
 
@@ -166,6 +167,31 @@ func (r *ServingReconciler) createOrUpdateServing(s *openfunction.Serving) (ctrl
 	log.V(1).Info("Create serving", "name", s.Name, "namespace", s.Namespace)
 
 	return ctrl.Result{}, nil
+}
+
+func (r *ServingReconciler) createOrUpdateKnativeService(s *openfunction.Serving) error {
+
+	log := r.Log.WithName("createOrUpdateKnativeService")
+	ksvc := kservingv1.Service{}
+	ksvc.Name = fmt.Sprintf("%s-%s", s.Name, "ksvc")
+	ksvc.Namespace = s.Namespace
+
+	if err := r.Delete(r.ctx, &ksvc); util.IgnoreNotFound(err) != nil {
+		log.Error(err, "Failed to delete old knative service", "name", ksvc.Name, "namespace", ksvc.Namespace)
+		return err
+	}
+
+	if err := r.mutateKsvc(&ksvc, s)(); err != nil {
+		log.Error(err, "Failed to mutate knative service", "name", s.Name, "namespace", s.Namespace)
+		return err
+	}
+
+	if err := r.Create(r.ctx, &ksvc); err != nil {
+		log.Error(err, "Failed to Create knative service", "name", s.Name, "namespace", s.Namespace)
+		return err
+	}
+
+	return nil
 }
 
 func (r *ServingReconciler) updateStatus(s *openfunction.Serving, status *openfunction.ServingStatus) error {

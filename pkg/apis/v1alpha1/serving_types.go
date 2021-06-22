@@ -34,6 +34,9 @@ type ServingSpec struct {
 	// All parameters will be injected into the pod as environment variables.
 	// Function code can use these parameters by getting environment variables
 	Params map[string]string `json:"params,omitempty"`
+	// Parameters of dapr.
+	// +optional
+	Dapr *DaprRuntime `json:"dapr,omitempty"`
 }
 
 // ServingStatus defines the observed state of Serving

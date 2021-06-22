@@ -1,0 +1,47 @@
+apiVersion: core.openfunction.io/v1alpha1
+kind: Function
+metadata:
+  name: autoscaling-subscriber
+spec:
+  version: "v1.0.0"
+  image: openfunctiondev/autoscaling-subscriber:latest
+  build:
+    builder: "openfunctiondev/go115-builder:v1"
+    params:
+      FUNC_NAME: "Subscriber"
+    srcRepo:
+      url: "https://github.com/OpenFunction/functions-framework-demos.git"
+      sourceSubPath: "dapr/pubsub-grpc/subscriber/userfunction"
+    registry:
+      url: "https://index.docker.io/v1/"
+      account:
+        name: "basic-user-pass"
+        key: "username"
+  serving:
+    runtime: "Dapr"
+    dapr:
+      protocol: gRPC
+      input:
+        name: autoscaling-pubsub
+        type: pubsub
+        pattern: metric
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "autoscaling-subscriber"
+        dapr.io/app-protocol: "grpc"
+        dapr.io/app-port: "8080"
+        dapr.io/log-level: "debug"
+        dapr.io/log-as-json: "true"
+      scaledObject:
+        pollingInterval: 15
+        minReplicaCount: 0
+        maxReplicaCount: 10
+        cooldownPeriod: 30
+        triggers:
+          - type: kafka
+            metadata:
+              topic: metric
+              bootstrapServers: kafka-cp-kafka.kafka.svc.cluster.local:9092
+              consumerGroup: autoscaling-subscriber
+              lagThreshold: "10"
+
