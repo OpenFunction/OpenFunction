@@ -1,0 +1,56 @@
+apiVersion: core.openfunction.io/v1alpha1
+kind: Function
+metadata:
+  name: autoscaling-producer
+spec:
+  version: "v1.0.0"
+  image: openfunctiondev/autoscaling-producer:latest
+  build:
+    builder: "openfunctiondev/go115-builder:v1"
+    params:
+      FUNC_NAME: "Producer"
+    srcRepo:
+      url: "https://github.com/OpenFunction/functions-framework-demos.git"
+      sourceSubPath: "dapr/pubsub-grpc/producer/userfunction"
+    registry:
+      url: "https://index.docker.io/v1/"
+      account:
+        name: "basic-user-pass"
+        key: "username"
+  serving:
+    runtime: "OpenFuncAsync"
+    params:
+      PUBSUB_NAME: autoscaling-pubsub
+      TOPIC_NAME: metric
+      NUMBER_OF_PUBLISHERS: "2"
+      PUBLISHERS_FREQ: "100ms"
+      PUBLISHERS_DELAY: "10s"
+      LOG_FREQ: "3s"
+      PUBLISH_TO_CONSOLE: "false"
+    openFuncAsync:
+      dapr:
+        protocol: gRPC
+        output:
+          - name: autoscaling-pubsub
+            type: pubsub
+            pattern: metric
+        annotations:
+          "dapr.io/enabled": "true"
+          "dapr.io/app-id": "autoscaling-producer"
+          "dapr.io/app-protocol": "grpc"
+          "dapr.io/log-level": "debug"
+          "dapr.io/log-as-json": "true"
+        components:
+        - name: autoscaling-pubsub
+          type: pubsub.kafka
+          version: v1
+          metadata:
+          - name: brokers
+            value: "kafka-cp-kafka.kafka.svc.cluster.local:9092"
+          - name: authRequired
+            value: "false"
+          - name: allowedTopics
+            value: "metric"
+          - name: consumerID
+            value: "autoscaling-subscriber"
+

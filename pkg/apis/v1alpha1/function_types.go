@@ -88,17 +88,17 @@ type Language string
 type Runtime string
 
 const (
-	Go           Language = "go"
-	Python       Language = "python"
-	Node         Language = "node"
-	BuildPhase            = "Build"
-	ServingPhase          = "Serving"
-	Created               = "Created"
-	Launching             = "Launching"
-	Launched              = "Launched"
-	Failed                = "Failed"
-	Knative      Runtime  = "Knative"
-	KEDA         Runtime  = "KEDA"
+	Go            Language = "go"
+	Python        Language = "python"
+	Node          Language = "node"
+	BuildPhase             = "Build"
+	ServingPhase           = "Serving"
+	Created                = "Created"
+	Launching              = "Launching"
+	Launched               = "Launched"
+	Failed                 = "Failed"
+	Knative       Runtime  = "Knative"
+	OpenFuncAsync Runtime  = "OpenFuncAsync"
 )
 
 type BuildImpl struct {
@@ -113,12 +113,14 @@ type BuildImpl struct {
 }
 
 type ServingImpl struct {
-	// Function runtime such as Knative or KEDA
+	// Function runtime such as Knative or OpenFuncAsync
 	Runtime *Runtime `json:"runtime,omitempty"`
 	// Parameters to pass to the serving.
 	// All parameters will be injected into the pod as environment variables.
 	// Function code can use these parameters by getting environment variables
 	Params map[string]string `json:"params,omitempty"`
+	// Parameters of asyncFunc runtime, must not be nil when runtime is OpenFuncAsync.
+	OpenFuncAsync *OpenFuncAsyncRuntime `json:"openFuncAsync,omitempty"`
 }
 
 // FunctionSpec defines the desired state of Function

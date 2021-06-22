@@ -22,6 +22,20 @@ patchesStrategicMerge:
 #- patches/cainjection_in_builders.yaml
 # +kubebuilder:scaffold:crdkustomizecainjectionpatch
 
+patchesJson6902:
+  - target:
+      group: apiextensions.k8s.io
+      version: v1
+      kind: CustomResourceDefinition
+      name: functions.core.openfunction.io
+    path: patches/dynamicvalue_in_functions.yaml
+  - target:
+      group: apiextensions.k8s.io
+      version: v1
+      kind: CustomResourceDefinition
+      name: servings.core.openfunction.io
+    path: patches/dynamicvalue_in_servings.yaml
+
 # the following config is for teaching kustomize how to do kustomization for CRDs.
 configurations:
 - kustomizeconfig.yaml

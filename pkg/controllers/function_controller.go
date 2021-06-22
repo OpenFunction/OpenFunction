@@ -20,7 +20,9 @@ import (
 	"context"
 	"fmt"
 
+	openfunctioncontext "github.com/OpenFunction/functions-framework-go/openfunction-context"
 	"github.com/go-logr/logr"
+	jsoniter "github.com/json-iterator/go"
 	openfunction "github.com/openfunction/pkg/apis/v1alpha1"
 	"github.com/openfunction/pkg/util"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -203,7 +205,7 @@ func (r *FunctionReconciler) createOrUpdateServing(fn *openfunction.Function) (c
 		return ctrl.Result{}, err
 	}
 
-	if err := r.updateHash(fn, servingHash, serving.Spec); err != nil {
+	if err := r.updateHash(fn, servingHash, r.createServingSpec(fn)); err != nil {
 		log.Error(err, "Failed to update function serving hash", "namespace", fn.Namespace, "name", fn.Name)
 		return ctrl.Result{}, err
 	}
@@ -226,6 +228,11 @@ func (r *FunctionReconciler) createServingSpec(fn *openfunction.Function) openfu
 
 	if fn.Spec.Serving != nil {
 		spec.Params = fn.Spec.Serving.Params
+		if spec.Params == nil {
+			spec.Params = make(map[string]string)
+		}
+		spec.Params["FUNC_CONTEXT"] = r.createFunctionContext(fn)
+		spec.OpenFuncAsync = fn.Spec.Serving.OpenFuncAsync
 	}
 
 	if fn.Spec.Serving != nil && fn.Spec.Serving.Runtime != nil {
@@ -236,6 +243,73 @@ func (r *FunctionReconciler) createServingSpec(fn *openfunction.Function) openfu
 	}
 
 	return spec
+}
+
+func (r *FunctionReconciler) createFunctionContext(fn *openfunction.Function) string {
+
+	rt := openfunctioncontext.Knative
+	if fn.Spec.Serving != nil && fn.Spec.Serving.Runtime != nil {
+		rt = openfunctioncontext.Runtime(*fn.Spec.Serving.Runtime)
+	}
+
+	var port int32 = 8080
+	if fn.Spec.Port != nil {
+		port = *fn.Spec.Port
+	}
+
+	version := ""
+	if fn.Spec.Version != nil {
+		version = *fn.Spec.Version
+	}
+
+	enabledFalse := false
+	enabledTrue := true
+
+	fc := openfunctioncontext.OpenFunctionContext{
+		Name:     fn.Name,
+		Version:  version,
+		Runtime:  rt,
+		Protocol: "HTTP",
+		Port:     fmt.Sprintf("%d", port),
+		Input: &openfunctioncontext.Input{
+			Enabled: &enabledFalse,
+		},
+		Outputs: &openfunctioncontext.Outputs{
+			Enabled:       &enabledFalse,
+			OutputObjects: make(map[string]*openfunctioncontext.Output),
+		},
+	}
+
+	if fn.Spec.Serving != nil && fn.Spec.Serving.OpenFuncAsync != nil && fn.Spec.Serving.OpenFuncAsync.Dapr != nil {
+		dapr := fn.Spec.Serving.OpenFuncAsync.Dapr
+
+		if dapr.Protocol != "" {
+			fc.Protocol = openfunctioncontext.Protocol(dapr.Protocol)
+		}
+
+		if dapr.Input != nil {
+			input := dapr.Input
+			fc.Input.Name = input.Name
+			fc.Input.Enabled = &enabledTrue
+			fc.Input.Pattern = input.Pattern
+			fc.Input.InType = openfunctioncontext.ResourceType(input.Type)
+		}
+
+		if dapr.Output != nil && len(dapr.Output) > 0 {
+			output := dapr.Output
+			fc.Outputs.Enabled = &enabledTrue
+			for _, o := range output {
+				fc.Outputs.OutputObjects[o.Name] = &openfunctioncontext.Output{
+					Pattern: o.Pattern,
+					OutType: openfunctioncontext.ResourceType(o.Type),
+					Params:  o.Params,
+				}
+			}
+		}
+	}
+
+	bs, _ := jsoniter.Marshal(fc)
+	return string(bs)
 }
 
 func (r *FunctionReconciler) cleanupBuilder(fn *openfunction.Function) (ctrl.Result, error) {
