@@ -1,4 +1,4 @@
-# Setup OpenFunction Serving with Dapr
+# Setup OpenFunction Serving with OpenFuncAsync
 
 ## Installation
 

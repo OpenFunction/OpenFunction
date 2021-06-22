@@ -23,11 +23,11 @@ const (
 	UserPort      = "user-port"
 )
 
-func (r *ServingReconciler) createOrUpdateDaprService(s *openfunction.Serving) error {
+func (r *ServingReconciler) createOrUpdateOpenFuncAsyncService(s *openfunction.Serving) error {
 	log := r.Log.WithName("createOrUpdateDaprService")
 
-	if s.Spec.Dapr == nil {
-		return fmt.Errorf("dapr config must not be nil when using dapr serving")
+	if s.Spec.OpenFuncAsync == nil {
+		return fmt.Errorf("OpenFuncAsync config must not be nil when using OpenFuncAsync runtime")
 	}
 
 	workload, err := r.createOrUpdateWorkload(s)
@@ -61,19 +61,24 @@ func (r *ServingReconciler) createOrUpdateDaprService(s *openfunction.Serving) e
 
 func (r *ServingReconciler) createOrUpdateWorkload(s *openfunction.Serving) (runtime.Object, error) {
 	log := r.Log.WithName("createOrUpdateWorkload")
-	dapr := s.Spec.Dapr
+
+	keda := s.Spec.OpenFuncAsync.Keda
 
 	var obj runtime.Object
-	if dapr.ScaledJob != nil {
-		obj = &batchv1.Job{}
-	} else if dapr.ScaledObject != nil {
-		if dapr.ScaledObject.WorkloadType == "StatefulSet" {
-			obj = &appsv1.StatefulSet{}
-		} else {
-			obj = &appsv1.Deployment{}
-		}
-	} else {
+
+	// By default, use deployment to running the function.
+	if keda == nil || (keda.ScaledJob == nil && keda.ScaledObject == nil) {
 		obj = &appsv1.Deployment{}
+	} else {
+		if keda.ScaledJob != nil {
+			obj = &batchv1.Job{}
+		} else {
+			if keda.ScaledObject.WorkloadType == "StatefulSet" {
+				obj = &appsv1.StatefulSet{}
+			} else {
+				obj = &appsv1.Deployment{}
+			}
+		}
 	}
 
 	accessor, _ := meta.Accessor(obj)
@@ -103,13 +108,11 @@ func (r *ServingReconciler) mutateWorkload(obj runtime.Object, s *openfunction.S
 
 	return func() error {
 
-		dapr := s.Spec.Dapr
-
 		accessor, _ := meta.Accessor(obj)
 		labels := map[string]string{
 			"openfunction.io/managed": "true",
 			"serving":                 s.Name,
-			"runtime":                 string(openfunction.DAPR),
+			"runtime":                 string(openfunction.OpenFuncAsync),
 		}
 		accessor.SetLabels(labels)
 
@@ -118,8 +121,10 @@ func (r *ServingReconciler) mutateWorkload(obj runtime.Object, s *openfunction.S
 		}
 
 		var replicas int32 = 1
-		if dapr.ScaledObject != nil && dapr.ScaledObject.MinReplicaCount != nil {
-			replicas = *dapr.ScaledObject.MinReplicaCount
+		if s.Spec.OpenFuncAsync.Keda != nil &&
+			s.Spec.OpenFuncAsync.Keda.ScaledObject != nil &&
+			s.Spec.OpenFuncAsync.Keda.ScaledObject.MinReplicaCount != nil {
+			replicas = *s.Spec.OpenFuncAsync.Keda.ScaledObject.MinReplicaCount
 		}
 
 		var port int32 = 8080
@@ -137,9 +142,14 @@ func (r *ServingReconciler) mutateWorkload(obj runtime.Object, s *openfunction.S
 			}
 		}
 
+		var annotations map[string]string
+		if s.Spec.OpenFuncAsync.Dapr != nil {
+			annotations = s.Spec.OpenFuncAsync.Dapr.Annotations
+		}
+
 		template := corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
-				Annotations: dapr.Annotations,
+				Annotations: annotations,
 				Labels:      labels,
 			},
 			Spec: corev1.PodSpec{
@@ -185,13 +195,13 @@ func (r *ServingReconciler) mutateWorkload(obj runtime.Object, s *openfunction.S
 func (r *ServingReconciler) createOrUpdateScaler(s *openfunction.Serving, workload runtime.Object) error {
 	log := r.Log.WithName("createOrUpdateScaler")
 
-	dapr := s.Spec.Dapr
-	if dapr.ScaledJob == nil && dapr.ScaledObject == nil {
+	keda := s.Spec.OpenFuncAsync.Keda
+	if keda == nil || (keda.ScaledJob == nil && keda.ScaledObject == nil) {
 		return nil
 	}
 
 	var obj runtime.Object
-	if dapr.ScaledJob != nil {
+	if keda.ScaledJob != nil {
 		obj = &kedav1alpha1.ScaledJob{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      fmt.Sprintf("%s-%s", s.Name, "scaler"),
@@ -229,10 +239,10 @@ func (r *ServingReconciler) createOrUpdateScaler(s *openfunction.Serving, worklo
 func (r *ServingReconciler) mutateScaler(obj runtime.Object, workload runtime.Object, s *openfunction.Serving) controllerutil.MutateFn {
 	return func() error {
 
-		dapr := s.Spec.Dapr
+		keda := s.Spec.OpenFuncAsync.Keda
 		switch obj.(type) {
 		case *kedav1alpha1.ScaledJob:
-			if dapr.ScaledJob == nil {
+			if keda == nil || keda.ScaledJob == nil {
 				return fmt.Errorf("ScaledJob is nil")
 			}
 
@@ -242,7 +252,7 @@ func (r *ServingReconciler) mutateScaler(obj runtime.Object, workload runtime.Ob
 			}
 
 			scaler := obj.(*kedav1alpha1.ScaledJob)
-			scaledJob := dapr.ScaledJob
+			scaledJob := keda.ScaledJob
 			scaler.Spec = kedav1alpha1.ScaledJobSpec{
 				JobTargetRef:               ref,
 				PollingInterval:            scaledJob.PollingInterval,
@@ -254,7 +264,7 @@ func (r *ServingReconciler) mutateScaler(obj runtime.Object, workload runtime.Ob
 				Triggers:                   scaledJob.Triggers,
 			}
 		case *kedav1alpha1.ScaledObject:
-			if dapr.ScaledObject == nil {
+			if keda == nil || keda.ScaledObject == nil {
 				return fmt.Errorf("ScaledObject is nil")
 			}
 
@@ -263,7 +273,7 @@ func (r *ServingReconciler) mutateScaler(obj runtime.Object, workload runtime.Ob
 				return err
 			}
 
-			scaledObject := dapr.ScaledObject
+			scaledObject := keda.ScaledObject
 			scaler := obj.(*kedav1alpha1.ScaledObject)
 			scaler.Spec = kedav1alpha1.ScaledObjectSpec{
 				ScaleTargetRef:  ref,
@@ -348,7 +358,7 @@ func (r *ServingReconciler) mutateSvc(svc *corev1.Service, s *openfunction.Servi
 		svc.Labels = map[string]string{
 			"openfunction.io/managed": "",
 			"serving":                 s.Name,
-			"runtime":                 string(openfunction.DAPR),
+			"runtime":                 string(openfunction.OpenFuncAsync),
 		}
 
 		accessor, _ := meta.Accessor(workload)
@@ -377,7 +387,7 @@ func (r *ServingReconciler) mutateSvc(svc *corev1.Service, s *openfunction.Servi
 func (r *ServingReconciler) createOrUpdateComponents(s *openfunction.Serving) error {
 	log := r.Log.WithName("createOrUpdateDaprComponents")
 
-	dapr := s.Spec.Dapr
+	dapr := s.Spec.OpenFuncAsync.Dapr
 	if dapr == nil {
 		return nil
 	}
@@ -415,7 +425,7 @@ func (r *ServingReconciler) createOrUpdateComponents(s *openfunction.Serving) er
 func (r *ServingReconciler) createOrUpdateSubscriptions(s *openfunction.Serving) error {
 	log := r.Log.WithName("createOrUpdateDaprSubscriptions")
 
-	dapr := s.Spec.Dapr
+	dapr := s.Spec.OpenFuncAsync.Dapr
 	if dapr == nil {
 		return nil
 	}
@@ -447,6 +457,6 @@ func (r *ServingReconciler) createOrUpdateSubscriptions(s *openfunction.Serving)
 		}
 	}
 
-	log.V(1).Info("Createsubscriptions", "serving", s.Name, "namespace", s.Namespace)
+	log.V(1).Info("Create Subscriptions", "serving", s.Name, "namespace", s.Namespace)
 	return nil
 }

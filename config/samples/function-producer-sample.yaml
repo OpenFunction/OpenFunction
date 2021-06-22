@@ -18,7 +18,7 @@ spec:
         name: "basic-user-pass"
         key: "username"
   serving:
-    runtime: "Dapr"
+    runtime: "OpenFuncAsync"
     params:
       PUBSUB_NAME: autoscaling-pubsub
       TOPIC_NAME: metric
@@ -27,29 +27,30 @@ spec:
       PUBLISHERS_DELAY: "10s"
       LOG_FREQ: "3s"
       PUBLISH_TO_CONSOLE: "false"
-    dapr:
-      protocol: gRPC
-      output:
+    openFuncAsync:
+      dapr:
+        protocol: gRPC
+        output:
+          - name: autoscaling-pubsub
+            type: pubsub
+            pattern: metric
+        annotations:
+          "dapr.io/enabled": "true"
+          "dapr.io/app-id": "autoscaling-producer"
+          "dapr.io/app-protocol": "grpc"
+          "dapr.io/log-level": "debug"
+          "dapr.io/log-as-json": "true"
+        components:
         - name: autoscaling-pubsub
-          type: pubsub
-          pattern: metric
-      annotations:
-        "dapr.io/enabled": "true"
-        "dapr.io/app-id": "autoscaling-producer"
-        "dapr.io/app-protocol": "grpc"
-        "dapr.io/log-level": "debug"
-        "dapr.io/log-as-json": "true"
-      components:
-      - name: autoscaling-pubsub
-        type: pubsub.kafka
-        version: v1
-        metadata:
-        - name: brokers
-          value: "kafka-cp-kafka.kafka.svc.cluster.local:9092"
-        - name: authRequired
-          value: "false"
-        - name: allowedTopics
-          value: "metric"
-        - name: consumerID
-          value: "autoscaling-subscriber"
+          type: pubsub.kafka
+          version: v1
+          metadata:
+          - name: brokers
+            value: "kafka-cp-kafka.kafka.svc.cluster.local:9092"
+          - name: authRequired
+            value: "false"
+          - name: allowedTopics
+            value: "metric"
+          - name: consumerID
+            value: "autoscaling-subscriber"
 

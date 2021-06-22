@@ -232,7 +232,7 @@ func (r *FunctionReconciler) createServingSpec(fn *openfunction.Function) openfu
 			spec.Params = make(map[string]string)
 		}
 		spec.Params["FUNC_CONTEXT"] = r.createFunctionContext(fn)
-		spec.Dapr = fn.Spec.Serving.Dapr
+		spec.OpenFuncAsync = fn.Spec.Serving.OpenFuncAsync
 	}
 
 	if fn.Spec.Serving != nil && fn.Spec.Serving.Runtime != nil {
@@ -280,8 +280,8 @@ func (r *FunctionReconciler) createFunctionContext(fn *openfunction.Function) st
 		},
 	}
 
-	if fn.Spec.Serving != nil && fn.Spec.Serving.Dapr != nil {
-		dapr := fn.Spec.Serving.Dapr
+	if fn.Spec.Serving != nil && fn.Spec.Serving.OpenFuncAsync != nil && fn.Spec.Serving.OpenFuncAsync.Dapr != nil {
+		dapr := fn.Spec.Serving.OpenFuncAsync.Dapr
 
 		if dapr.Protocol != "" {
 			fc.Protocol = openfunctioncontext.Protocol(dapr.Protocol)

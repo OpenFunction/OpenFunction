@@ -146,8 +146,8 @@ func (r *ServingReconciler) createOrUpdateServing(s *openfunction.Serving) (ctrl
 			return ctrl.Result{}, err
 		}
 		break
-	case openfunction.DAPR:
-		if err := r.createOrUpdateDaprService(s); err != nil {
+	case openfunction.OpenFuncAsync:
+		if err := r.createOrUpdateOpenFuncAsyncService(s); err != nil {
 			log.Error(err, "Failed to CreateOrUpdate dapr service", "error", err.Error())
 			return ctrl.Result{}, err
 		}
