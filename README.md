@@ -189,3 +189,17 @@ You can get help on developing this project by visiting [Development Guide](docs
 ## Roadmap
 
 [Here](docs/roadmap.md) you can find OpenFunction's roadmap.
+
+## Community
+
+### Community Call
+
+Meeting Info: [Zoom](https://us02web.zoom.us/j/87437196365?pwd=UndDL2puMXlqcSt5U3JaYUdRNk85Zz09) 
+
+Meeting Time: Wednesday at 16:30~17:30 Beijing Time (biweekly, starting from June 23rd, 2021) [Meeting Calendar](https://kubesphere.io/contribution/)
+
+[Meeting notes](https://docs.google.com/document/d/1bh5-kVPegjNlIjjq_e37mS3ZhyXWhmmUaysFgeI9_-o/edit?usp=sharing)
+
+### Contact Us
+
+- Slack [#sig-serverless](https://kubesphere.slack.com/archives/C021XAR3CG3)
