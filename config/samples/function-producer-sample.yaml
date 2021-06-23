@@ -6,7 +6,7 @@ spec:
   version: "v1.0.0"
   image: openfunctiondev/autoscaling-producer:latest
   build:
-    builder: "openfunctiondev/go115-builder:v1"
+    builder: "openfunctiondev/go115-builder:latest"
     params:
       FUNC_NAME: "Producer"
     srcRepo:
