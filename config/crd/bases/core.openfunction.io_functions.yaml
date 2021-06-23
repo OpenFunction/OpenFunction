@@ -154,7 +154,7 @@ spec:
                 properties:
                   openFuncAsync:
                     description: Parameters of asyncFunc runtime, must not be nil
-                      when runtime is AsyncFunc.
+                      when runtime is OpenFuncAsync.
                     properties:
                       dapr:
                         description: Configrations of dapr.
