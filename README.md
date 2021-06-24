@@ -50,7 +50,7 @@ You need to install at least one of the following options for builders:
     
 ### Serving
 
-Currently, OpenFunction supportes tow runtime, Knative and OpenFuncAsync, you need to install at least one of these.
+Currently, OpenFunction supports two serving runtimes, Knative and OpenFuncAsync. At least one of these runtimes needs to be installed.
 
 ## CustomResourceDefinitions
 
