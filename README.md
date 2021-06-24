@@ -22,7 +22,25 @@ The current version of OpenFunction requires that you have a Kubernetes cluster 
 
 In addition, you need to deploy several dependencies for the OpenFunction ```Builder``` and ```Serving```.
 
-You can refer to the [Installation Guide](docs/installation/README.md) to setup OpenFunction ```Builder``` and ```Serving```.
+You can refer to the [Installation Guide](docs/installation/README.md) to setup OpenFunction ```Builder``` and ```Serving```, 
+or use the following command to easily setup OpenFunction ```Builder``` and ```Serving```.
+
+```shell
+sh hack/deploy.sh --all
+```
+
+This comman will install all supported ```Builder``` and ```Serving``` to your cluster.
+
+You can customize the installation through the following parameters:
+
+|Parameter|Comment|
+|---|---|
+| --all                              | Install all supported ```Builder``` and ```Serving``` |
+| --with-tekton                      | Install Tekton builder |
+| --with-knative                     | Install Knative serving runtime |
+| --with-openFuncAsync               | Install OpenFuncAsync serving runtime |
+| --poor-network                     | Use this when you having poor network connectivity to GitHub/Googleapis |
+| --tekton-dashboard-nodeport <port> | Expose the Tekton dashboard service with nodeport |
 
 ### Builder
 
@@ -32,29 +50,7 @@ You need to install at least one of the following options for builders:
     
 ### Serving
 
-You need to install at least one of the following options for the serving component:
-
-- Currently, OpenFunction Serving relies on Knative, so you need to [install Knative Serving](https://knative.dev/docs/install/).
-- Another Serving runtime Dapr + KEDA will be supported soon.
-
-### Tekton and Knative
-
-You can deploy Tekton and Knative follow this command.
-
-```bash
-sh hack/deploy-tekon-and-knative.sh
-```
-You deploy Tekton and Knative follow this command if you having poor network connectivity to GitHub/Googleapis.
-
-```bash
-sh hack/deploy-tekon-and-knative.sh --poor-network
-```
-
-If you want to use NodePort to expose the Tekton dashboard service, follow this command.
-
-```bash
-sh hack/deploy-tekon-and-knative.sh --tekton-dashboard-nodeport <port>
-```
+Currently, OpenFunction supportes tow runtime, Knative and OpenFuncAsync, you need to install at least one of these.
 
 ## CustomResourceDefinitions
 
