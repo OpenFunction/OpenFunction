@@ -10,18 +10,17 @@
 
 ## v0.2.0, plan to be released in June, 2021
 
-- [ ] Support Dapr + KEDA + Deployment/Job as Serving backend
-- [ ] Add FUNC_CONTEXT for Input/Output data bindings
-- [ ] Functions Frameworks Spec
-- [ ] Develop customized go function framework & buildpacks for both Knative and Dapr + KEDA backend
-- [ ] Support asynchronous Non-HTTP function types
-- [ ] Support batch jobs function type
+- [ ] Support OpenFunctionAsync serving runtime（backed by Dapr + KEDA + Deployment/Job)
+- [ ] Functions Frameworks OpenFunction Async function support
+- [ ] Customized go function framework & builders for both Knative and OpenFunctionAsync serving runtime
 
 ## v0.3.0, 2021 H2
 
+- [ ] Async function dead letter sink support
+- [ ] OpenFunction Events: OpenFunction's own event management including EventSource and Trigger supports
 - [ ] Support python functions frameworks
 - [ ] Support nodejs functions frameworks
 - [ ] Support scheduling functions to Edge nodes (KubeEdge)
-- [ ] Test and support existing application buildpacks to run application as Serverless workload directly
-- [ ] Support [ShipWright](https://github.com/shipwright-io/build) as Builder backend to build functions or apps with Docker file (without buildpacks)
+- [ ] Test and support existing application builders to run an application as Serverless workload directly
+- [ ] Support [ShipWright](https://github.com/shipwright-io/build) as Builder backend to build functions or apps with Docker file
 - [ ] Support AI Inference functions, for example, AI models loaded by Tensorflow Serving or KFServing
