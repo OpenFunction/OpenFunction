@@ -11,7 +11,7 @@
 ## v0.2.0, plan to be released in June, 2021
 
 - [ ] Support OpenFunctionAsync serving runtime（backed by Dapr + KEDA + Deployment/Job)
-- [ ] Functions Frameworks OpenFunction Async function support
+- [ ] Functions Frameworks async function support
 - [ ] Customized go function framework & builders for both Knative and OpenFunctionAsync serving runtime
 
 ## v0.3.0, 2021 H2
