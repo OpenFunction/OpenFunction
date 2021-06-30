@@ -18,19 +18,41 @@
 
 The core function of OpenFunction is to enable users to develop, run, and manage business applications as execution units of code functions. OpenFunction implements the following [custom resource definitions (CRDs)](https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/):  
 
-- **```Function```**, defines a function.
-- **```Builder```**, defines a function builder.
-- **```Serving```**, defines a function workload.
+- **Function**, defines a function.
+- **Builder**, defines a function builder.
+- **Serving**, defines a function workload.
+
+### Function
+
+The goal of Function is to control the lifecycle management from user code to the final application that can respond to events through a single profile.
+
+Function will manage and coordinate Builder and Serving resources to handle the details of the process.
 
 ### Builder
 
-You need to install at least one of the following options for builders:
+The goal of Builder is to compile the user's function source code into an application image that can be run in a cloud-native environment.
 
-- Currently, OpenFunction Builder uses Tekton and Cloud Native Buildpacks to build container images.
+It will fetch the code from the code repository, build the application image locally and publish it to the container image repository.
+
+Currently, OpenFunction Builder uses [Tekton and Cloud Native Buildpacks](#tekton-and-cloud-native-buildpacks) to build container images.
+
+#### Tekton and Cloud Native Buildpacks
+
+Tekton is a CI/CD system that provides task pipelining capabilities. 
+
+Cloud Native Buildpacks is an OCI standard image building framework that transform your application source code into images that can run on any cloud.
+
+OpenFunction Builder controls the build process of application images by Tekton, including fetching code, building and publishing images via Cloud Native Buildpacks.
 
 ### Serving
 
-Currently, OpenFunction supports two serving runtimes, Knative and [OpenFuncAsync](#openfuncasync). At least one of these runtimes needs to be installed.
+The goal of Serving is to serving user functions and implementing event-driven functions response.
+
+Currently, OpenFunction supports two serving runtimes, [Knative](#knative) and [OpenFuncAsync](#openfuncasync). At least one of these runtimes needs to be installed.
+
+#### Knative
+
+Knative Serving builds on Kubernetes to support deploying and serving serverless applications and functions. Knative Serving is easy to get started with and scales to support advanced scenarios.
 
 #### OpenFuncAsync
 
@@ -39,14 +61,6 @@ OpenFuncAsync is an event-driven Serving runtime. It is implemented based on KED
 You can refer to [Prerequisites](#prerequisites) and use `--with-openFuncAsync` to install OpenFuncAsync runtime.
 
 The OpenFuncAsync runtime can be triggered by a variety of event types, such as MQ, cronjob, DB events, etc. In Kubernetes cluster, OpenFuncAsync will be triggered in the form of deployments or jobs.
-
-Here's a sample of using OpenFuncAsync runtime. 
-
-> In order to run this sample, you need to install [Kafka](https://strimzi.io/).
-
-You need to modify the definitions in the [subcriber](https://github.com/OpenFunction/OpenFunction/blob/main/config/samples/function-subscriber-sample.yaml) and [producer](https://github.com/OpenFunction/OpenFunction/blob/main/config/samples/function-producer-sample.yaml) according to the Kafka configuration and then apply them. Subsequently, you can observe that as the number of event messages increases, the number of the `subcriber` replications increases and vice versa.
-
-You can find more samples of OpenFuncAsync runtime [here](https://github.com/OpenFunction/samples#openfuncasync-runtime).
 
 ## QuickStart
 
