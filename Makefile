@@ -13,7 +13,7 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
-all: manager
+all: manager test
 
 # Run tests
 test: generate fmt vet manifests
@@ -58,7 +58,7 @@ generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 # Build the docker image
-build: test
+build: all
 	docker build -f cmd/Dockerfile . -t ${IMG}
 
 # Push the docker image
