@@ -46,10 +46,16 @@ Create a PR for the changes to be reviewed.
 ## Publish the new release
 
 For new minor and major releases, create the `release-<major>.<minor>` branch starting at the PR merge commit.
-
 From now on, all work happens on the `release-<major>.<minor>` branch.
 
 Bump the version in the `VERSION` file in the root of the repository.
+Build and push the container image:
+
+```bash
+make build
+make push
+```
+> We'll add a CI pipeline in the future which will automatically push the container images to [docker hub](https://hub.docker.com/repository/docker/openfunction).
 
 Tag the new release with a tag named `v<major>.<minor>.<patch>`, e.g. `v2.1.3`. Note the `v` prefix. You can do the tagging on the commandline:
 
@@ -58,15 +64,7 @@ tag="$(< VERSION)"
 git tag -a "${tag}" -m "${tag}"
 git push origin "${tag}"
 ```
-
-Build and push the container image:
-
-```bash
-make build
-make push
-```
-
-> We'll add a CI pipeline in the future which will automatically push the container images to [docker hub](https://hub.docker.com/repository/docker/openfunction).
+Commit all the changes.
 
 Go to https://github.com/OpenFunction/OpenFunction/releases/new, associate the new release with the before pushed tag, paste in changes made to `CHANGELOG.md`, add file `config/bundle.yaml` and then click "Publish release".
 
