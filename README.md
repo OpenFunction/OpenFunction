@@ -14,39 +14,19 @@
 
 ![](docs/images/OpenFunction-architecture.png)
 
----
+## CustomResourceDefinitions
 
-## Prerequisites
+The core function of OpenFunction is to enable users to develop, run, and manage business applications as execution units of code functions. OpenFunction implements the following [custom resource definitions (CRDs)](https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/):  
 
-The current version of OpenFunction requires that you have a Kubernetes cluster with version ``>=1.18.6``.
-
-In addition, you need to deploy several dependencies for the OpenFunction ```Builder``` and ```Serving```.
-
-You can refer to the [Installation Guide](docs/installation/README.md) to setup OpenFunction ```Builder``` and ```Serving```, 
-or use the following command to easily setup OpenFunction ```Builder``` and ```Serving```.
-
-```shell
-sh hack/deploy.sh --all
-```
-
-This comman will install all supported ```Builder``` and ```Serving``` to your cluster.
-
-You can customize the installation through the following parameters:
-
-|Parameter|Comment|
-|---|---|
-| --all                              | Install all supported ```Builder``` and ```Serving``` |
-| --with-tekton                      | Install Tekton builder |
-| --with-knative                     | Install Knative serving runtime |
-| --with-openFuncAsync               | Install OpenFuncAsync serving runtime |
-| --poor-network                     | Use this when you having poor network connectivity to GitHub/Googleapis |
-| --tekton-dashboard-nodeport <port> | Expose the Tekton dashboard service with nodeport |
+- **```Function```**, defines a function.
+- **```Builder```**, defines a function builder.
+- **```Serving```**, defines a function workload.
 
 ### Builder
 
 You need to install at least one of the following options for builders:
 
-- Currently, OpenFunction Builder uses Tekton and Cloud Native Buildpacks to build container images, you need to [install Tekton](https://tekton.dev/docs/getting-started/#installation).
+- Currently, OpenFunction Builder uses Tekton and Cloud Native Buildpacks to build container images.
 
 ### Serving
 
@@ -68,15 +48,33 @@ You need to modify the definitions in the [subcriber](https://github.com/OpenFun
 
 You can find more samples of OpenFuncAsync runtime [here](https://github.com/OpenFunction/samples#openfuncasync-runtime).
 
-## CustomResourceDefinitions
-
-The core function of OpenFunction is to enable users to develop, run, and manage business applications as execution units of code functions. OpenFunction implements the following [custom resource definitions (CRDs)](https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/):  
-
-- **```Function```**, defines a function.
-- **```Builder```**, defines a function builder.
-- **```Serving```**, defines a function workload.
-
 ## QuickStart
+
+### Prerequisites
+
+The current version of OpenFunction requires that you have a Kubernetes cluster with version ``>=1.18.6``.
+
+In addition, you need to deploy several dependencies for the OpenFunction ```Builder``` and ```Serving```.
+
+You can refer to the [Installation Guide](docs/installation/README.md) to setup OpenFunction ```Builder``` and ```Serving```, 
+or use the following command to easily setup OpenFunction ```Builder``` and ```Serving```.
+
+```shell
+sh hack/deploy.sh --all
+```
+
+This command will install dependencies of all supported ```Builder``` and ```Serving``` to your cluster.
+
+You can also customize the installation with the following parameters:
+
+|Parameter|Comment|
+|---|---|
+| --all                              | Install all supported ```Builder``` and ```Serving``` |
+| --with-tekton                      | Install Tekton builder |
+| --with-knative                     | Install Knative serving runtime |
+| --with-openFuncAsync               | Install OpenFuncAsync serving runtime |
+| --poor-network                     | Use this when you having poor network connectivity to GitHub/Googleapis |
+| --tekton-dashboard-nodeport <port> | Expose the Tekton dashboard service with nodeport |
 
 ### Install
 
@@ -100,7 +98,7 @@ kubectl apply -f https://raw.githubusercontent.com/OpenFunction/OpenFunction/mai
 
 If you have already installed the OpenFunction platform, refer to [OpenFunction samples](https://github.com/OpenFunction/samples) to run a sample function.
 
-### Removal
+### Uninstall 
 
 You can uninstall the components of OpenFunction by executing the following command:
 
