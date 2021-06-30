@@ -198,8 +198,8 @@ github.com/Microsoft/hcsshim v0.8.7/go.mod h1:OHd7sQqRFrYd3RmSgbgji+ctCwkbq2wbEY
 github.com/NYTimes/gziphandler v0.0.0-20170623195520-56545f4a5d46/go.mod h1:3wb06e3pkSAbeQ52E9H9iFoQsEEwGN64994WTCIhntQ=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/OneOfOne/xxhash v1.2.7/go.mod h1:eZbhyaAYD41SGSSsnmcpxVoRiQ/MPUTjUdIIOT9Um7Q=
-github.com/OpenFunction/functions-framework-go v0.0.0-20210623031620-ffb205df35e1 h1:sKvMCrXvqcFN0bgaO7Anmp1TU7PV9qiA3aKy95hAgIg=
-github.com/OpenFunction/functions-framework-go v0.0.0-20210623031620-ffb205df35e1/go.mod h1:qutTdJaNjItWud90dMcpfb639I57JUWyBhT3JB2gv68=
+github.com/OpenFunction/functions-framework-go v0.0.0-20210628081257-4137e46a99a6 h1:zztT2LUOUB+JemH1LXGpokXyWX2u2MCJxyIZ5akfE2w=
+github.com/OpenFunction/functions-framework-go v0.0.0-20210628081257-4137e46a99a6/go.mod h1:qutTdJaNjItWud90dMcpfb639I57JUWyBhT3JB2gv68=
 github.com/OpenPeeDeeP/depguard v1.0.1/go.mod h1:xsIw86fROiiwelg+jB2uM9PiKihMMmUx/1V+TNhjQvM=
 github.com/PuerkitoBio/purell v1.0.0/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=
 github.com/PuerkitoBio/purell v1.1.1 h1:WEQqlqaGbrPkxLJWfBwQmfEAE1Z7ONdDLqrN38tNFfI=

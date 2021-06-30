@@ -3,6 +3,7 @@ package controllers
 import (
 	goerrors "errors"
 	"fmt"
+	"strconv"
 
 	"github.com/ghodss/yaml"
 	openfunction "github.com/openfunction/pkg/apis/v1alpha1"
@@ -36,6 +37,17 @@ const (
 	output           = "output"
 	cache            = "cache"
 	source           = "source"
+	revision         = "revision"
+	refspec          = "refspec"
+	submodules       = "submodules"
+	depth            = "depth"
+	sslVerify        = "sslVerify"
+	deleteExisting   = "deleteExisting"
+	httpProxy        = "httpProxy"
+	httpsProxy       = "httpsProxy"
+	noProxy          = "noProxy"
+	verbose          = "verbose"
+	gitInitImage     = "gitInitImage"
 )
 
 var (
@@ -253,15 +265,66 @@ func (r *BuilderReconciler) mutatePipeline(p *pipeline.Pipeline, builder *openfu
 				},
 			},
 		}
+
+		m := make(map[string]string)
+		if builder.Spec.SrcRepo.Revision != nil {
+			m[revision] = *builder.Spec.SrcRepo.Revision
+		}
+
+		if builder.Spec.SrcRepo.Refspec != nil {
+			m[refspec] = *builder.Spec.SrcRepo.Refspec
+		}
+
+		if builder.Spec.SrcRepo.Submodules != nil {
+			m[submodules] = strconv.FormatBool(*builder.Spec.SrcRepo.Submodules)
+		}
+
+		if builder.Spec.SrcRepo.Depth != nil {
+			m[depth] = fmt.Sprintf("%d", *builder.Spec.SrcRepo.Depth)
+		}
+
+		if builder.Spec.SrcRepo.SslVerify != nil {
+			m[sslVerify] = strconv.FormatBool(*builder.Spec.SrcRepo.SslVerify)
+		}
+
+		if builder.Spec.SrcRepo.SubDirectory != nil {
+			m[subDirectory] = *builder.Spec.SrcRepo.SubDirectory
+		}
+
 		if builder.Spec.SrcRepo.DeleteExisting != nil {
-			param := pipeline.Param{
-				Name: subDirectory,
-				Value: pipeline.ArrayOrString{
-					Type:      pipeline.ParamTypeString,
-					StringVal: *builder.Spec.SrcRepo.DeleteExisting,
+			m[deleteExisting] = strconv.FormatBool(*builder.Spec.SrcRepo.DeleteExisting)
+		}
+
+		if builder.Spec.SrcRepo.HttpProxy != nil {
+			m[httpProxy] = *builder.Spec.SrcRepo.HttpProxy
+		}
+
+		if builder.Spec.SrcRepo.HttpsProxy != nil {
+			m[httpsProxy] = *builder.Spec.SrcRepo.HttpsProxy
+		}
+
+		if builder.Spec.SrcRepo.NoProxy != nil {
+			m[noProxy] = *builder.Spec.SrcRepo.NoProxy
+		}
+
+		if builder.Spec.SrcRepo.Verbose != nil {
+			m[verbose] = strconv.FormatBool(*builder.Spec.SrcRepo.Verbose)
+		}
+
+		if builder.Spec.SrcRepo.GitInitImage != nil {
+			m[gitInitImage] = *builder.Spec.SrcRepo.GitInitImage
+		}
+
+		for k, v := range m {
+			taskFetchSrc.Params = append(taskFetchSrc.Params,
+				pipeline.Param{
+					Name: k,
+					Value: pipeline.ArrayOrString{
+						Type:      pipeline.ParamTypeString,
+						StringVal: v,
+					},
 				},
-			}
-			taskFetchSrc.Params = append(taskFetchSrc.Params, param)
+			)
 		}
 
 		var funcEnv []string

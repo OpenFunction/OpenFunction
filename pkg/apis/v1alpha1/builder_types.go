@@ -44,10 +44,12 @@ type BuilderStatus struct {
 	State string `json:"state,omitempty"`
 }
 
+// Builder is the Schema for the builders API
+
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:shortName=fb
 // +kubebuilder:subresource:status
-// Builder is the Schema for the builders API
+
 type Builder struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

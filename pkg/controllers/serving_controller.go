@@ -71,9 +71,30 @@ func (r *ServingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 func (r *ServingReconciler) mutateKsvc(ksvc *kservingv1.Service, s *openfunction.Serving) controllerutil.MutateFn {
 	return func() error {
-		container := corev1.Container{
-			Image: s.Spec.Image,
+
+		template := s.Spec.Template
+		if template == nil {
+			template = &corev1.PodSpec{}
 		}
+
+		var container *corev1.Container
+		for index := range template.Containers {
+			if template.Containers[index].Name == FunctionContainer {
+				container = &template.Containers[index]
+			}
+		}
+
+		appended := false
+		if container == nil {
+			container = &corev1.Container{
+				Name:            FunctionContainer,
+				ImagePullPolicy: corev1.PullIfNotPresent,
+			}
+			appended = true
+		}
+
+		container.Image = s.Spec.Image
+
 		port := corev1.ContainerPort{}
 		if s.Spec.Port != nil {
 			port.ContainerPort = *s.Spec.Port
@@ -81,15 +102,16 @@ func (r *ServingReconciler) mutateKsvc(ksvc *kservingv1.Service, s *openfunction
 		}
 
 		if s.Spec.Params != nil {
-			var env []corev1.EnvVar
 			for k, v := range s.Spec.Params {
-				env = append(env, corev1.EnvVar{
+				container.Env = append(container.Env, corev1.EnvVar{
 					Name:  k,
 					Value: v,
 				})
 			}
+		}
 
-			container.Env = env
+		if appended {
+			template.Containers = append(template.Containers, *container)
 		}
 
 		objectMeta := metav1.ObjectMeta{
@@ -113,11 +135,7 @@ func (r *ServingReconciler) mutateKsvc(ksvc *kservingv1.Service, s *openfunction
 					Template: kservingv1.RevisionTemplateSpec{
 						ObjectMeta: objectMeta,
 						Spec: kservingv1.RevisionSpec{
-							PodSpec: corev1.PodSpec{
-								Containers: []corev1.Container{
-									container,
-								},
-							},
+							PodSpec: *template,
 						},
 					},
 				},
@@ -158,7 +176,7 @@ func (r *ServingReconciler) createOrUpdateServing(s *openfunction.Serving) (ctrl
 		break
 	default:
 		err := fmt.Errorf("unknow runtime %s", *s.Spec.Runtime)
-		log.Error(err, "unknow runtime", "runtime", *s.Spec.Runtime)
+		log.Error(err, "unknown runtime", "runtime", *s.Spec.Runtime)
 		return ctrl.Result{}, err
 	}
 

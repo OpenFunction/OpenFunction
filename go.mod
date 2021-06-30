@@ -3,7 +3,7 @@ module github.com/openfunction
 go 1.15
 
 require (
-	github.com/OpenFunction/functions-framework-go v0.0.0-20210623031620-ffb205df35e1
+	github.com/OpenFunction/functions-framework-go v0.0.0-20210628081257-4137e46a99a6
 	github.com/dapr/dapr v1.2.2
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.4.0

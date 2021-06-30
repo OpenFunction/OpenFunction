@@ -39,7 +39,7 @@ type GitRepo struct {
 	// A subpath within the `source` input where the source to build is located.
 	SourceSubPath *string `json:"sourceSubPath,omitempty"`
 	// Clean out the contents of the repo's destination directory if it already exists before cloning the repo there (default: true)
-	DeleteExisting *string `json:"deleteExisting,omitempty"`
+	DeleteExisting *bool `json:"deleteExisting,omitempty"`
 	// Git HTTP proxy server for non-SSL requests (default: "")
 	HttpProxy *string `json:"httpProxy,omitempty"`
 	// Git HTTPS proxy server for SSL requests (default: "")
@@ -53,8 +53,8 @@ type GitRepo struct {
 }
 
 func (gr *GitRepo) Init() {
-	var revision, refspec, subDir, sourceSubPath, deletingExisting, httpProxy, httpsProxy, noProxy, gitInitImage string
-	var submodules, sslVerify, verbose bool
+	var revision, refspec, subDir, sourceSubPath, httpProxy, httpsProxy, noProxy, gitInitImage string
+	var deletingExisting, submodules, sslVerify, verbose bool
 	var depth int8
 	gr.Revision = &revision
 	gr.Refspec = &refspec
@@ -121,6 +121,11 @@ type ServingImpl struct {
 	Params map[string]string `json:"params,omitempty"`
 	// Parameters of asyncFunc runtime, must not be nil when runtime is OpenFuncAsync.
 	OpenFuncAsync *OpenFuncAsyncRuntime `json:"openFuncAsync,omitempty"`
+	// Template describes the pods that will be created.
+	// The container named `function` is the container which is used to run the image built by the builder.
+	// If it is not set, the controller will automatically add one.
+	// +optional
+	Template *v1.PodSpec `json:"template,omitempty"`
 }
 
 // FunctionSpec defines the desired state of Function
@@ -132,7 +137,7 @@ type FunctionSpec struct {
 	// The port on which the function will be invoked
 	Port *int32 `json:"port,omitempty"`
 	// Information needed to build a function
-	Build *BuildImpl `json:"build"`
+	Build *BuildImpl `json:"build,omitempty"`
 	// Information needed to run a function
 	Serving *ServingImpl `json:"serving,omitempty"`
 }

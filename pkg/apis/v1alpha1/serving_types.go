@@ -20,6 +20,7 @@ import (
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	subscriptionsv1alpha1 "github.com/dapr/dapr/pkg/apis/subscriptions/v1alpha1"
 	kedav1alpha1 "github.com/kedacore/keda/v2/api/v1alpha1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -55,37 +56,20 @@ type KedaScaledJob struct {
 	Triggers []kedav1alpha1.ScaleTriggers `json:"triggers"`
 }
 
-type DaprInput struct {
-	// Input name, the name of Dapr component. The component must be created in k8s cluster,
-	// or defined in the `components` or `subscriptions`.
+type DaprIO struct {
+	// The name of Dapr component, subscriptions, service invocationThe.
+	// Component and subscription must be created in k8s cluster, or defined in the `components` or `subscriptions`.
 	Name string `json:"name"`
 	// Input type, known values are bindings, pubsub, invoke.
 	// bindings: Indicates that the input is the Dapr bindings component.
-	// pubsub: Indicates that the input is the Dapr pubsub component.
-	// invoke: Indicates that the input is the Dapr service invocation component.
+	// pubsub: Indicates that the input is the Dapr pubsub component or subscription.
+	// invoke: Indicates that the input is the Dapr service invocation.
 	Type string `json:"type"`
-	// Input serving listening path.
-	// if the type is bindings, pattern is the name of component.
-	// if the type is pubsub, pattern is the topic of subscription.
-	// If the type is invoke, pattern is the name of function.
-	Pattern string `json:"pattern"`
-}
-
-type DaprOutput struct {
-	// Output name, the name of Dapr component. The component must be created in k8s cluster,
-	// or defined in the `components` or `subscriptions`.
-	Name string `json:"name"`
-	// Output type, known values are bindings, pubsub, invoke.
-	// bindings: Indicates that the input is the Dapr bindings component.
-	// pubsub: Indicates that the input is the Dapr pubsub component.
-	// invoke: Indicates that the input is the Dapr service invocation component.
-	Type string `json:"type"`
-	// Output serving listening path.
-	// if the type is bindings, pattern is the name of component.
-	// if the type is pubsub, pattern is the topic of subscription.
-	// If the type is invoke, pattern is the name of function.
-	Pattern string `json:"pattern"`
-	// Parameters for output.
+	// Topic name of mq, required when type is pubsub
+	Topic string `json:"topic,omitempty"`
+	// Method name of dapr service invocation, required when type is invoke.
+	MethodName string `json:"methodName,omitempty"`
+	// Parameters for dapr input/output.
 	Params map[string]string `json:"params,omitempty"`
 }
 
@@ -105,22 +89,18 @@ type Dapr struct {
 	// Annotations for dapr
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty"`
-	// Function serving kind, known values are HTTP, gRPC default value is http.
-	// +optional
-	Protocol string `json:"protocol,omitempty"`
 	// Components of dapr
 	// +optional
 	Components []DaprComponent `json:"components,omitempty"`
 	// Subscriptions of dapr
 	// +optional
 	Subscriptions []DaprSubscription `json:"subscriptions,omitempty"`
-
-	// Function input from bindings data
+	// Function inputs from bindings data
 	// +optional
-	Input *DaprInput `json:"input,omitempty"`
-	// Function output to bindings data
+	Inputs []*DaprIO `json:"inputs,omitempty"`
+	// Function outputs to bindings data
 	// +optional
-	Output []DaprOutput `json:"output,omitempty"`
+	Outputs []*DaprIO `json:"outputs,omitempty"`
 }
 
 type Keda struct {
@@ -131,10 +111,10 @@ type Keda struct {
 }
 
 type OpenFuncAsyncRuntime struct {
-	// Configrations of dapr.
+	// Configurations of dapr.
 	// +optional
 	Dapr *Dapr `json:"dapr,omitempty"`
-	// Configrations of keda.
+	// Configurations of keda.
 	// +optional
 	Keda *Keda `json:"keda,omitempty"`
 }
@@ -156,6 +136,11 @@ type ServingSpec struct {
 	// Parameters of OpenFuncAsync runtime.
 	// +optional
 	OpenFuncAsync *OpenFuncAsyncRuntime `json:"openFuncAsync,omitempty"`
+	// Template describes the pods that will be created.
+	// The container named `function` is the container which is used to run the image built by the builder.
+	// If it is not set, the controller will automatically add one.
+	// +optional
+	Template *v1.PodSpec `json:"template,omitempty"`
 }
 
 // ServingStatus defines the observed state of Serving
@@ -164,10 +149,12 @@ type ServingStatus struct {
 	State string `json:"state,omitempty"`
 }
 
+// Serving is the Schema for the servings API
+
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:shortName=fs
 // +kubebuilder:subresource:status
-// Serving is the Schema for the servings API
+
 type Serving struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
