@@ -85,7 +85,7 @@ You can install the OpenFunction platform by the following command:
 - Install the latest stable version
 
 ```shell
-kubectl apply -f https://github.com/OpenFunction/OpenFunction/releases/download/v0.1.0/release.yaml
+kubectl apply -f https://github.com/OpenFunction/OpenFunction/releases/download/v0.2.0/bundle.yaml
 ```
 
 - Install the development version
