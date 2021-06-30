@@ -47,10 +47,26 @@ You can customize the installation through the following parameters:
 You need to install at least one of the following options for builders:
 
 - Currently, OpenFunction Builder uses Tekton and Cloud Native Buildpacks to build container images, you need to [install Tekton](https://tekton.dev/docs/getting-started/#installation).
-    
+
 ### Serving
 
-Currently, OpenFunction supports two serving runtimes, Knative and OpenFuncAsync. At least one of these runtimes needs to be installed.
+Currently, OpenFunction supports two serving runtimes, Knative and [OpenFuncAsync](#openfuncasync). At least one of these runtimes needs to be installed.
+
+#### OpenFuncAsync
+
+OpenFuncAsync is an event-driven Serving runtime. It is implemented based on KEDA + Dapr.
+
+You can refer to [Prerequisites](#prerequisites) and use `--with-openFuncAsync` to install OpenFuncAsync runtime.
+
+The OpenFuncAsync runtime can be triggered by a variety of event types, such as MQ, cronjob, DB events, etc. In Kubernetes cluster, OpenFuncAsync will be triggered in the form of deployments or jobs.
+
+Here's a sample of using OpenFuncAsync runtime. 
+
+> In order to run this sample, you need to install [Kafka](https://strimzi.io/).
+
+You need to modify the definitions in the [subcriber](https://github.com/OpenFunction/OpenFunction/blob/main/config/samples/function-subscriber-sample.yaml) and [producer](https://github.com/OpenFunction/OpenFunction/blob/main/config/samples/function-producer-sample.yaml) according to the Kafka configuration and then apply them. Subsequently, you can observe that as the number of event messages increases, the number of the `subcriber` replications increases and vice versa.
+
+You can find more samples of OpenFuncAsync runtime [here](https://github.com/OpenFunction/samples#openfuncasync-runtime).
 
 ## CustomResourceDefinitions
 
@@ -117,7 +133,7 @@ If you have already installed the OpenFunction platform, follow the steps below 
 
     ```shell
     kubectl get functions.core.openfunction.io
-
+    
     NAME              AGE
     function-sample   5s
     ```
