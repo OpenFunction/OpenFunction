@@ -57,7 +57,7 @@ type KedaScaledJob struct {
 }
 
 type DaprIO struct {
-	// The name of Dapr component, subscriptions, service invocationThe.
+	// The name of Dapr component, subscriptions, service invocation.
 	// Component and subscription must be created in k8s cluster, or defined in the `components` or `subscriptions`.
 	Name string `json:"name"`
 	// Input type, known values are bindings, pubsub, invoke.
@@ -95,10 +95,10 @@ type Dapr struct {
 	// Subscriptions of dapr
 	// +optional
 	Subscriptions []DaprSubscription `json:"subscriptions,omitempty"`
-	// Function inputs from bindings data
+	// Function inputs from Dapr components including binding, pubsub, and service invocation
 	// +optional
 	Inputs []*DaprIO `json:"inputs,omitempty"`
-	// Function outputs to bindings data
+	// Function outputs from Dapr components including binding, pubsub, and service invocation
 	// +optional
 	Outputs []*DaprIO `json:"outputs,omitempty"`
 }

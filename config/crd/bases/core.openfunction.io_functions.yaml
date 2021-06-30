@@ -157,7 +157,7 @@ spec:
                       when runtime is OpenFuncAsync.
                     properties:
                       dapr:
-                        description: Configrations of dapr.
+                        description: Configurations of dapr.
                         properties:
                           annotations:
                             additionalProperties:
@@ -216,16 +216,17 @@ spec:
                               type: object
                             type: array
                           inputs:
-                            description: Function inputs from bindings data
+                            description: Function inputs from Dapr components including
+                              binding, pubsub, and service invocation
                             items:
                               properties:
                                 methodName:
                                   description: Method name of dapr service invocation,
-                                    requeried when type is invoke.
+                                    required when type is invoke.
                                   type: string
                                 name:
                                   description: The name of Dapr component, subscriptions,
-                                    service invocationThe. Component and subscription
+                                    service invocation. Component and subscription
                                     must be created in k8s cluster, or defined in
                                     the `components` or `subscriptions`.
                                   type: string
@@ -235,7 +236,7 @@ spec:
                                   description: Parameters for dapr input/output.
                                   type: object
                                 topic:
-                                  description: Topic name of mq, requeried when type
+                                  description: Topic name of mq, required when type
                                     is pubsub
                                   type: string
                                 type:
@@ -252,16 +253,17 @@ spec:
                               type: object
                             type: array
                           outputs:
-                            description: Function outputs to bindings data
+                            description: Function outputs from Dapr components including
+                              binding, pubsub, and service invocation
                             items:
                               properties:
                                 methodName:
                                   description: Method name of dapr service invocation,
-                                    requeried when type is invoke.
+                                    required when type is invoke.
                                   type: string
                                 name:
                                   description: The name of Dapr component, subscriptions,
-                                    service invocationThe. Component and subscription
+                                    service invocation. Component and subscription
                                     must be created in k8s cluster, or defined in
                                     the `components` or `subscriptions`.
                                   type: string
@@ -271,7 +273,7 @@ spec:
                                   description: Parameters for dapr input/output.
                                   type: object
                                 topic:
-                                  description: Topic name of mq, requeried when type
+                                  description: Topic name of mq, required when type
                                     is pubsub
                                   type: string
                                 type:
@@ -312,7 +314,7 @@ spec:
                             type: array
                         type: object
                       keda:
-                        description: Configrations of keda.
+                        description: Configurations of keda.
                         properties:
                           scaledJob:
                             properties:
