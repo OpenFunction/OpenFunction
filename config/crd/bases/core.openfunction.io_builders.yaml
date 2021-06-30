@@ -21,7 +21,6 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Builder is the Schema for the builders API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -85,7 +84,7 @@ spec:
                     description: 'Clean out the contents of the repo''s destination
                       directory if it already exists before cloning the repo there
                       (default: true)'
-                    type: string
+                    type: boolean
                   depth:
                     description: 'Performs a shallow clone where only the most recent
                       commit(s) will be fetched (default: 1)'

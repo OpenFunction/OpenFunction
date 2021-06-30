@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"strings"
 
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	subscriptionsv1alpha1 "github.com/dapr/dapr/pkg/apis/subscriptions/v1alpha1"
@@ -19,8 +20,8 @@ import (
 )
 
 const (
-	UserContainer = "user-container"
-	UserPort      = "user-port"
+	FunctionContainer = "function"
+	FunctionPort      = "function-port"
 )
 
 func (r *ServingReconciler) createOrUpdateOpenFuncAsyncService(s *openfunction.Serving) error {
@@ -132,19 +133,61 @@ func (r *ServingReconciler) mutateWorkload(obj runtime.Object, s *openfunction.S
 			port = *s.Spec.Port
 		}
 
-		var env []corev1.EnvVar
+		annotations := make(map[string]string)
+		annotations["dapr.io/enabled"] = "true"
+		annotations["dapr.io/app-id"] = fmt.Sprintf("%s-%s", strings.TrimSuffix(s.Name, "-serving"), s.Namespace)
+		annotations["dapr.io/log-as-json"] = "true"
+		if s.Spec.OpenFuncAsync.Dapr != nil {
+			for k, v := range s.Spec.OpenFuncAsync.Dapr.Annotations {
+				annotations[k] = v
+			}
+		}
+
+		// The dapr protocol must equal to the protocol of function framework.
+		annotations["dapr.io/app-protocol"] = "grpc"
+		// The dapr port must equal the function port.
+		annotations["dapr.io/app-port"] = fmt.Sprintf("%d", port)
+
+		spec := s.Spec.Template
+		if spec == nil {
+			spec = &corev1.PodSpec{}
+		}
+
+		var container *corev1.Container
+		for index := range spec.Containers {
+			if spec.Containers[index].Name == FunctionContainer {
+				container = &spec.Containers[index]
+			}
+		}
+
+		appended := false
+		if container == nil {
+			container = &corev1.Container{
+				Name:            FunctionContainer,
+				ImagePullPolicy: corev1.PullIfNotPresent,
+			}
+			appended = true
+		}
+
+		container.Image = s.Spec.Image
+
+		container.Ports = append(container.Ports, corev1.ContainerPort{
+			Name:          FunctionPort,
+			ContainerPort: port,
+			Protocol:      corev1.ProtocolTCP,
+		})
+
 		if s.Spec.Params != nil {
 			for k, v := range s.Spec.Params {
-				env = append(env, corev1.EnvVar{
+				container.Env = append(container.Env, corev1.EnvVar{
 					Name:  k,
 					Value: v,
 				})
 			}
 		}
 
-		var annotations map[string]string
-		if s.Spec.OpenFuncAsync.Dapr != nil {
-			annotations = s.Spec.OpenFuncAsync.Dapr.Annotations
+		if appended {
+			spec.Containers = append(spec.Containers, *container)
 		}
 
 		template := corev1.PodTemplateSpec{
@@ -152,23 +195,7 @@ func (r *ServingReconciler) mutateWorkload(obj runtime.Object, s *openfunction.S
 				Annotations: annotations,
 				Labels:      labels,
 			},
-			Spec: corev1.PodSpec{
-				Containers: []corev1.Container{
-					{
-						Name:  UserContainer,
-						Image: s.Spec.Image,
-						Ports: []corev1.ContainerPort{
-							{
-								Name:          UserPort,
-								ContainerPort: port,
-								Protocol:      corev1.ProtocolTCP,
-							},
-						},
-						ImagePullPolicy: corev1.PullAlways,
-						Env:             env,
-					},
-				},
-			},
+			Spec: *spec,
 		}
 
 		switch obj.(type) {
@@ -258,7 +285,7 @@ func (r *ServingReconciler) mutateScaler(obj runtime.Object, workload runtime.Ob
 				PollingInterval:            scaledJob.PollingInterval,
 				SuccessfulJobsHistoryLimit: scaledJob.SuccessfulJobsHistoryLimit,
 				FailedJobsHistoryLimit:     scaledJob.FailedJobsHistoryLimit,
-				EnvSourceContainerName:     UserContainer,
+				EnvSourceContainerName:     FunctionContainer,
 				MaxReplicaCount:            scaledJob.MaxReplicaCount,
 				ScalingStrategy:            scaledJob.ScalingStrategy,
 				Triggers:                   scaledJob.Triggers,
@@ -310,7 +337,7 @@ func (r *ServingReconciler) getObjectTargetRef(workload runtime.Object) (*kedav1
 	accessor, _ := meta.Accessor(workload)
 	ref := &kedav1alpha1.ScaleTarget{
 		Name:                   accessor.GetName(),
-		EnvSourceContainerName: UserContainer,
+		EnvSourceContainerName: FunctionContainer,
 	}
 
 	switch workload.(type) {

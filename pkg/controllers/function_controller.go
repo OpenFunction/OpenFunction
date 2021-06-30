@@ -96,6 +96,11 @@ func (r *FunctionReconciler) createOrUpdateFunc(fn *openfunction.Function) (ctrl
 func (r *FunctionReconciler) createOrUpdateBuilder(fn *openfunction.Function) (ctrl.Result, error) {
 	log := r.Log.WithName("createOrUpdateBuilder")
 
+	if fn.Spec.Build == nil {
+		log.V(1).Info("skip build", "namespace", fn.Namespace, "name", fn.Name)
+		return ctrl.Result{}, nil
+	}
+
 	var builder openfunction.Builder
 	builder.Name = fmt.Sprintf("%s-%s", fn.Name, "builder")
 	builder.Namespace = fn.Namespace
@@ -232,6 +237,8 @@ func (r *FunctionReconciler) createServingSpec(fn *openfunction.Function) openfu
 		}
 		spec.Params["FUNC_CONTEXT"] = r.createFunctionContext(fn)
 		spec.OpenFuncAsync = fn.Spec.Serving.OpenFuncAsync
+
+		spec.Template = fn.Spec.Serving.Template
 	}
 
 	if fn.Spec.Serving != nil && fn.Spec.Serving.Runtime != nil {
@@ -261,54 +268,66 @@ func (r *FunctionReconciler) createFunctionContext(fn *openfunction.Function) st
 		version = *fn.Spec.Version
 	}
 
-	enabledFalse := false
-	enabledTrue := true
-
 	fc := openfunctioncontext.OpenFunctionContext{
-		Name:     fn.Name,
-		Version:  version,
-		Runtime:  rt,
-		Protocol: "HTTP",
-		Port:     fmt.Sprintf("%d", port),
-		Input: &openfunctioncontext.Input{
-			Enabled: &enabledFalse,
-		},
-		Outputs: &openfunctioncontext.Outputs{
-			Enabled:       &enabledFalse,
-			OutputObjects: make(map[string]*openfunctioncontext.Output),
-		},
+		Name:    fn.Name,
+		Version: version,
+		Runtime: rt,
+		Port:    fmt.Sprintf("%d", port),
 	}
 
 	if fn.Spec.Serving != nil && fn.Spec.Serving.OpenFuncAsync != nil && fn.Spec.Serving.OpenFuncAsync.Dapr != nil {
 		dapr := fn.Spec.Serving.OpenFuncAsync.Dapr
 
-		if dapr.Protocol != "" {
-			fc.Protocol = openfunctioncontext.Protocol(dapr.Protocol)
-		}
+		if dapr.Inputs != nil && len(dapr.Inputs) > 0 {
+			input := dapr.Inputs[0]
+			fc.Input = openfunctioncontext.Input{
+				Name:   input.Name,
+				Uri:    getUri(input),
+				Params: input.Params,
+			}
 
-		if dapr.Input != nil {
-			input := dapr.Input
-			fc.Input.Name = input.Name
-			fc.Input.Enabled = &enabledTrue
-			fc.Input.Pattern = input.Pattern
-			fc.Input.InType = openfunctioncontext.ResourceType(input.Type)
-		}
-
-		if dapr.Output != nil && len(dapr.Output) > 0 {
-			output := dapr.Output
-			fc.Outputs.Enabled = &enabledTrue
-			for _, o := range output {
-				fc.Outputs.OutputObjects[o.Name] = &openfunctioncontext.Output{
-					Pattern: o.Pattern,
-					OutType: openfunctioncontext.ResourceType(o.Type),
-					Params:  o.Params,
+			if fc.Input.Params == nil {
+				fc.Input.Params = map[string]string{
+					"type": input.Type,
 				}
+			}
+		}
+
+		if dapr.Outputs != nil && len(dapr.Outputs) > 0 {
+			fc.Outputs = make(map[string]*openfunctioncontext.Output)
+
+			for _, o := range dapr.Outputs {
+				output := openfunctioncontext.Output{
+					Uri:    getUri(o),
+					Params: o.Params,
+				}
+
+				if output.Params == nil {
+					output.Params = map[string]string{
+						"type": o.Type,
+					}
+				}
+
+				fc.Outputs[o.Name] = &output
 			}
 		}
 	}
 
 	bs, _ := jsoniter.Marshal(fc)
 	return string(bs)
+}
+
+func getUri(io *openfunction.DaprIO) string {
+	switch io.Type {
+	case string(openfunctioncontext.OpenFuncBinding):
+		return io.Name
+	case string(openfunctioncontext.OpenFuncTopic):
+		return io.Topic
+	case string(openfunctioncontext.OpenFuncService):
+		return io.MethodName
+	default:
+		return ""
+	}
 }
 
 func (r *FunctionReconciler) cleanupBuilder(fn *openfunction.Function) (ctrl.Result, error) {

@@ -6,18 +6,22 @@ spec:
   version: "v1.0.0"
   image: openfunctiondev/autoscaling-producer:latest
   build:
-    builder: "openfunctiondev/go115-builder:latest"
+    builder: "openfunctiondev/go115-builder:v0.2.0"
     params:
       FUNC_NAME: "Producer"
     srcRepo:
-      url: "https://github.com/OpenFunction/functions-framework-demos.git"
-      sourceSubPath: "dapr/pubsub-grpc/producer/userfunction"
+      url: "https://github.com/OpenFunction/samples.git"
+      sourceSubPath: "functions/OpenFuncAsync/pubsub/producer/"
     registry:
       url: "https://index.docker.io/v1/"
       account:
         name: "basic-user-pass"
         key: "username"
   serving:
+    template:
+      containers:
+        - name: function
+          imagePullPolicy: Always
     runtime: "OpenFuncAsync"
     params:
       PUBSUB_NAME: autoscaling-pubsub
@@ -29,17 +33,15 @@ spec:
       PUBLISH_TO_CONSOLE: "false"
     openFuncAsync:
       dapr:
-        protocol: gRPC
-        output:
+        outputs:
           - name: autoscaling-pubsub
             type: pubsub
-            pattern: metric
+            topic: metric
         annotations:
-          "dapr.io/enabled": "true"
-          "dapr.io/app-id": "autoscaling-producer"
-          "dapr.io/app-protocol": "grpc"
+          # "dapr.io/enabled": "true"
+          # "dapr.io/app-id": "autoscaling-producer"
           "dapr.io/log-level": "debug"
-          "dapr.io/log-as-json": "true"
+          # "dapr.io/log-as-json": "true"
         components:
         - name: autoscaling-pubsub
           type: pubsub.kafka
