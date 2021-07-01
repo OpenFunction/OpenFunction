@@ -1,6 +1,6 @@
 # Roadmap
 
-## v0.1.0, released on May 17th, 2021
+## v0.1.0, May 2021
 
 - [x] Create Function, Builder and Serving CRDs and corresponding controllers
 - [x] Support using existing function framework & buildpacks such as Google Cloud Function to build functions
@@ -8,13 +8,13 @@
 - [x] Support Knative as Serving backend
 - [x] Optimize and localize existing function framework & buildpacks
 
-## v0.2.0, plan to be released in June, 2021
+## v0.2.0, June 2021
 
 - [x] Support OpenFunctionAsync serving runtime（backed by Dapr + KEDA + Deployment/Job)
 - [x] Functions Frameworks async function support
 - [x] Customized go function framework & builders for both Knative and OpenFunctionAsync serving runtime
 
-## v0.3.0, July or August，2021
+## v0.3.0, July ~ August 2021
 
 - [ ] OpenFunction Events: OpenFunction's own event management
 - [ ] Async function dead letter sink
@@ -23,7 +23,7 @@
 - [ ] Nodejs functions frameworks
 - [ ] Python functions frameworks
 
-## v0.4.0+, 2021 H2
+## v0.4.0+, 2021 Q4
 
 - [ ] OpenFunction sync function
 - [ ] OpenFunction CLI
