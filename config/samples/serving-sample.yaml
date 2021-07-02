@@ -1,7 +1,0 @@
-apiVersion: core.openfunction.io/v1alpha1
-kind: Serving
-metadata:
-  name: serving-sample
-spec:
-  # Add fields here
-  foo: bar
