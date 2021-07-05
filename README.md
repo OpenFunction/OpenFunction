@@ -114,10 +114,16 @@ If you have already installed the OpenFunction platform, refer to [OpenFunction 
 
 ### Uninstall 
 
-You can uninstall the components of OpenFunction by executing the following command:
+- Uninstall the latest stable version
 
 ```shell
-kubectl delete -f config/bundle.yaml
+kubectl delete -f https://raw.githubusercontent.com/OpenFunction/OpenFunction/release-0.2/config/bundle.yaml
+```
+
+- Uninstall the development version
+
+```shell
+kubectl delete -f https://raw.githubusercontent.com/OpenFunction/OpenFunction/main/config/bundle.yaml
 ```
 
 ## Development
