@@ -18,15 +18,15 @@
 
 - [ ] OpenFunction Events: OpenFunction's own event management
 - [ ] Async function dead letter sink
-- [ ] Run an existing container image as serverless workload without the build process
-- [ ] Support existing application builders or customized builders to run an application as Serverless workload directly
+- [ ] Build and serving could be launched separately
+- [ ] Support running an application as Serverless workload directly
+- [ ] OpenFunction CLI
 - [ ] Nodejs functions frameworks
-- [ ] Python functions frameworks
 
 ## v0.4.0+, 2021 Q4
 
 - [ ] OpenFunction sync function
-- [ ] OpenFunction CLI
+- [ ] Python functions frameworks
 - [ ] OpenFunction Console (WebUI)
 - [ ] Support scheduling functions to Edge nodes (KubeEdge)
 - [ ] Test and support existing application builders to run an application as Serverless workload directly
