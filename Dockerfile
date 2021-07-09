@@ -1,5 +1,5 @@
 # Build the openfunction binary
-FROM golang:1.13 as builder
+FROM golang:1.15 as builder
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -10,7 +10,9 @@ COPY go.sum go.sum
 RUN GOPROXY="https://goproxy.cn" go mod download
 
 # Copy the go source
-COPY cmd/main.go main.go
+COPY main.go main.go
+COPY api/ api/
+COPY controllers/ controllers/
 COPY pkg/ pkg/
 
 # Build

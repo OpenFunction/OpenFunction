@@ -1,6 +1,8 @@
 apiVersion: v1
 kind: Namespace
 metadata:
+  labels:
+    control-plane: controller-manager
   name: openfunction
 ---
 apiVersion: apiextensions.k8s.io/v1
@@ -23,6 +25,7 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
+        description: Builder is the Schema for the builders API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -7052,6 +7055,7 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
+        description: Serving is the Schema for the servings API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -13537,6 +13541,12 @@ status:
   conditions: []
   storedVersions: []
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: openfunction-controller-manager
+  namespace: openfunction
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -13556,19 +13566,24 @@ rules:
   - patch
   - delete
 - apiGroups:
-  - ""
+  - coordination.k8s.io
   resources:
-  - configmaps/status
+  - leases
   verbs:
   - get
+  - list
+  - watch
+  - create
   - update
   - patch
+  - delete
 - apiGroups:
   - ""
   resources:
   - events
   verbs:
   - create
+  - patch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -13671,6 +13686,12 @@ rules:
 - apiGroups:
   - core.openfunction.io
   resources:
+  - servings/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - core.openfunction.io
+  resources:
   - servings/status
   verbs:
   - get
@@ -13769,7 +13790,7 @@ roleRef:
   name: openfunction-leader-election-role
 subjects:
 - kind: ServiceAccount
-  name: default
+  name: openfunction-controller-manager
   namespace: openfunction
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -13782,7 +13803,7 @@ roleRef:
   name: openfunction-manager-role
 subjects:
 - kind: ServiceAccount
-  name: default
+  name: openfunction-controller-manager
   namespace: openfunction
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -13795,7 +13816,26 @@ roleRef:
   name: openfunction-proxy-role
 subjects:
 - kind: ServiceAccount
-  name: default
+  name: openfunction-controller-manager
+  namespace: openfunction
+---
+apiVersion: v1
+data:
+  controller_manager_config.yaml: |
+    apiVersion: controller-runtime.sigs.k8s.io/v1alpha1
+    kind: ControllerManagerConfig
+    health:
+      healthProbeBindAddress: :8081
+    metrics:
+      bindAddress: 127.0.0.1:8080
+    webhook:
+      port: 9443
+    leaderElection:
+      leaderElect: true
+      resourceName: 79f0111e.openfunction.io
+kind: ConfigMap
+metadata:
+  name: openfunction-manager-config
   namespace: openfunction
 ---
 apiVersion: v1
@@ -13836,18 +13876,31 @@ spec:
         - --upstream=http://127.0.0.1:8080/
         - --logtostderr=true
         - --v=10
-        image: openfunction/kube-rbac-proxy:v0.5.0
+        image: openfunction/kube-rbac-proxy:v0.8.0
         name: kube-rbac-proxy
         ports:
         - containerPort: 8443
           name: https
       - args:
-        - --metrics-addr=127.0.0.1:8080
-        - --enable-leader-election
+        - --health-probe-bind-address=:8081
+        - --metrics-bind-address=127.0.0.1:8080
+        - --leader-elect
         command:
         - /openfunction
         image: openfunction/openfunction:latest
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
         name: openfunction
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
         resources:
           limits:
             cpu: 500m
@@ -13855,4 +13908,9 @@ spec:
           requests:
             cpu: 100m
             memory: 20Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+      securityContext:
+        runAsNonRoot: true
+      serviceAccountName: openfunction-controller-manager
       terminationGracePeriodSeconds: 10
