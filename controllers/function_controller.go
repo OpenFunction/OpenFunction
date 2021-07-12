@@ -1,5 +1,5 @@
 /*
-
+Copyright 2021.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,12 +23,13 @@ import (
 	openfunctioncontext "github.com/OpenFunction/functions-framework-go/openfunction-context"
 	"github.com/go-logr/logr"
 	jsoniter "github.com/json-iterator/go"
-	openfunction "github.com/openfunction/pkg/apis/v1alpha1"
-	"github.com/openfunction/pkg/util"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	kcache "sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	openfunction "github.com/openfunction/api/v1alpha1"
+	"github.com/openfunction/pkg/util"
 )
 
 const (
@@ -45,12 +46,20 @@ type FunctionReconciler struct {
 	tektonCache kcache.Cache
 }
 
-// +kubebuilder:rbac:groups=core.openfunction.io,resources=functions,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=core.openfunction.io,resources=functions/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=tekton.dev,resources=tasks;pipelineresources;pipelines;pipelineruns,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core.openfunction.io,resources=functions,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core.openfunction.io,resources=functions/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=tekton.dev,resources=tasks;pipelineresources;pipelines;pipelineruns,verbs=get;list;watch;create;update;patch;delete
 
-func (r *FunctionReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	ctx := context.Background()
+// Reconcile is part of the main kubernetes reconciliation loop which aims to
+// move the current state of the cluster closer to the desired state.
+// TODO(user): Modify the Reconcile function to compare the state specified by
+// the Function object against the actual cluster state, and then
+// perform operations to make the cluster state reflect the state specified by
+// the user.
+//
+// For more details, check Reconcile and its Result here:
+// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
+func (r *FunctionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.ctx = ctx
 	log := r.Log.WithValues("function", req.NamespacedName)
 
@@ -456,6 +465,7 @@ func (r *FunctionReconciler) needToCreateOrUpdateServing(fn *openfunction.Functi
 	return needToCreateOrUpdate
 }
 
+// SetupWithManager sets up the controller with the Manager.
 func (r *FunctionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&openfunction.Function{}).

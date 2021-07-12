@@ -102,6 +102,12 @@ rules:
 - apiGroups:
   - core.openfunction.io
   resources:
+  - servings/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - core.openfunction.io
+  resources:
   - servings/status
   verbs:
   - get

@@ -2,25 +2,25 @@
 # since it depends on service name and namespace that are out of this kustomize package.
 # It should be run by config/default
 resources:
-- bases/core.openfunction.io_servings.yaml
 - bases/core.openfunction.io_functions.yaml
+- bases/core.openfunction.io_servings.yaml
 - bases/core.openfunction.io_builders.yaml
-# +kubebuilder:scaffold:crdkustomizeresource
+#+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix.
 # patches here are for enabling the conversion webhook for each CRD
-#- patches/webhook_in_servings.yaml
 #- patches/webhook_in_functions.yaml
+#- patches/webhook_in_servings.yaml
 #- patches/webhook_in_builders.yaml
-# +kubebuilder:scaffold:crdkustomizewebhookpatch
+#+kubebuilder:scaffold:crdkustomizewebhookpatch
 
 # [CERTMANAGER] To enable webhook, uncomment all the sections with [CERTMANAGER] prefix.
 # patches here are for enabling the CA injection for each CRD
-#- patches/cainjection_in_servings.yaml
 #- patches/cainjection_in_functions.yaml
+#- patches/cainjection_in_servings.yaml
 #- patches/cainjection_in_builders.yaml
-# +kubebuilder:scaffold:crdkustomizecainjectionpatch
+#+kubebuilder:scaffold:crdkustomizecainjectionpatch
 
 patchesJson6902:
   - target:

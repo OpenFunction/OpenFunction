@@ -1,5 +1,5 @@
 /*
-
+Copyright 2021.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,11 +20,12 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
-	openfunction "github.com/openfunction/pkg/apis/v1alpha1"
-	"github.com/openfunction/pkg/util"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	openfunction "github.com/openfunction/api/v1alpha1"
+	"github.com/openfunction/pkg/util"
 )
 
 // BuilderReconciler reconciles a Builder object
@@ -35,13 +36,21 @@ type BuilderReconciler struct {
 	ctx    context.Context
 }
 
-// +kubebuilder:rbac:groups=core.openfunction.io,resources=builders,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=core.openfunction.io,resources=builders/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=tekton.dev,resources=tasks;pipelineresources;pipelines;pipelineruns,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=core,resources=configmaps;persistentvolumeclaims;serviceaccounts;secrets;services,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core.openfunction.io,resources=builders,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core.openfunction.io,resources=builders/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=tekton.dev,resources=tasks;pipelineresources;pipelines;pipelineruns,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core,resources=configmaps;persistentvolumeclaims;serviceaccounts;secrets;services,verbs=get;list;watch;create;update;patch;delete
 
-func (r *BuilderReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	ctx := context.Background()
+// Reconcile is part of the main kubernetes reconciliation loop which aims to
+// move the current state of the cluster closer to the desired state.
+// TODO(user): Modify the Reconcile function to compare the state specified by
+// the Builder object against the actual cluster state, and then
+// perform operations to make the cluster state reflect the state specified by
+// the user.
+//
+// For more details, check Reconcile and its Result here:
+// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
+func (r *BuilderReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.ctx = ctx
 	log := r.Log.WithValues("Builder", req.NamespacedName)
 
@@ -121,6 +130,7 @@ func (r *BuilderReconciler) updateStatus(builder *openfunction.Builder, status *
 	return nil
 }
 
+// SetupWithManager sets up the controller with the Manager.
 func (r *BuilderReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&openfunction.Builder{}).

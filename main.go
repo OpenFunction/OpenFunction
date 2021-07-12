@@ -1,5 +1,5 @@
 /*
-
+Copyright 2021.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,34 +20,38 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
+	"strings"
+
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	subscriptionsv1alpha1 "github.com/dapr/dapr/pkg/apis/subscriptions/v1alpha1"
 	kedav1alpha1 "github.com/kedacore/keda/v2/api/v1alpha1"
 	"go.uber.org/zap/zapcore"
-	"os"
-	"strings"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	kcache "k8s.io/client-go/tools/cache"
 	"knative.dev/pkg/apis"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
+	// to ensure that exec-entrypoint and run can make use of them.
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	ttv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	tekton "github.com/tektoncd/pipeline/pkg/client/clientset/versioned/scheme"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	kcache "k8s.io/client-go/tools/cache"
 	kneventing "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
 	knserving "knative.dev/serving/pkg/client/clientset/versioned/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	crclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	openfunction "github.com/openfunction/pkg/apis/v1alpha1"
-	"github.com/openfunction/pkg/controllers"
-	crclient "sigs.k8s.io/controller-runtime/pkg/client"
-	// +kubebuilder:scaffold:imports
+	openfunction "github.com/openfunction/api/v1alpha1"
+	"github.com/openfunction/controllers"
+	//+kubebuilder:scaffold:imports
 )
 
 var (
@@ -66,7 +70,7 @@ func init() {
 	_ = componentsv1alpha1.AddToScheme(scheme)
 	_ = subscriptionsv1alpha1.AddToScheme(scheme)
 	_ = kedav1alpha1.AddToScheme(scheme)
-	// +kubebuilder:scaffold:scheme
+	//+kubebuilder:scaffold:scheme
 }
 
 func watchBuilderStatus(mgr manager.Manager) error {
@@ -84,10 +88,10 @@ func watchBuilderStatus(mgr manager.Manager) error {
 	}
 
 	go func() {
-		_ = tektonCache.Start(ctx.Done())
+		_ = tektonCache.Start(ctx)
 	}()
 
-	mgr.GetCache().WaitForCacheSync(ctx.Done())
+	mgr.GetCache().WaitForCacheSync(ctx)
 
 	// Setup informer for PipelineRun
 	plrInf, err := tektonCache.GetInformer(ctx, &ttv1beta1.PipelineRun{})
@@ -102,7 +106,7 @@ func watchBuilderStatus(mgr manager.Manager) error {
 		},
 	})
 
-	if ok := tektonCache.WaitForCacheSync(ctx.Done()); !ok {
+	if ok := tektonCache.WaitForCacheSync(ctx); !ok {
 		err := fmt.Errorf("Tekton cache failed")
 		setupLog.Error(err, "Failed to get informer for PipelineRun")
 		return err
@@ -170,13 +174,14 @@ func main() {
 	var logLevel string
 	var metricsAddr string
 	var enableLeaderElection bool
+	var probeAddr string
 
 	flag.StringVar(&logLevel, "log-level", "info", "The log level, known values are, debug, info, warn, error")
-	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
+	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
+	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	flag.Parse()
 
 	var level zapcore.LevelEnabler
 	switch logLevel {
@@ -193,14 +198,23 @@ func main() {
 		os.Exit(1)
 	}
 
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true), zap.Level(level), zap.StacktraceLevel(zapcore.PanicLevel)))
+	opts := zap.Options{
+		Development:     true,
+		Level:           level,
+		StacktraceLevel: zapcore.PanicLevel,
+	}
+	opts.BindFlags(flag.CommandLine)
+	flag.Parse()
+
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: metricsAddr,
-		Port:               9443,
-		LeaderElection:     enableLeaderElection,
-		LeaderElectionID:   "79f0111e.openfunction.io",
+		Scheme:                 scheme,
+		MetricsBindAddress:     metricsAddr,
+		Port:                   9443,
+		HealthProbeBindAddress: probeAddr,
+		LeaderElection:         enableLeaderElection,
+		LeaderElectionID:       "79f0111e.openfunction.io",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -231,8 +245,16 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "Serving")
 		os.Exit(1)
 	}
+	//+kubebuilder:scaffold:builder
 
-	// +kubebuilder:scaffold:builder
+	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up health check")
+		os.Exit(1)
+	}
+	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up ready check")
+		os.Exit(1)
+	}
 
 	client = mgr.GetClient()
 	go func() {

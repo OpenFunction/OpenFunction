@@ -1,5 +1,5 @@
 /*
-
+Copyright 2021.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -148,9 +148,9 @@ type FunctionStatus struct {
 	State string `json:"state,omitempty"`
 }
 
-// +kubebuilder:object:root=true
-// +kubebuilder:resource:shortName=fn
-// +kubebuilder:subresource:status
+//+kubebuilder:object:root=true
+//+kubebuilder:resource:shortName=fn
+//+kubebuilder:subresource:status
 
 // Function is the Schema for the functions API
 type Function struct {
@@ -161,7 +161,7 @@ type Function struct {
 	Status FunctionStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:object:root=true
+//+kubebuilder:object:root=true
 
 // FunctionList contains a list of Function
 type FunctionList struct {

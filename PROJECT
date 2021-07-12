@@ -1,13 +1,35 @@
 domain: openfunction.io
+layout:
+- go.kubebuilder.io/v3
+multigroup: true
+projectName: openfunction
 repo: github.com/openfunction
 resources:
-- group: core
-  kind: Serving
-  version: v1alpha1
-- group: core
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: openfunction.io
+  group: core
   kind: Function
+  path: github.com/openfunction/api/v1alpha1
   version: v1alpha1
-- group: core
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: openfunction.io
+  group: core
+  kind: Serving
+  path: github.com/openfunction/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: openfunction.io
+  group: core
   kind: Builder
+  path: github.com/openfunction/api/v1alpha1
   version: v1alpha1
-version: "2"
+version: "3"

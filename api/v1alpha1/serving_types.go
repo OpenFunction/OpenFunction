@@ -1,5 +1,5 @@
 /*
-
+Copyright 2021.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -149,12 +149,11 @@ type ServingStatus struct {
 	State string `json:"state,omitempty"`
 }
 
+//+kubebuilder:object:root=true
+//+kubebuilder:resource:shortName=fs
+//+kubebuilder:subresource:status
+
 // Serving is the Schema for the servings API
-
-// +kubebuilder:object:root=true
-// +kubebuilder:resource:shortName=fs
-// +kubebuilder:subresource:status
-
 type Serving struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -163,7 +162,7 @@ type Serving struct {
 	Status ServingStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:object:root=true
+//+kubebuilder:object:root=true
 
 // ServingList contains a list of Serving
 type ServingList struct {
