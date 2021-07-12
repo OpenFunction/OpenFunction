@@ -127,6 +127,84 @@ rules:
   - update
   - watch
 - apiGroups:
+  - event.openfunction.io
+  resources:
+  - eventbus
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - event.openfunction.io
+  resources:
+  - eventbus/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - event.openfunction.io
+  resources:
+  - eventbus/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - event.openfunction.io
+  resources:
+  - eventsources
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - event.openfunction.io
+  resources:
+  - eventsources/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - event.openfunction.io
+  resources:
+  - eventsources/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - event.openfunction.io
+  resources:
+  - triggers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - event.openfunction.io
+  resources:
+  - triggers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - event.openfunction.io
+  resources:
+  - triggers/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - keda.sh
   resources:
   - scaledjobs

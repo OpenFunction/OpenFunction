@@ -5,6 +5,9 @@ resources:
 - bases/core.openfunction.io_functions.yaml
 - bases/core.openfunction.io_servings.yaml
 - bases/core.openfunction.io_builders.yaml
+- bases/event.openfunction.io_eventsources.yaml
+- bases/event.openfunction.io_eventbus.yaml
+- bases/event.openfunction.io_triggers.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:
@@ -13,6 +16,9 @@ patchesStrategicMerge:
 #- patches/webhook_in_functions.yaml
 #- patches/webhook_in_servings.yaml
 #- patches/webhook_in_builders.yaml
+#- patches/webhook_in_eventsources.yaml
+#- patches/webhook_in_eventbus.yaml
+#- patches/webhook_in_triggers.yaml
 #+kubebuilder:scaffold:crdkustomizewebhookpatch
 
 # [CERTMANAGER] To enable webhook, uncomment all the sections with [CERTMANAGER] prefix.
@@ -20,6 +26,9 @@ patchesStrategicMerge:
 #- patches/cainjection_in_functions.yaml
 #- patches/cainjection_in_servings.yaml
 #- patches/cainjection_in_builders.yaml
+#- patches/cainjection_in_eventsources.yaml
+#- patches/cainjection_in_eventbus.yaml
+#- patches/cainjection_in_triggers.yaml
 #+kubebuilder:scaffold:crdkustomizecainjectionpatch
 
 patchesJson6902:
@@ -35,6 +44,18 @@ patchesJson6902:
       kind: CustomResourceDefinition
       name: servings.core.openfunction.io
     path: patches/dynamicvalue_in_servings.yaml
+  - target:
+      group: apiextensions.k8s.io
+      version: v1
+      kind: CustomResourceDefinition
+      name: eventsources.event.openfunction.io
+    path: patches/dynamicvalue_in_eventsources.yaml
+  - target:
+      group: apiextensions.k8s.io
+      version: v1
+      kind: CustomResourceDefinition
+      name: eventbus.event.openfunction.io
+    path: patches/dynamicvalue_in_eventbus.yaml
 
 # the following config is for teaching kustomize how to do kustomization for CRDs.
 configurations:

@@ -32,4 +32,31 @@ resources:
   kind: Builder
   path: github.com/openfunction/api/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: openfunction.io
+  group: event
+  kind: EventSource
+  path: github.com/openfunction/apis/event/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: openfunction.io
+  group: event
+  kind: EventBus
+  path: github.com/openfunction/apis/event/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: openfunction.io
+  group: event
+  kind: Trigger
+  path: github.com/openfunction/apis/event/v1alpha1
+  version: v1alpha1
 version: "3"
