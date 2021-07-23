@@ -1,0 +1,20 @@
+# permissions for end users to view clustereventbus.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: clustereventbus-viewer-role
+rules:
+  - apiGroups:
+      - events.openfunction.io
+    resources:
+      - clustereventbus
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - events.openfunction.io
+    resources:
+      - clustereventbus/status
+    verbs:
+      - get

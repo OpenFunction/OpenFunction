@@ -1,0 +1,24 @@
+# permissions for end users to edit clustereventbus.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: clustereventbus-editor-role
+rules:
+  - apiGroups:
+      - events.openfunction.io
+    resources:
+      - clustereventbus
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - events.openfunction.io
+    resources:
+      - clustereventbus/status
+    verbs:
+      - get

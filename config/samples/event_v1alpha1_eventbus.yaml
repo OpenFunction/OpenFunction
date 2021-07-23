@@ -1,4 +1,4 @@
-apiVersion: event.openfunction.io/v1alpha1
+apiVersion: events.openfunction.io/v1alpha1
 kind: EventBus
 metadata:
   name: eventbus-sample

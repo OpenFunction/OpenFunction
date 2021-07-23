@@ -5,7 +5,7 @@ metadata:
   name: trigger-viewer-role
 rules:
 - apiGroups:
-  - event.openfunction.io
+  - events.openfunction.io
   resources:
   - triggers
   verbs:
@@ -13,7 +13,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - event.openfunction.io
+  - events.openfunction.io
   resources:
   - triggers/status
   verbs:

@@ -5,7 +5,7 @@ metadata:
   name: trigger-editor-role
 rules:
 - apiGroups:
-  - event.openfunction.io
+  - events.openfunction.io
   resources:
   - triggers
   verbs:
@@ -17,7 +17,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - event.openfunction.io
+  - events.openfunction.io
   resources:
   - triggers/status
   verbs:

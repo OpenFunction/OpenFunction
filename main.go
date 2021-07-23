@@ -33,6 +33,8 @@ import (
 	"knative.dev/pkg/apis"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/openfunction/controllers/core"
+
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -49,10 +51,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	openfunction "github.com/openfunction/api/v1alpha1"
-	openfunctionevent "github.com/openfunction/apis/event/v1alpha1"
-	"github.com/openfunction/controllers"
-	eventcontrollers "github.com/openfunction/controllers/event"
+	openfunction "github.com/openfunction/apis/core/v1alpha1"
+	openfunctionevent "github.com/openfunction/apis/events/v1alpha1"
+	eventcontrollers "github.com/openfunction/controllers/events"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -120,12 +121,12 @@ func watchBuilderStatus(mgr manager.Manager) error {
 
 func onBuilderUpdate(obj interface{}) {
 	if plr, ok := obj.(*ttv1beta1.PipelineRun); ok {
-		if ok := strings.HasSuffix(plr.Name, "-"+controllers.BuildPipelineRun); !ok {
+		if ok := strings.HasSuffix(plr.Name, "-"+core.BuildPipelineRun); !ok {
 			return
 		}
 
 		if plr.Status.CompletionTime != nil {
-			fn := strings.TrimSuffix(plr.Name, fmt.Sprintf("-%s-%s", "builder", controllers.BuildPipelineRun))
+			fn := strings.TrimSuffix(plr.Name, fmt.Sprintf("-%s-%s", "builder", core.BuildPipelineRun))
 
 			cond := plr.Status.GetCondition(apis.ConditionSucceeded)
 			// Enter Serving Phase only when the PipelineRun's 'Succeeded' condition is True which means the build is successful
@@ -224,7 +225,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.FunctionReconciler{
+	if err = (&core.FunctionReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Function"),
 		Scheme: mgr.GetScheme(),
@@ -232,7 +233,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "Function")
 		os.Exit(1)
 	}
-	if err = (&controllers.BuilderReconciler{
+	if err = (&core.BuilderReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Builder"),
 		Scheme: mgr.GetScheme(),
@@ -240,7 +241,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "Builder")
 		os.Exit(1)
 	}
-	if err = (&controllers.ServingReconciler{
+	if err = (&core.ServingReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Serving"),
 		Scheme: mgr.GetScheme(),
@@ -254,14 +255,6 @@ func main() {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EventSource")
-		os.Exit(1)
-	}
-	if err = (&eventcontrollers.EventBusReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("EventBus"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "EventBus")
 		os.Exit(1)
 	}
 	if err = (&eventcontrollers.TriggerReconciler{
