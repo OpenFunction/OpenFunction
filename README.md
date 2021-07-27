@@ -12,7 +12,7 @@
 - Provide event management functions for trigger functions.
 - Provide additional functions to manage function versions, ingress management etc.
 
-![](docs/images/OpenFunction-architecture.png)
+![](docs/images/openfunction-overview.jpg)
 
 ## CustomResourceDefinitions
 
