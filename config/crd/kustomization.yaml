@@ -2,9 +2,13 @@
 # since it depends on service name and namespace that are out of this kustomize package.
 # It should be run by config/default
 resources:
-- bases/core.openfunction.io_functions.yaml
-- bases/core.openfunction.io_servings.yaml
-- bases/core.openfunction.io_builders.yaml
+  - bases/core.openfunction.io_functions.yaml
+  - bases/core.openfunction.io_servings.yaml
+  - bases/core.openfunction.io_builders.yaml
+  - bases/events.openfunction.io_eventsources.yaml
+  - bases/events.openfunction.io_eventbus.yaml
+  - bases/events.openfunction.io_triggers.yaml
+  - bases/events.openfunction.io_clustereventbus.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:
@@ -13,6 +17,10 @@ patchesStrategicMerge:
 #- patches/webhook_in_functions.yaml
 #- patches/webhook_in_servings.yaml
 #- patches/webhook_in_builders.yaml
+#- patches/webhook_in_eventsources.yaml
+#- patches/webhook_in_eventbus.yaml
+#- patches/webhook_in_triggers.yaml
+#- patches/webhook_in_clustereventbus.yaml
 #+kubebuilder:scaffold:crdkustomizewebhookpatch
 
 # [CERTMANAGER] To enable webhook, uncomment all the sections with [CERTMANAGER] prefix.
@@ -20,6 +28,10 @@ patchesStrategicMerge:
 #- patches/cainjection_in_functions.yaml
 #- patches/cainjection_in_servings.yaml
 #- patches/cainjection_in_builders.yaml
+#- patches/cainjection_in_eventsources.yaml
+#- patches/cainjection_in_eventbus.yaml
+#- patches/cainjection_in_triggers.yaml
+#- patches/cainjection_in_clustereventbus.yaml
 #+kubebuilder:scaffold:crdkustomizecainjectionpatch
 
 patchesJson6902:
@@ -35,7 +47,25 @@ patchesJson6902:
       kind: CustomResourceDefinition
       name: servings.core.openfunction.io
     path: patches/dynamicvalue_in_servings.yaml
+  - target:
+      group: apiextensions.k8s.io
+      version: v1
+      kind: CustomResourceDefinition
+      name: eventsources.events.openfunction.io
+    path: patches/dynamicvalue_in_eventsources.yaml
+  - target:
+      group: apiextensions.k8s.io
+      version: v1
+      kind: CustomResourceDefinition
+      name: eventbus.events.openfunction.io
+    path: patches/dynamicvalue_in_eventbus.yaml
+  - target:
+      group: apiextensions.k8s.io
+      version: v1
+      kind: CustomResourceDefinition
+      name: clustereventbus.events.openfunction.io
+    path: patches/dynamicvalue_in_eventbus.yaml
 
 # the following config is for teaching kustomize how to do kustomization for CRDs.
 configurations:
-- kustomizeconfig.yaml
+  - kustomizeconfig.yaml

@@ -178,6 +178,440 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
+  name: clustereventbus.events.openfunction.io
+spec:
+  group: events.openfunction.io
+  names:
+    kind: ClusterEventBus
+    listKind: ClusterEventBusList
+    plural: clustereventbus
+    shortNames:
+    - ceb
+    singular: clustereventbus
+  scope: Cluster
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ClusterEventBus is the Schema for the clustereventbus API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: EventBusSpec defines the desired state of EventBus and ClusterEventBus
+            properties:
+              nats:
+                description: Use Nats streaming as the default backend for event bus
+                properties:
+                  ignoreErrors:
+                    type: boolean
+                  initTimeout:
+                    type: string
+                  metadata:
+                    items:
+                      description: MetadataItem is a name/value pair for a metadata
+                      properties:
+                        name:
+                          type: string
+                        secretKeyRef:
+                          description: SecretKeyRef is a reference to a secret holding
+                            the value for the metadata item. Name is the secret name,
+                            and key is the field in the secret.
+                          properties:
+                            key:
+                              type: string
+                            name:
+                              type: string
+                          required:
+                          - key
+                          - name
+                          type: object
+                        value:
+                          description: DynamicValue is a dynamic value struct for
+                            the component.metadata pair value
+                          type: ""
+                          x-kubernetes-preserve-unknown-fields: true
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  type:
+                    type: string
+                  version:
+                    type: string
+                required:
+                - metadata
+                - type
+                - version
+                type: object
+              topic:
+                description: Topic indicates the name of the message channel of eventbus
+                  If not specified, "default" will be used as the name of the message
+                  channel
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  name: eventbus.events.openfunction.io
+spec:
+  group: events.openfunction.io
+  names:
+    kind: EventBus
+    listKind: EventBusList
+    plural: eventbus
+    shortNames:
+    - eb
+    singular: eventbus
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: EventBus is the Schema for the eventbus API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: EventBusSpec defines the desired state of EventBus and ClusterEventBus
+            properties:
+              nats:
+                description: Use Nats streaming as the default backend for event bus
+                properties:
+                  ignoreErrors:
+                    type: boolean
+                  initTimeout:
+                    type: string
+                  metadata:
+                    items:
+                      description: MetadataItem is a name/value pair for a metadata
+                      properties:
+                        name:
+                          type: string
+                        secretKeyRef:
+                          description: SecretKeyRef is a reference to a secret holding
+                            the value for the metadata item. Name is the secret name,
+                            and key is the field in the secret.
+                          properties:
+                            key:
+                              type: string
+                            name:
+                              type: string
+                          required:
+                          - key
+                          - name
+                          type: object
+                        value:
+                          description: DynamicValue is a dynamic value struct for
+                            the component.metadata pair value
+                          type: ""
+                          x-kubernetes-preserve-unknown-fields: true
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  type:
+                    type: string
+                  version:
+                    type: string
+                required:
+                - metadata
+                - type
+                - version
+                type: object
+              topic:
+                description: Topic indicates the name of the message channel of eventbus
+                  If not specified, "default" will be used as the name of the message
+                  channel
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  name: eventsources.events.openfunction.io
+spec:
+  group: events.openfunction.io
+  names:
+    kind: EventSource
+    listKind: EventSourceList
+    plural: eventsources
+    shortNames:
+    - es
+    singular: eventsource
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.eventBus
+      name: EventBus
+      type: string
+    - jsonPath: .spec.sink.ref.name
+      name: Sink
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: EventSource is the Schema for the eventsources API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: EventSourceSpec defines the desired state of EventSource
+            properties:
+              cron:
+                additionalProperties:
+                  properties:
+                    ignoreErrors:
+                      type: boolean
+                    initTimeout:
+                      type: string
+                    metadata:
+                      items:
+                        description: MetadataItem is a name/value pair for a metadata
+                        properties:
+                          name:
+                            type: string
+                          secretKeyRef:
+                            description: SecretKeyRef is a reference to a secret holding
+                              the value for the metadata item. Name is the secret
+                              name, and key is the field in the secret.
+                            properties:
+                              key:
+                                type: string
+                              name:
+                                type: string
+                            required:
+                            - key
+                            - name
+                            type: object
+                          value:
+                            description: DynamicValue is a dynamic value struct for
+                              the component.metadata pair value
+                            type: ""
+                            x-kubernetes-preserve-unknown-fields: true
+                        required:
+                        - name
+                        type: object
+                      type: array
+                    srcTopic:
+                      description: SourceTopic is used to specify the topic name of
+                        the event source in Pub/Sub mode scenario
+                      type: string
+                    type:
+                      type: string
+                    version:
+                      type: string
+                  required:
+                  - metadata
+                  - type
+                  - version
+                  type: object
+                description: Cron event source, the Key is used to refer to the name
+                  of the event
+                type: object
+              eventBus:
+                description: EventBus allows you to specify a specific EventBus to
+                  be used instead of the "default" one
+                type: string
+              kafka:
+                additionalProperties:
+                  properties:
+                    ignoreErrors:
+                      type: boolean
+                    initTimeout:
+                      type: string
+                    metadata:
+                      items:
+                        description: MetadataItem is a name/value pair for a metadata
+                        properties:
+                          name:
+                            type: string
+                          secretKeyRef:
+                            description: SecretKeyRef is a reference to a secret holding
+                              the value for the metadata item. Name is the secret
+                              name, and key is the field in the secret.
+                            properties:
+                              key:
+                                type: string
+                              name:
+                                type: string
+                            required:
+                            - key
+                            - name
+                            type: object
+                          value:
+                            description: DynamicValue is a dynamic value struct for
+                              the component.metadata pair value
+                            type: ""
+                            x-kubernetes-preserve-unknown-fields: true
+                        required:
+                        - name
+                        type: object
+                      type: array
+                    srcTopic:
+                      description: SourceTopic is used to specify the topic name of
+                        the event source in Pub/Sub mode scenario
+                      type: string
+                    type:
+                      type: string
+                    version:
+                      type: string
+                  required:
+                  - metadata
+                  - type
+                  - version
+                  type: object
+                description: Kafka event source, the Key is used to refer to the name
+                  of the event
+                type: object
+              redis:
+                additionalProperties:
+                  properties:
+                    ignoreErrors:
+                      type: boolean
+                    initTimeout:
+                      type: string
+                    metadata:
+                      items:
+                        description: MetadataItem is a name/value pair for a metadata
+                        properties:
+                          name:
+                            type: string
+                          secretKeyRef:
+                            description: SecretKeyRef is a reference to a secret holding
+                              the value for the metadata item. Name is the secret
+                              name, and key is the field in the secret.
+                            properties:
+                              key:
+                                type: string
+                              name:
+                                type: string
+                            required:
+                            - key
+                            - name
+                            type: object
+                          value:
+                            description: DynamicValue is a dynamic value struct for
+                              the component.metadata pair value
+                            type: ""
+                            x-kubernetes-preserve-unknown-fields: true
+                        required:
+                        - name
+                        type: object
+                      type: array
+                    srcTopic:
+                      description: SourceTopic is used to specify the topic name of
+                        the event source in Pub/Sub mode scenario
+                      type: string
+                    type:
+                      type: string
+                    version:
+                      type: string
+                  required:
+                  - metadata
+                  - type
+                  - version
+                  type: object
+                description: Redis event source, the Key is used to refer to the name
+                  of the event
+                type: object
+              sink:
+                description: Sink is a callable address, such as Knative Service
+                properties:
+                  ref:
+                    properties:
+                      apiVersion:
+                        description: API version of the referent.
+                        type: string
+                      kind:
+                        description: Kind of the referent.
+                        type: string
+                      name:
+                        description: Name of the referent.
+                        type: string
+                      namespace:
+                        description: Namespace of the referent.
+                        type: string
+                    required:
+                    - apiVersion
+                    - kind
+                    - name
+                    type: object
+                type: object
+            type: object
+          status:
+            description: EventSourceStatus defines the observed state of EventSource
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
   name: functions.core.openfunction.io
 spec:
   group: core.openfunction.io
@@ -13541,6 +13975,154 @@ status:
   conditions: []
   storedVersions: []
 ---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  name: triggers.events.openfunction.io
+spec:
+  group: events.openfunction.io
+  names:
+    kind: Trigger
+    listKind: TriggerList
+    plural: triggers
+    singular: trigger
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Trigger is the Schema for the triggers API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: TriggerSpec defines the desired state of Trigger
+            properties:
+              eventBus:
+                description: EventBus allows you to specify a specific EventBus to
+                  be used instead of the "default" one
+                type: string
+              inputs:
+                description: Inputs defines the event sources associated with the
+                  Trigger
+                items:
+                  properties:
+                    eventName:
+                      description: EventName, name of event
+                      type: string
+                    eventSourceName:
+                      description: EventSourceName, name of EventSource
+                      type: string
+                    eventSourceNamespace:
+                      description: EventSourceNamespace, namespace of EventSource,
+                        default to namespace of Trigger
+                      type: string
+                    name:
+                      description: Name, name of input
+                      type: string
+                  required:
+                  - eventName
+                  - eventSourceName
+                  - name
+                  type: object
+                type: array
+              subscribers:
+                description: Subscribers defines the subscribers associated with the
+                  Trigger
+                items:
+                  properties:
+                    condition:
+                      description: Condition for judging events
+                      type: string
+                    deadLetterSink:
+                      description: SinkSpec describes an event source for the Kafka.
+                      properties:
+                        ref:
+                          properties:
+                            apiVersion:
+                              description: API version of the referent.
+                              type: string
+                            kind:
+                              description: Kind of the referent.
+                              type: string
+                            name:
+                              description: Name of the referent.
+                              type: string
+                            namespace:
+                              description: Namespace of the referent.
+                              type: string
+                          required:
+                          - apiVersion
+                          - kind
+                          - name
+                          type: object
+                      type: object
+                    deadLetterTopic:
+                      type: string
+                    sink:
+                      description: Sink and DeadLetterSink are used to handle subscribers
+                        who use the synchronous call method
+                      properties:
+                        ref:
+                          properties:
+                            apiVersion:
+                              description: API version of the referent.
+                              type: string
+                            kind:
+                              description: Kind of the referent.
+                              type: string
+                            name:
+                              description: Name of the referent.
+                              type: string
+                            namespace:
+                              description: Namespace of the referent.
+                              type: string
+                          required:
+                          - apiVersion
+                          - kind
+                          - name
+                          type: object
+                      type: object
+                    topic:
+                      description: Topic and DeadLetterTopic are used to handle subscribers
+                        who use the asynchronous call method
+                      type: string
+                  required:
+                  - condition
+                  type: object
+                type: array
+            required:
+            - eventBus
+            - inputs
+            - subscribers
+            type: object
+          status:
+            description: TriggerStatus defines the observed state of Trigger
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -13710,6 +14292,58 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - events.openfunction.io
+  resources:
+  - eventsources
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - events.openfunction.io
+  resources:
+  - eventsources/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - events.openfunction.io
+  resources:
+  - eventsources/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - events.openfunction.io
+  resources:
+  - triggers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - events.openfunction.io
+  resources:
+  - triggers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - events.openfunction.io
+  resources:
+  - triggers/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - keda.sh
   resources:

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package core
 
 import (
 	"context"
@@ -32,7 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	openfunction "github.com/openfunction/api/v1alpha1"
+	openfunction "github.com/openfunction/apis/core/v1alpha1"
 )
 
 // ServingReconciler reconciles a Serving object

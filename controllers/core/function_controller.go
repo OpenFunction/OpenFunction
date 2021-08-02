@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package core
 
 import (
 	"context"
@@ -28,7 +28,7 @@ import (
 	kcache "sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	openfunction "github.com/openfunction/api/v1alpha1"
+	openfunction "github.com/openfunction/apis/core/v1alpha1"
 	"github.com/openfunction/pkg/util"
 )
 

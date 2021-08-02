@@ -1,0 +1,20 @@
+# permissions for end users to view triggers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: trigger-viewer-role
+rules:
+- apiGroups:
+  - events.openfunction.io
+  resources:
+  - triggers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - events.openfunction.io
+  resources:
+  - triggers/status
+  verbs:
+  - get

@@ -1,0 +1,20 @@
+# permissions for end users to view eventsources.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: eventsource-viewer-role
+rules:
+- apiGroups:
+  - events.openfunction.io
+  resources:
+  - eventsources
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - events.openfunction.io
+  resources:
+  - eventsources/status
+  verbs:
+  - get

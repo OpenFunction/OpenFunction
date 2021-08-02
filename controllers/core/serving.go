@@ -1,4 +1,4 @@
-package controllers
+package core
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	openfunction "github.com/openfunction/api/v1alpha1"
+	openfunction "github.com/openfunction/apis/core/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"

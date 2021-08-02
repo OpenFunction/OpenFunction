@@ -80,7 +80,7 @@ The control flow of the EventSource controller is as follows:
 An example CRD for EventSource is as follows.
 
 ```yaml
-apiVersion: event.openfunction.io/v1alpha1
+apiVersion: events.openfunction.io/v1alpha1
 kind: EventSource
 metadata:
   name: kafka
@@ -127,7 +127,7 @@ The simplest approach to an event-driven framework is to associate event sources
 We will design a CRD for EventBus that will generate a generic template for a Dapr Component based on a specific implementation of the event bus (usually a messaging server, such as Kafka, Nats, etc.).
 
 ```yaml
-apiVersion: event.openfunction.io/v1alpha1
+apiVersion: events.openfunction.io/v1alpha1
 kind: EventBus
 metadata:
   name: default
@@ -170,7 +170,7 @@ An example of a CRD for Trigger is as follows.
 > The `spec.subscribers.deadLetterSink` defines the dead letter queue, the content is the same as the `spec.subscribers.ref`.
 
 ```yaml
-apiVersion: event.openfunction.io/v1alpha1
+apiVersion: events.openfunction.io/v1alpha1
 kind: Trigger
 metadata:
   name: func1

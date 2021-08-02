@@ -1,0 +1,7 @@
+apiVersion: events.openfunction.io/v1alpha1
+kind: EventSource
+metadata:
+  name: eventsource-sample
+spec:
+  # Add fields here
+  foo: bar

@@ -1,0 +1,150 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
+  name: triggers.events.openfunction.io
+spec:
+  group: events.openfunction.io
+  names:
+    kind: Trigger
+    listKind: TriggerList
+    plural: triggers
+    singular: trigger
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Trigger is the Schema for the triggers API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: TriggerSpec defines the desired state of Trigger
+            properties:
+              eventBus:
+                description: EventBus allows you to specify a specific EventBus to
+                  be used instead of the "default" one
+                type: string
+              inputs:
+                description: Inputs defines the event sources associated with the
+                  Trigger
+                items:
+                  properties:
+                    eventName:
+                      description: EventName, name of event
+                      type: string
+                    eventSourceName:
+                      description: EventSourceName, name of EventSource
+                      type: string
+                    eventSourceNamespace:
+                      description: EventSourceNamespace, namespace of EventSource,
+                        default to namespace of Trigger
+                      type: string
+                    name:
+                      description: Name, name of input
+                      type: string
+                  required:
+                  - eventName
+                  - eventSourceName
+                  - name
+                  type: object
+                type: array
+              subscribers:
+                description: Subscribers defines the subscribers associated with the
+                  Trigger
+                items:
+                  properties:
+                    condition:
+                      description: Condition for judging events
+                      type: string
+                    deadLetterSink:
+                      description: SinkSpec describes an event source for the Kafka.
+                      properties:
+                        ref:
+                          properties:
+                            apiVersion:
+                              description: API version of the referent.
+                              type: string
+                            kind:
+                              description: Kind of the referent.
+                              type: string
+                            name:
+                              description: Name of the referent.
+                              type: string
+                            namespace:
+                              description: Namespace of the referent.
+                              type: string
+                          required:
+                          - apiVersion
+                          - kind
+                          - name
+                          type: object
+                      type: object
+                    deadLetterTopic:
+                      type: string
+                    sink:
+                      description: Sink and DeadLetterSink are used to handle subscribers
+                        who use the synchronous call method
+                      properties:
+                        ref:
+                          properties:
+                            apiVersion:
+                              description: API version of the referent.
+                              type: string
+                            kind:
+                              description: Kind of the referent.
+                              type: string
+                            name:
+                              description: Name of the referent.
+                              type: string
+                            namespace:
+                              description: Namespace of the referent.
+                              type: string
+                          required:
+                          - apiVersion
+                          - kind
+                          - name
+                          type: object
+                      type: object
+                    topic:
+                      description: Topic and DeadLetterTopic are used to handle subscribers
+                        who use the asynchronous call method
+                      type: string
+                  required:
+                  - condition
+                  type: object
+                type: array
+            required:
+            - eventBus
+            - inputs
+            - subscribers
+            type: object
+          status:
+            description: TriggerStatus defines the observed state of Trigger
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

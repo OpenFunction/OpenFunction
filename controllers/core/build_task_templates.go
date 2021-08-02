@@ -1,4 +1,4 @@
-package controllers
+package core
 
 const (
 	// Tekton build template from https://raw.githubusercontent.com/tektoncd/catalog/main/task/buildpacks/0.3/buildpacks.yaml

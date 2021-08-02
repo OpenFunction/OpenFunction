@@ -1,0 +1,24 @@
+# permissions for end users to edit eventsources.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: eventsource-editor-role
+rules:
+- apiGroups:
+  - events.openfunction.io
+  resources:
+  - eventsources
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - events.openfunction.io
+  resources:
+  - eventsources/status
+  verbs:
+  - get
