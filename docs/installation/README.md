@@ -6,7 +6,7 @@ You can follow this guide to setup OpenFunction ```Builder``` and ```Serving```.
 
 ## Setup OpenFunction Builder
 
-- [Setup OpenFunction Builder with Tekton](Setup-OpenFunction-Builder-with-Tekton.md)
+- [Setup OpenFunction Builder with Shipwright](Setup-OpenFunction-Builder-with-Shipwright.md)
 
 ## Setup OpenFunction Serving
 

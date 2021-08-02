@@ -1,9 +1,9 @@
 #!/bin/bash
 
-TEMP=$(getopt -o a --long all,with-tekton,with-knative,with-openFuncAsync -- "$@")
+TEMP=$(getopt -o a --long all,with-shipwright,with-knative,with-openFuncAsync -- "$@")
 
 all=false
-with_tekton=false
+with_shipwright=false
 with_knative=false
 with_openFuncAsync=false
 
@@ -21,8 +21,8 @@ while true; do
     all=true
     shift
     ;;
-  --with-tekton)
-    with_tekton=true
+  --with-shipwright)
+    with_shipwright=true
     shift
     ;;
   --with-knative)
@@ -45,12 +45,12 @@ while true; do
 done
 
 if [ "$all" = "true" ]; then
-  with_tekton=true
+  with_shipwright=true
   with_knative=true
   with_openFuncAsync=true
 fi
 
-if [ "$with_tekton" = "true" ]; then
+if [ "$with_shipwright" = "true" ]; then
   kubectl delete ns tekton-pipelines
   kubectl delete podsecuritypolicies tekton-pipelines
   kubectl delete ClusterRole tekton-pipelines-controller-cluster-access
@@ -103,6 +103,14 @@ if [ "$with_tekton" = "true" ]; then
   kubectl delete ClusterRoleBinding tekton-dashboard-backend
   kubectl delete ClusterRoleBinding tekton-dashboard-tenant
   kubectl delete ClusterRoleBinding tekton-dashboard-extensions
+
+  kubectl delete Namespace shipwright-build
+  kubectl delete ClusterRole shipwright-build-controller
+  kubectl delete ClusterRoleBinding shipwright-build-controller
+  kubectl delete CustomResourceDefinition BuildRun
+  kubectl delete CustomResourceDefinition Build
+  kubectl delete CustomResourceDefinition BuildStrategy
+  kubectl delete CustomResourceDefinition ClusterBuildStrategy
 fi
 
 if [ "$with_knative" = "true" ]; then

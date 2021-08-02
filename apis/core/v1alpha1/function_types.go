@@ -24,64 +24,22 @@ import (
 type GitRepo struct {
 	// Git url to clone
 	Url string `json:"url"`
-	// Git revision to checkout (branch, tag, sha, ref…) (default:"")
+	// Git revision to check out (branch, tag, sha, ref…) (default:"")
 	Revision *string `json:"revision,omitempty"`
-	// Git refspec to fetch before checking out revision (default:"")
-	Refspec *string `json:"refspec,omitempty"`
-	// Defines if the resource should initialize and fetch the submodules (default: true)
-	Submodules *bool `json:"submodules,omitempty"`
-	// Performs a shallow clone where only the most recent commit(s) will be fetched (default: 1)
-	Depth *int8 `json:"depth,omitempty"`
-	// Defines if http.sslVerify should be set to true or false in the global git config (default: true)
-	SslVerify *bool `json:"sslVerify,omitempty"`
-	// Subdirectory inside the "output" workspace to clone the git repo into (default: "")
-	SubDirectory *string `json:"subDirectory,omitempty"`
 	// A subpath within the `source` input where the source to build is located.
 	SourceSubPath *string `json:"sourceSubPath,omitempty"`
-	// Clean out the contents of the repo's destination directory if it already exists before cloning the repo there (default: true)
-	DeleteExisting *bool `json:"deleteExisting,omitempty"`
-	// Git HTTP proxy server for non-SSL requests (default: "")
-	HttpProxy *string `json:"httpProxy,omitempty"`
-	// Git HTTPS proxy server for SSL requests (default: "")
-	HttpsProxy *string `json:"httpsProxy,omitempty"`
-	// Git no proxy - opt out of proxying HTTP/HTTPS requests (default: "")
-	NoProxy *string `json:"noProxy,omitempty"`
-	// Log the commands that are executed during git-clone's operation (default: true)
-	Verbose *bool `json:"verbose,omitempty"`
-	// The image used where the git-init binary is (default: "gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init:v0.17.3")
-	GitInitImage *string `json:"gitInitImage,omitempty"`
+	// Credentials references a Secret that contains credentials to access
+	// the repository.
+	//
+	// +optional
+	Credentials *v1.LocalObjectReference `json:"credentials,omitempty"`
 }
 
 func (gr *GitRepo) Init() {
-	var revision, refspec, subDir, sourceSubPath, httpProxy, httpsProxy, noProxy, gitInitImage string
-	var deletingExisting, submodules, sslVerify, verbose bool
-	var depth int8
+	var revision, sourceSubPath string
 	gr.Revision = &revision
-	gr.Refspec = &refspec
-	gr.SubDirectory = &subDir
 	gr.SourceSubPath = &sourceSubPath
-	gr.DeleteExisting = &deletingExisting
-	gr.HttpProxy = &httpProxy
-	gr.HttpsProxy = &httpsProxy
-	gr.NoProxy = &noProxy
-	gr.GitInitImage = &gitInitImage
-	gr.Submodules = &submodules
-	gr.SslVerify = &sslVerify
-	gr.Verbose = &verbose
-	gr.Depth = &depth
-}
-
-type Registry struct {
-	// Image registry url
-	Url *string `json:"url,omitempty"`
-	// Image registry account including username and password
-	Account *v1.SecretKeySelector `json:"account,omitempty"`
-}
-
-func (r *Registry) Init() {
-	var url string
-	r.Url = &url
-	r.Account = &v1.SecretKeySelector{}
+	gr.Credentials = &v1.LocalObjectReference{}
 }
 
 type Language string
@@ -89,32 +47,71 @@ type Runtime string
 
 const (
 	Go            Language = "go"
-	Python        Language = "python"
 	Node          Language = "node"
 	BuildPhase             = "Build"
 	ServingPhase           = "Serving"
 	Created                = "Created"
-	Launching              = "Launching"
-	Launched               = "Launched"
+	Building               = "building"
+	Running                = "Running"
+	Succeeded              = "Succeeded"
 	Failed                 = "Failed"
+	Skipped                = "Skipped"
 	Knative       Runtime  = "Knative"
 	OpenFuncAsync Runtime  = "OpenFuncAsync"
+	Shipwright             = "Shipwright"
 )
 
+type Strategy struct {
+	// Name of the referent; More info: http://kubernetes.io/docs/user-guide/identifiers#names
+	Name string `json:"name"`
+
+	// BuildStrategyKind indicates the kind of the buildstrategy, BuildStrategy or ClusterBuildStrategy, default is BuildStrategy.
+	Kind *string `json:"kind,omitempty"`
+}
+
+type ShipwrightEngine struct {
+	// Strategy references the BuildStrategy to use to build the image.
+	// +optional
+	Strategy *Strategy `json:"strategy,omitempty"`
+	// Timeout defines the maximum amount of time the Build should take to execute.
+	//
+	// +optional
+	// +kubebuilder:validation:Format=duration
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
+}
+
 type BuildImpl struct {
-	// Cloud Native Buildpacks builders
-	Builder string `json:"builder"`
-	// Environment params to pass to the builder
+	// Builder refers to the image containing the build tools inside which
+	// the source code would be built.
+	//
+	// +optional
+	Builder *string `json:"builder"`
+	// BuilderCredentials references a Secret that contains credentials to access
+	// the builder image repository.
+	//
+	// +optional
+	BuilderCredentials *v1.LocalObjectReference `json:"builderCredentials,omitempty"`
+	// The configuration for `Shipwright` build engine.
+	Shipwright *ShipwrightEngine `json:"shipwright,omitempty"`
+	// Params is a list of key/value that could be used to set strategy parameters.
+	// When using _params_, users should avoid:
+	// Defining a parameter name that doesn't match one of the `spec.parameters` defined in the `BuildStrategy`.
+	// Defining a parameter name that collides with the Shipwright reserved parameters. These are _BUILDER_IMAGE_,_DOCKERFILE_,_CONTEXT_DIR_ and any name starting with _shp-_.
 	Params map[string]string `json:"params,omitempty"`
+	// Environment params to pass to the builder.
+	Env map[string]string `json:"env,omitempty"`
 	// Function Source code repository
 	SrcRepo *GitRepo `json:"srcRepo"`
-	// Image registry of the function image
-	Registry *Registry `json:"registry"`
+	// Dockerfile is the path to the Dockerfile to be used for
+	// build strategies which bank on the Dockerfile for building an image.
+	//
+	// +optional
+	Dockerfile *string `json:"dockerfile,omitempty"`
 }
 
 type ServingImpl struct {
-	// Function runtime such as Knative or OpenFuncAsync
-	Runtime *Runtime `json:"runtime,omitempty"`
+	// Function runtime such as Knative or OpenFuncAsync.
+	Runtime *Runtime `json:"runtime"`
 	// Parameters to pass to the serving.
 	// All parameters will be injected into the pod as environment variables.
 	// Function code can use these parameters by getting environment variables
@@ -134,23 +131,39 @@ type FunctionSpec struct {
 	Version *string `json:"version,omitempty"`
 	// Function image name
 	Image string `json:"image"`
+	// ImageCredentials references a Secret that contains credentials to access
+	// the image repository.
+	//
+	// +optional
+	ImageCredentials *v1.LocalObjectReference `json:"imageCredentials,omitempty"`
 	// The port on which the function will be invoked
 	Port *int32 `json:"port,omitempty"`
-	// Information needed to build a function
+	// Information needed to build a function. If the `Build` is nil, it will skip the build step.
 	Build *BuildImpl `json:"build,omitempty"`
-	// Information needed to run a function
+	// Information needed to run a function. If the `Serving` is nil, it will skip the serving step.
 	Serving *ServingImpl `json:"serving,omitempty"`
+}
+
+type Condition struct {
+	State        string `json:"state,omitempty"`
+	ResourceRef  string `json:"resourceRef,omitempty"`
+	ResourceHash string `json:"resourceHash,omitempty"`
 }
 
 // FunctionStatus defines the observed state of Function
 type FunctionStatus struct {
-	Phase string `json:"phase,omitempty"`
-	State string `json:"state,omitempty"`
+	Build   *Condition `json:"build,omitempty"`
+	Serving *Condition `json:"serving,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:resource:shortName=fn
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="BuildState",type=string,JSONPath=`.status.build.state`
+//+kubebuilder:printcolumn:name="ServingState",type=string,JSONPath=`.status.serving.state`
+//+kubebuilder:printcolumn:name="Builder",type=string,JSONPath=`.status.build.resourceRef`
+//+kubebuilder:printcolumn:name="Serving",type=string,JSONPath=`.status.serving.resourceRef`
+//+kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Function is the Schema for the functions API
 type Function struct {

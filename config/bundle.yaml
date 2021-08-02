@@ -22,7 +22,17 @@ spec:
     singular: builder
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.state
+      name: State
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: Builder is the Schema for the builders API
@@ -43,114 +53,100 @@ spec:
             description: BuilderSpec defines the desired state of Builder
             properties:
               builder:
-                description: Cloud Native Buildpacks builders
+                description: Builder refers to the image containing the build tools
+                  inside which the source code would be built.
                 type: string
+              builderCredentials:
+                description: BuilderCredentials references a Secret that contains
+                  credentials to access the builder image repository.
+                properties:
+                  name:
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                      TODO: Add other useful fields. apiVersion, kind, uid?'
+                    type: string
+                type: object
+              dockerfile:
+                description: Dockerfile is the path to the Dockerfile to be used for
+                  build strategies which bank on the Dockerfile for building an image.
+                type: string
+              env:
+                additionalProperties:
+                  type: string
+                description: Environment params to pass to the builder.
+                type: object
               image:
                 description: Function image name
                 type: string
+              imageCredentials:
+                description: ImageCredentials references a Secret that contains credentials
+                  to access the image repository.
+                properties:
+                  name:
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                      TODO: Add other useful fields. apiVersion, kind, uid?'
+                    type: string
+                type: object
               params:
                 additionalProperties:
                   type: string
-                description: Environment variables to pass to the build process
+                description: Params is a list of key/value that could be used to set
+                  strategy parameters.
                 type: object
               port:
                 description: The port on which the function will be invoked
                 format: int32
                 type: integer
-              registry:
-                description: Image registry of the function image
+              shipwright:
+                description: The configuration for `Shipwright` build engine.
                 properties:
-                  account:
-                    description: Image registry account including username and password
+                  strategy:
+                    description: Strategy references the BuildStrategy to use to build
+                      the image.
                     properties:
-                      key:
-                        description: The key of the secret to select from.  Must be
-                          a valid secret key.
+                      kind:
+                        description: BuildStrategyKind indicates the kind of the buildstrategy,
+                          BuildStrategy or ClusterBuildStrategy, default is BuildStrategy.
                         type: string
                       name:
-                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                        description: 'Name of the referent; More info: http://kubernetes.io/docs/user-guide/identifiers#names'
                         type: string
-                      optional:
-                        description: Specify whether the Secret or its key must be
-                          defined
-                        type: boolean
                     required:
-                    - key
+                    - name
                     type: object
-                  url:
-                    description: Image registry url
+                  timeout:
+                    description: Timeout defines the maximum amount of time the Build
+                      should take to execute.
+                    format: duration
                     type: string
                 type: object
               srcRepo:
                 description: Git repository info of a function
                 properties:
-                  deleteExisting:
-                    description: 'Clean out the contents of the repo''s destination
-                      directory if it already exists before cloning the repo there
-                      (default: true)'
-                    type: boolean
-                  depth:
-                    description: 'Performs a shallow clone where only the most recent
-                      commit(s) will be fetched (default: 1)'
-                    type: integer
-                  gitInitImage:
-                    description: 'The image used where the git-init binary is (default:
-                      "gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init:v0.17.3")'
-                    type: string
-                  httpProxy:
-                    description: 'Git HTTP proxy server for non-SSL requests (default:
-                      "")'
-                    type: string
-                  httpsProxy:
-                    description: 'Git HTTPS proxy server for SSL requests (default:
-                      "")'
-                    type: string
-                  noProxy:
-                    description: 'Git no proxy - opt out of proxying HTTP/HTTPS requests
-                      (default: "")'
-                    type: string
-                  refspec:
-                    description: Git refspec to fetch before checking out revision
-                      (default:"")
-                    type: string
+                  credentials:
+                    description: Credentials references a Secret that contains credentials
+                      to access the repository.
+                    properties:
+                      name:
+                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                        type: string
+                    type: object
                   revision:
-                    description: Git revision to checkout (branch, tag, sha, ref…)
+                    description: Git revision to check out (branch, tag, sha, ref…)
                       (default:"")
                     type: string
                   sourceSubPath:
                     description: A subpath within the `source` input where the source
                       to build is located.
                     type: string
-                  sslVerify:
-                    description: 'Defines if http.sslVerify should be set to true
-                      or false in the global git config (default: true)'
-                    type: boolean
-                  subDirectory:
-                    description: 'Subdirectory inside the "output" workspace to clone
-                      the git repo into (default: "")'
-                    type: string
-                  submodules:
-                    description: 'Defines if the resource should initialize and fetch
-                      the submodules (default: true)'
-                    type: boolean
                   url:
                     description: Git url to clone
                     type: string
-                  verbose:
-                    description: 'Log the commands that are executed during git-clone''s
-                      operation (default: true)'
-                    type: boolean
                 required:
                 - url
                 type: object
-              version:
-                description: Function version in format like v1.0.0
-                type: string
             required:
-            - builder
             - image
-            - registry
             - srcRepo
             type: object
           status:
@@ -158,6 +154,11 @@ spec:
             properties:
               phase:
                 type: string
+              resourceRef:
+                additionalProperties:
+                  type: string
+                description: Associate resources.
+                type: object
               state:
                 type: string
             type: object
@@ -670,7 +671,23 @@ spec:
     singular: function
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.build.state
+      name: BuildState
+      type: string
+    - jsonPath: .status.serving.state
+      name: ServingState
+      type: string
+    - jsonPath: .status.build.resourceRef
+      name: Builder
+      type: string
+    - jsonPath: .status.serving.resourceRef
+      name: Serving
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: Function is the Schema for the functions API
@@ -691,118 +708,115 @@ spec:
             description: FunctionSpec defines the desired state of Function
             properties:
               build:
-                description: Information needed to build a function
+                description: Information needed to build a function. If the `Build`
+                  is nil, it will skip the build step.
                 properties:
                   builder:
-                    description: Cloud Native Buildpacks builders
+                    description: Builder refers to the image containing the build
+                      tools inside which the source code would be built.
                     type: string
+                  builderCredentials:
+                    description: BuilderCredentials references a Secret that contains
+                      credentials to access the builder image repository.
+                    properties:
+                      name:
+                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                        type: string
+                    type: object
+                  dockerfile:
+                    description: Dockerfile is the path to the Dockerfile to be used
+                      for build strategies which bank on the Dockerfile for building
+                      an image.
+                    type: string
+                  env:
+                    additionalProperties:
+                      type: string
+                    description: Environment params to pass to the builder.
+                    type: object
                   params:
                     additionalProperties:
                       type: string
-                    description: Environment params to pass to the builder
+                    description: 'Params is a list of key/value that could be used
+                      to set strategy parameters. When using _params_, users should
+                      avoid: Defining a parameter name that doesn''t match one of
+                      the `spec.parameters` defined in the `BuildStrategy`. Defining
+                      a parameter name that collides with the Shipwright reserved
+                      parameters. These are _BUILDER_IMAGE_,_DOCKERFILE_,_CONTEXT_DIR_
+                      and any name starting with _shp-_.'
                     type: object
-                  registry:
-                    description: Image registry of the function image
+                  shipwright:
+                    description: The configuration for `Shipwright` build engine.
                     properties:
-                      account:
-                        description: Image registry account including username and
-                          password
+                      strategy:
+                        description: Strategy references the BuildStrategy to use
+                          to build the image.
                         properties:
-                          key:
-                            description: The key of the secret to select from.  Must
-                              be a valid secret key.
+                          kind:
+                            description: BuildStrategyKind indicates the kind of the
+                              buildstrategy, BuildStrategy or ClusterBuildStrategy,
+                              default is BuildStrategy.
                             type: string
                           name:
-                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            description: 'Name of the referent; More info: http://kubernetes.io/docs/user-guide/identifiers#names'
                             type: string
-                          optional:
-                            description: Specify whether the Secret or its key must
-                              be defined
-                            type: boolean
                         required:
-                        - key
+                        - name
                         type: object
-                      url:
-                        description: Image registry url
+                      timeout:
+                        description: Timeout defines the maximum amount of time the
+                          Build should take to execute.
+                        format: duration
                         type: string
                     type: object
                   srcRepo:
                     description: Function Source code repository
                     properties:
-                      deleteExisting:
-                        description: 'Clean out the contents of the repo''s destination
-                          directory if it already exists before cloning the repo there
-                          (default: true)'
-                        type: boolean
-                      depth:
-                        description: 'Performs a shallow clone where only the most
-                          recent commit(s) will be fetched (default: 1)'
-                        type: integer
-                      gitInitImage:
-                        description: 'The image used where the git-init binary is
-                          (default: "gcr.io/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init:v0.17.3")'
-                        type: string
-                      httpProxy:
-                        description: 'Git HTTP proxy server for non-SSL requests (default:
-                          "")'
-                        type: string
-                      httpsProxy:
-                        description: 'Git HTTPS proxy server for SSL requests (default:
-                          "")'
-                        type: string
-                      noProxy:
-                        description: 'Git no proxy - opt out of proxying HTTP/HTTPS
-                          requests (default: "")'
-                        type: string
-                      refspec:
-                        description: Git refspec to fetch before checking out revision
-                          (default:"")
-                        type: string
+                      credentials:
+                        description: Credentials references a Secret that contains
+                          credentials to access the repository.
+                        properties:
+                          name:
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            type: string
+                        type: object
                       revision:
-                        description: Git revision to checkout (branch, tag, sha, ref…)
-                          (default:"")
+                        description: Git revision to check out (branch, tag, sha,
+                          ref…) (default:"")
                         type: string
                       sourceSubPath:
                         description: A subpath within the `source` input where the
                           source to build is located.
                         type: string
-                      sslVerify:
-                        description: 'Defines if http.sslVerify should be set to true
-                          or false in the global git config (default: true)'
-                        type: boolean
-                      subDirectory:
-                        description: 'Subdirectory inside the "output" workspace to
-                          clone the git repo into (default: "")'
-                        type: string
-                      submodules:
-                        description: 'Defines if the resource should initialize and
-                          fetch the submodules (default: true)'
-                        type: boolean
                       url:
                         description: Git url to clone
                         type: string
-                      verbose:
-                        description: 'Log the commands that are executed during git-clone''s
-                          operation (default: true)'
-                        type: boolean
                     required:
                     - url
                     type: object
                 required:
-                - builder
-                - registry
                 - srcRepo
                 type: object
               image:
                 description: Function image name
                 type: string
+              imageCredentials:
+                description: ImageCredentials references a Secret that contains credentials
+                  to access the image repository.
+                properties:
+                  name:
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                      TODO: Add other useful fields. apiVersion, kind, uid?'
+                    type: string
+                type: object
               port:
                 description: The port on which the function will be invoked
                 format: int32
                 type: integer
               serving:
-                description: Information needed to run a function
+                description: Information needed to run a function. If the `Serving`
+                  is nil, it will skip the serving step.
                 properties:
                   openFuncAsync:
                     description: Parameters of asyncFunc runtime, must not be nil
@@ -817,7 +831,7 @@ spec:
                             description: Annotations for dapr
                             type: object
                           components:
-                            description: Components of dapr
+                            description: Components of dapr.
                             items:
                               properties:
                                 ignoreErrors:
@@ -942,7 +956,7 @@ spec:
                               type: object
                             type: array
                           subscriptions:
-                            description: Subscriptions of dapr
+                            description: Subscriptions of dapr.
                             items:
                               properties:
                                 name:
@@ -979,6 +993,10 @@ spec:
                               pollingInterval:
                                 format: int32
                                 type: integer
+                              restartPolicy:
+                                description: Restart policy for all containers within
+                                  the pod. One of OnFailure, Never. Default to Never.
+                                type: string
                               scalingStrategy:
                                 description: ScalingStrategy defines the strategy
                                   of Scaling
@@ -1249,7 +1267,7 @@ spec:
                       code can use these parameters by getting environment variables
                     type: object
                   runtime:
-                    description: Function runtime such as Knative or OpenFuncAsync
+                    description: Function runtime such as Knative or OpenFuncAsync.
                     type: string
                   template:
                     description: Template describes the pods that will be created.
@@ -7488,6 +7506,8 @@ spec:
                     required:
                     - containers
                     type: object
+                required:
+                - runtime
                 type: object
               version:
                 description: Function version in format like v1.0.0
@@ -7498,10 +7518,24 @@ spec:
           status:
             description: FunctionStatus defines the observed state of Function
             properties:
-              phase:
-                type: string
-              state:
-                type: string
+              build:
+                properties:
+                  resourceHash:
+                    type: string
+                  resourceRef:
+                    type: string
+                  state:
+                    type: string
+                type: object
+              serving:
+                properties:
+                  resourceHash:
+                    type: string
+                  resourceRef:
+                    type: string
+                  state:
+                    type: string
+                type: object
             type: object
         type: object
     served: true
@@ -7532,7 +7566,17 @@ spec:
     singular: serving
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.state
+      name: State
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: Serving is the Schema for the servings API
@@ -7555,6 +7599,15 @@ spec:
               image:
                 description: Function image name
                 type: string
+              imageCredentials:
+                description: ImageCredentials references a Secret that contains credentials
+                  to access the image repository.
+                properties:
+                  name:
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                      TODO: Add other useful fields. apiVersion, kind, uid?'
+                    type: string
+                type: object
               openFuncAsync:
                 description: Parameters of OpenFuncAsync runtime.
                 properties:
@@ -7567,7 +7620,7 @@ spec:
                         description: Annotations for dapr
                         type: object
                       components:
-                        description: Components of dapr
+                        description: Components of dapr.
                         items:
                           properties:
                             ignoreErrors:
@@ -7692,7 +7745,7 @@ spec:
                           type: object
                         type: array
                       subscriptions:
-                        description: Subscriptions of dapr
+                        description: Subscriptions of dapr.
                         items:
                           properties:
                             name:
@@ -7729,6 +7782,10 @@ spec:
                           pollingInterval:
                             format: int32
                             type: integer
+                          restartPolicy:
+                            description: Restart policy for all containers within
+                              the pod. One of OnFailure, Never. Default to Never.
+                            type: string
                           scalingStrategy:
                             description: ScalingStrategy defines the strategy of Scaling
                             properties:
@@ -14000,12 +14057,18 @@ spec:
                 type: string
             required:
             - image
+            - runtime
             type: object
           status:
             description: ServingStatus defines the observed state of Serving
             properties:
               phase:
                 type: string
+              resourceRef:
+                additionalProperties:
+                  type: string
+                description: Associate resources.
+                type: object
               state:
                 type: string
             type: object
@@ -14296,10 +14359,6 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - configmaps
-  - persistentvolumeclaims
-  - secrets
-  - serviceaccounts
   - services
   verbs:
   - create
@@ -14518,12 +14577,10 @@ rules:
   - update
   - watch
 - apiGroups:
-  - tekton.dev
+  - shipwright.io
   resources:
-  - pipelineresources
-  - pipelineruns
-  - pipelines
-  - tasks
+  - buildruns
+  - builds
   verbs:
   - create
   - delete
@@ -14696,3 +14753,124 @@ spec:
         runAsNonRoot: true
       serviceAccountName: openfunction-controller-manager
       terminationGracePeriodSeconds: 10
+---
+apiVersion: shipwright.io/v1alpha1
+kind: ClusterBuildStrategy
+metadata:
+  name: openfunction-openfunction
+  namespace: openfunction
+spec:
+  buildSteps:
+  - args:
+    - -c
+    - |
+      #!/usr/bin/env bash
+      set -e
+
+      for path in "/cache" "/tekton/home" "/layers" "/workspace/source"; do
+        echo "> Setting permissions on '$path'..."
+        chown -R "$(params.USER_ID):$(params.GROUP_ID)" "$path"
+      done
+
+      echo "> Processing any environment variables..."
+      ENV_DIR="/platform/env"
+
+      echo "--> Creating 'env' directory: $ENV_DIR"
+      mkdir -p "$ENV_DIR"
+
+      envs=(`echo $(params.ENV_VARS) | tr ',' ' '`)
+
+      for env in "${envs[@]}"; do
+          IFS='=' read -r key value string <<< "$env"
+          if [[ "$key" != "" && "$value" != "" ]]; then
+              path="${ENV_DIR}/${key}"
+              echo "--> Writing ${path}..."
+              echo -n "$value" > "$path"
+          fi
+      done
+    command:
+    - /usr/local/bin/bash
+    image: docker.io/library/bash:5.1.4@sha256:b208215a4655538be652b2769d82e576bc4d0a2bb132144c060efc5be8c3f5d6
+    name: prepare
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - mountPath: /cache
+      name: cache
+    - mountPath: /layers
+      name: layers-dir
+    - mountPath: /platform
+      name: $(params.PLATFORM_DIR)
+  - args:
+    - -app=/workspace/source/$(params.CONTEXT_DIR)
+    - -cache-dir=/cache
+    - -uid=$(params.USER_ID)
+    - -gid=$(params.GROUP_ID)
+    - -layers=/layers
+    - -platform=/platform
+    - -report=/layers/report.toml
+    - -process-type=$(params.PROCESS_TYPE)
+    - -skip-restore=$(params.SKIP_RESTORE)
+    - -previous-image=$(params.APP_IMAGE)
+    - -run-image=$(params.RUN_IMAGE)
+    - $(params.APP_IMAGE)
+    command:
+    - /cnb/lifecycle/creator
+    image: $(params.BUILDER_IMAGE)
+    imagePullPolicy: Always
+    name: create
+    securityContext:
+      runAsGroup: 1000
+      runAsUser: 1000
+    volumeMounts:
+    - mountPath: /cache
+      name: cache
+    - mountPath: /layers
+      name: layers-dir
+    - mountPath: /platform
+      name: $(params.PLATFORM_DIR)
+  - args:
+    - -c
+    - |
+      #!/usr/bin/env bash
+      set -e
+      cat /layers/report.toml | grep "digest" | cut -d'"' -f2 | cut -d'"' -f2 | tr -d '\n' | tee $(results.shp-image-digest.path)
+    command:
+    - /bin/sh
+    image: docker.io/library/bash:5.1.4@sha256:b208215a4655538be652b2769d82e576bc4d0a2bb132144c060efc5be8c3f5d6
+    name: results
+    volumeMounts:
+    - mountPath: /layers
+      name: layers-dir
+  parameters:
+  - description: The name of where to store the app image.
+    name: APP_IMAGE
+  - default: ""
+    description: A subpath within the source input where the source to build is located.
+    name: SOURCE_SUBPATH
+  - default: web
+    description: The default process type to set on the image.
+    name: PROCESS_TYPE
+  - default: ""
+    description: Reference to a run image to use.
+    name: RUN_IMAGE
+  - default: ""
+    description: The name of the persistent app cache image (if no cache workspace
+      is provided).
+    name: CACHE_IMAGE
+  - default: "false"
+    description: Do not write layer metadata or restore cached layers.
+    name: SKIP_RESTORE
+  - default: "1000"
+    description: The user ID of the builder image user.
+    name: USER_ID
+  - default: "1000"
+    description: The group ID of the builder image user.
+    name: GROUP_ID
+  - default: empty-dir
+    description: The name of the platform directory.
+    name: PLATFORM_DIR
+  - default: ""
+    description: Environment variables to set during _build-time_. The formate is
+      `key1=value1,key2=value2`.
+    name: ENV_VARS
