@@ -2,9 +2,9 @@
 
 ## Overview
 
-```OpenFunction``` is a cloud-native open source FaaS (Function as a Service) platform aiming to enable users to focus on their business logic without worrying about the underlying runtime environment and infrastructure. Users only need to submit business-related source code in the form of functions.
+**OpenFunction** is a cloud-native open source FaaS (Function as a Service) platform aiming to enable users to focus on their business logic without worrying about the underlying runtime environment and infrastructure. Users only need to submit business-related source code in the form of functions.
 
-```OpenFunction``` features but not limited to the following:
+OpenFunction features but not limited to the following:
 
 - Convert business-related function source code to runnable application source code.
 - Generate a deployable container image from the converted application source code.
@@ -16,19 +16,21 @@
 
 ## CustomResourceDefinitions
 
-The core function of OpenFunction is to enable users to develop, run, and manage business applications as execution units of code functions. OpenFunction implements the following [custom resource definitions (CRDs)](https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/):  
+### Core CRDs
+
+The core capability of OpenFunction is to enable users to develop, run and manage applications as executable function code. OpenFunction implements the following [custom resource definitions (CRDs)](https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/):  
 
 - **Function**, defines a function.
 - **Builder**, defines a function builder.
 - **Serving**, defines a function workload.
 
-### Function
+#### Function
 
 The goal of Function is to control the lifecycle management from user code to the final application that can respond to events through a single profile.
 
 Function will manage and coordinate Builder and Serving resources to handle the details of the process.
 
-### Builder
+#### Builder
 
 The goal of Builder is to compile the user's function source code into an application image that can be run in a cloud-native environment.
 
@@ -36,7 +38,7 @@ It will fetch the code from the code repository, build the application image loc
 
 Currently, OpenFunction Builder uses [Tekton and Cloud Native Buildpacks](#tekton-and-cloud-native-buildpacks) to build container images.
 
-#### Tekton and Cloud Native Buildpacks
+##### Tekton and Cloud Native Buildpacks
 
 Tekton is a CI/CD system that provides task pipelining capabilities. 
 
@@ -44,23 +46,29 @@ Cloud Native Buildpacks is an OCI standard image building framework that transfo
 
 OpenFunction Builder controls the build process of application images by Tekton, including fetching code, building and publishing images via Cloud Native Buildpacks.
 
-### Serving
+#### Serving
 
 The goal of Serving is to serving user functions and implementing event-driven functions response.
 
 Currently, OpenFunction supports two serving runtimes, [Knative](#knative) and [OpenFuncAsync](#openfuncasync). At least one of these runtimes needs to be installed.
 
-#### Knative
+##### Knative
 
 Knative Serving builds on Kubernetes to support deploying and serving serverless applications and functions. Knative Serving is easy to get started with and scales to support advanced scenarios.
 
-#### OpenFuncAsync
+##### OpenFuncAsync
 
 OpenFuncAsync is an event-driven Serving runtime. It is implemented based on KEDA + Dapr.
 
 You can refer to [Prerequisites](#prerequisites) and use `--with-openFuncAsync` to install OpenFuncAsync runtime.
 
 The OpenFuncAsync runtime can be triggered by a variety of event types, such as MQ, cronjob, DB events, etc. In Kubernetes cluster, OpenFuncAsync will be triggered in the form of deployments or jobs.
+
+### Events CRDs
+
+OpenFunction also provides an event handling framework that complements the event-driven capabilities of OpenFunction as a FaaS framework.
+
+You can refer to [OpenFunction Events Framework Concepts](docs/concepts/OpenFunction-events-framework.md) for more information.
 
 ## QuickStart
 
