@@ -1,3 +1,16 @@
+- [Overview](#overview)
+  * [Features](#features)
+- [Concepts](#concepts)
+  * [Architecture](#architecture)
+  * [EventSource](#eventsource)
+  * [EventBus(ClusterEventBus)](#eventbusclustereventbus)
+  * [Trigger](#trigger)
+- [Getting Started](#getting-started)
+  * [Sample 1: Event source trigger synchronization function](#sample-1-event-source-trigger-synchronization-function)
+  * [Sample 2: Use of event bus and triggers](#sample-2-use-of-event-bus-and-triggers)
+  * [Sample 3: Multi sources in one EventSource](#sample-3-multi-sources-in-one-eventsource)
+  * [Sample 4: EventBus and ClusterEventBus](#sample-4-eventbus-and-clustereventbus)
+
 # Overview
 
 **OpenFunction Events** is the event management framework for OpenFunction.
@@ -20,7 +33,7 @@ Represents the producer of an event, such as a Kafka service, an object storage 
 
 The **EventSource** contains a description of these event producers  and is also responsible for directing where the events they generate should go.
 
-### Available:
+### Available
 
 - Kafka
 - Cron (scheduler)
@@ -34,7 +47,7 @@ The **EventBus** contains a description of the event bus backend service (usuall
 
 EventBus will take care of event bus adaptation for namespaced scope by default, while we provide an event bus adapter **ClusterEventBus** for clustered scope. **ClusterEventBus** will take effect when other components do not find an EventBus under the namespace.
 
-### Available:
+### Available
 
 - NATS Streaming
 
@@ -276,8 +289,8 @@ You will observe the following changes:
 > 1. Create EventSource CR called "my-eventsource"
 > 2. Retrieve and reorganize the configuration of the EventBus (used to pass in the Deployments in step 5), including:
      >    1. The EventBus name ("default" in this sample)
->    2. The name of the Dapr Component associated with the EventBus ("eventsource-eventbus-my-eventsource" in this sample)
-> 3. Create a Dapr Component called "eventsource-eventbus-my-eventsource" for associating the event bus
+>    2. The name of the Dapr Component associated with the EventBus ("eventbus-eventsource-my-eventsource" in this sample)
+> 3. Create a Dapr Component called "eventbus-eventsource-my-eventsource" for associating the event bus
 > 4. Create a Dapr Component called "eventsource-my-eventsource-kafka-sample-two" for associating the event source
 > 5. Create a Deployments called "eventsource-my-eventsource-kafka-sample-two" for processing events
 
@@ -292,7 +305,7 @@ default   10m
 
 ~# kubectl get components
 NAME                                          AGE
-eventsource-eventbus-my-eventsource           28s
+eventbus-eventsource-my-eventsource           28s
 eventsource-my-eventsource-kafka-sample-two   28s
 
 ~# kubectl get deployments.apps
@@ -347,8 +360,8 @@ You will observe the following changes :
 > 1. Create a Trigger CR called "my-trigger"
 > 2. Retrieve and reorganize the configuration of the EventBus (used to pass in the Deployments in step 5), including:
      >    1. The EventBus name ("default" in this sample)
->    2. The name of the Dapr Component associated with the EventBus ("trigger-eventbus-my-trigger" in this sample)
-> 3. Create a Dapr Component called "trigger-eventbus-my-trigger" for associating the event bus
+>    2. The name of the Dapr Component associated with the EventBus ("eventbus-trigger-my-trigger" in this sample)
+> 3. Create a Dapr Component called "eventbus-trigger-my-trigger" for associating the event bus
 > 4. Create a Dapr Component called "trigger-sink-my-trigger-default-function-sample-serving-ksvc" for associating the target function
 > 5. Create a Deployments called "trigger-my-trigger" to handle trigger tasks
 
@@ -363,7 +376,7 @@ default   62m
 
 ~# kubectl get components
 NAME                                                           AGE
-trigger-eventbus-my-trigger                                    34m
+eventbus-trigger-my-trigger                                    34m
 trigger-sink-my-trigger-default-function-sample-serving-ksvc   34m
 
 ~# kubectl get deployments.apps
@@ -437,7 +450,7 @@ function-sample-serving-ksvc-v100-deployment-5df4f559db-h69xj   2/2     Running 
 
 ## Sample 3: Multi sources in one EventSource
 
-We add an event source configuration to the EventSource based on [Sample 1](#Sample 1:Event source trigger synchronization function) .
+We add an event source configuration to the EventSource based on [Sample 1](#sample-1-event-source-trigger-synchronization-function) .
 
 Create an EventSource configuration `eventsource-multi.yaml` :
 
@@ -510,7 +523,7 @@ The role of the `cron` event is to trigger the function in sink every 5 seconds.
 
 ## Sample 4: EventBus and ClusterEventBus
 
-Based on [Sample 2](#Sample 2: Use of event bus and triggers), we try to use a ClusterEventBus instead of an EventBus in the namespace.
+Based on [Sample 2](#sample-2-use-of-event-bus-and-triggers), we try to use a ClusterEventBus instead of an EventBus in the namespace.
 
 Create a ClusterEventBus configuration `clustereventbus-default.yaml` ：
 

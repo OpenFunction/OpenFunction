@@ -28,10 +28,10 @@ const (
 	EventSourceComponentNameTmpl = "eventsource-%s-%s-%s"
 	// EventSourceSinkComponentNameTmpl => eventsource-sink-{eventSourceName}
 	EventSourceSinkComponentNameTmpl = "eventsource-sink-%s"
-	// EventSourceBusComponentNameTmpl => eventsource-eventbus-{eventSourceName}
-	EventSourceBusComponentNameTmpl = "eventsource-eventbus-%s"
-	// TriggerBusComponentNameTmpl => trigger-eventbus-{triggerName}
-	TriggerBusComponentNameTmpl = "trigger-eventbus-%s"
+	// EventSourceBusComponentNameTmpl => eventbus-eventsource-{eventSourceName}
+	EventSourceBusComponentNameTmpl = "eventbus-eventsource-%s"
+	// TriggerBusComponentNameTmpl => eventbus-trigger-{triggerName}
+	TriggerBusComponentNameTmpl = "eventbus-trigger-%s"
 	// TriggerSinkComponentNameTmpl => trigger-sink-{triggerName}-{sinkNamespace}-{sinkName}
 	TriggerSinkComponentNameTmpl = "trigger-sink-%s-%s-%s"
 	// EventSourceWorkloadsNameTmpl => eventsource-{eventSourceName}-{sourceKind}-{eventName}

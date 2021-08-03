@@ -22,7 +22,7 @@ package v1alpha1
 
 import (
 	apiv1alpha1 "github.com/kedacore/keda/v2/api/v1alpha1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
