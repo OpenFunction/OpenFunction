@@ -25,6 +25,19 @@ spec:
     - jsonPath: .spec.sink.ref.name
       name: Sink
       type: string
+    - jsonPath: .status.state
+      name: Status
+      type: string
+    - jsonPath: .status.componentStatistics
+      name: Components
+      type: string
+    - jsonPath: .status.workloadStatistics
+      name: Workloads
+      type: string
+    - jsonPath: .status.message
+      name: Message
+      priority: 10
+      type: string
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -228,6 +241,39 @@ spec:
             type: object
           status:
             description: EventSourceStatus defines the observed state of EventSource
+            properties:
+              componentStatistics:
+                type: string
+              componentStatus:
+                items:
+                  properties:
+                    name:
+                      type: string
+                    state:
+                      type: string
+                  required:
+                  - name
+                  - state
+                  type: object
+                type: array
+              message:
+                type: string
+              state:
+                type: string
+              workloadStatistics:
+                type: string
+              workloadStatus:
+                items:
+                  properties:
+                    name:
+                      type: string
+                    state:
+                      type: string
+                  required:
+                  - name
+                  - state
+                  type: object
+                type: array
             type: object
         type: object
     served: true

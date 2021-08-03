@@ -62,12 +62,24 @@ type Subscriber struct {
 type TriggerStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	State               string                 `json:"state,omitempty"`
+	Message             string                 `json:"message,omitempty"`
+	ComponentStatus     []*OwnedResourceStatus `json:"componentStatus,omitempty"`
+	ComponentStatistics string                 `json:"componentStatistics,omitempty"`
+	WorkloadStatus      []*OwnedResourceStatus `json:"workloadStatus,omitempty"`
+	WorkloadStatistics  string                 `json:"workloadStatistics,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
 // Trigger is the Schema for the triggers API
+//+kubebuilder:printcolumn:name="EventBus",type=string,JSONPath=`.spec.eventBus`
+//+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.state`
+//+kubebuilder:printcolumn:name="Components",type=string,JSONPath=`.status.componentStatistics`
+//+kubebuilder:printcolumn:name="Workloads",type=string,JSONPath=`.status.workloadStatistics`
+//+kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.message`,priority=10
 type Trigger struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

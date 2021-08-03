@@ -23,25 +23,22 @@ import (
 	"fmt"
 	"strings"
 
-	"k8s.io/apimachinery/pkg/labels"
-
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
-
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/json"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
-
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/json"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	openfunction "github.com/openfunction/apis/events/v1alpha1"
 	openfunctionevent "github.com/openfunction/apis/events/v1alpha1"
@@ -56,10 +53,11 @@ const (
 // TriggerReconciler reconciles a Trigger object
 type TriggerReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
-	ctx    context.Context
-	envs   *TriggerConfig
+	Log                 logr.Logger
+	Scheme              *runtime.Scheme
+	ctx                 context.Context
+	envs                *TriggerConfig
+	controlledResources *ControlledResources
 }
 
 type Subscribers struct {
@@ -91,16 +89,35 @@ func (r *TriggerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	var trigger openfunctionevent.Trigger
 	r.envs = &TriggerConfig{}
+	r.controlledResources = &ControlledResources{}
 
 	if err := r.Get(ctx, req.NamespacedName, &trigger); err != nil {
 		log.V(1).Info("Trigger deleted", "error", err)
 		return ctrl.Result{}, util.IgnoreNotFound(err)
 	}
 
-	if _, err := r.createOrUpdateTrigger(&trigger); err != nil {
+	// Get all exist components and workloads owned by the Trigger and mark them with status of pending deletion (set to true)
+	// In the later reconcile, the resources that still need to be kept are set to non-pending deletion status (set to false) based on the latest list of resources to be created
+	controlledLabelSelector := labels.SelectorFromSet(labels.Set(map[string]string{TriggerControlledLabel: trigger.Name}))
+	err := retrieveControlledResources(r.ctx, r.Client, controlledLabelSelector, r.controlledResources)
+	if err != nil {
+		log.Error(err, "Failed to retrieve exist controlled resources", "namespace", trigger.Namespace, "name", trigger.Name)
 		return ctrl.Result{}, err
 	}
 
+	if _, err := r.createOrUpdateTrigger(&trigger); err != nil {
+		log.Error(err, "Failed to create or update trigger", "namespace", trigger.Namespace, "name", trigger.Name)
+		if err := r.updateStatus(&trigger, &openfunctionevent.TriggerStatus{State: Error, Message: fmt.Sprintln(err)}); err != nil {
+			log.Error(err, "Failed to update trigger status", "namespace", trigger.Namespace, "name", trigger.Name)
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, err
+	}
+
+	if err := r.updateStatus(&trigger, &openfunctionevent.TriggerStatus{State: Running, Message: ""}); err != nil {
+		log.Error(err, "Failed to update trigger status", "namespace", trigger.Namespace, "name", trigger.Name)
+		return ctrl.Result{}, err
+	}
 	return ctrl.Result{}, nil
 }
 
@@ -116,56 +133,34 @@ func (r *TriggerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 func (r *TriggerReconciler) createOrUpdateTrigger(trigger *openfunctionevent.Trigger) (ctrl.Result, error) {
 	log := r.Log.WithName("createOrUpdate")
 
-	var existComponents componentsv1alpha1.ComponentList
-	var existWorkloads appsv1.DeploymentList
-	controlledLabelSelector := labels.SelectorFromSet(labels.Set(map[string]string{TriggerControlledLabel: trigger.Name}))
-
-	if err := r.List(r.ctx, &existComponents, &client.ListOptions{LabelSelector: controlledLabelSelector}); err != nil {
-		log.Error(err, "Failed to retrieve exist controlled components", "namespace", trigger.Namespace, "name", trigger.Name)
-		return ctrl.Result{}, err
-	}
-	componentsPendingDelete := map[string]bool{}
-	for _, component := range existComponents.Items {
-		c := component
-		componentsPendingDelete[c.Name] = true
-	}
-
-	if err := r.List(r.ctx, &existWorkloads, &client.ListOptions{LabelSelector: controlledLabelSelector}); err != nil {
-		log.Error(err, "Failed to retrieve exist controlled workloads", "namespace", trigger.Namespace, "name", trigger.Name)
-		return ctrl.Result{}, err
-	}
-	workloadsPendingDelete := map[string]bool{}
-	for _, workload := range existWorkloads.Items {
-		w := workload
-		workloadsPendingDelete[w.Name] = true
-	}
-
 	// Handle EventBus reconcile.
 	if trigger.Spec.EventBus != "" {
-		if err := r.handleEventBus(trigger, componentsPendingDelete); err != nil {
+		if err := r.handleEventBus(trigger); err != nil {
 			return ctrl.Result{}, err
 		}
+	} else {
+		return ctrl.Result{}, errors.New("spec.evenBus must be set")
 	}
 
 	// Handle Subscriber reconcile.
-	if err := r.handleSubscriber(trigger, componentsPendingDelete, workloadsPendingDelete); err != nil {
+	if err := r.handleSubscriber(trigger); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	if err := r.handleDeprecatedComponents(trigger, componentsPendingDelete); err != nil {
-		log.Error(err, "Failed to handle deprecated components", "namespace", trigger.Namespace, "name", trigger.Name)
+	// Clean up resources to be deprecated
+	if err := r.handleDeprecatedResources(trigger); err != nil {
+		log.Error(err, "Failed to handle deprecated resources", "namespace", trigger.Namespace, "name", trigger.Name)
 		return ctrl.Result{}, err
 	}
 
-	if err := r.handleDeprecatedWorkloads(trigger, workloadsPendingDelete); err != nil {
-		log.Error(err, "Failed to handle deprecated workloads", "namespace", trigger.Namespace, "name", trigger.Name)
+	if _, err := ctrl.CreateOrUpdate(r.ctx, r.Client, trigger, r.mutateTrigger(trigger)); err != nil {
+		log.Error(err, "Failed to update trigger", "namespace", trigger.Namespace, "name", trigger.Name)
 		return ctrl.Result{}, err
 	}
-
 	return ctrl.Result{}, nil
 }
 
-func (r *TriggerReconciler) handleEventBus(trigger *openfunctionevent.Trigger, componentsPendingDelete map[string]bool) error {
+func (r *TriggerReconciler) handleEventBus(trigger *openfunctionevent.Trigger) error {
 
 	// Retrieve the specification of EventBus associated with the Trigger
 	var eventBusSpec openfunctionevent.EventBusSpec
@@ -173,7 +168,7 @@ func (r *TriggerReconciler) handleEventBus(trigger *openfunctionevent.Trigger, c
 	if eventBus == nil {
 		clusterEventBus := retrieveClusterEventBus(r.ctx, r.Client, trigger.Spec.EventBus)
 		if clusterEventBus == nil {
-			return errors.New("cannot retrieve eventBus and clusterEventBus")
+			return errors.New("cannot retrieve eventBus or clusterEventBus")
 		} else {
 			eventBusSpec = clusterEventBus.Spec
 		}
@@ -182,9 +177,7 @@ func (r *TriggerReconciler) handleEventBus(trigger *openfunctionevent.Trigger, c
 	}
 
 	componentName := fmt.Sprintf(TriggerBusComponentNameTmpl, trigger.Name)
-	if componentsPendingDelete[componentName] {
-		componentsPendingDelete[componentName] = false
-	}
+	r.controlledResources.SetResourceStatusToActive(componentName, ResourceTypeComponent)
 
 	// Set TriggerConfig.EventBusComponentName and TriggerConfig.EventBusTopics.
 	r.envs.EventBusComponentName = componentName
@@ -218,13 +211,14 @@ func (r *TriggerReconciler) handleEventBus(trigger *openfunctionevent.Trigger, c
 		if _, err := ctrl.CreateOrUpdate(r.ctx, r.Client, component, mutateDaprComponent(r.Scheme, component, trigger)); err != nil {
 			return err
 		}
+		r.controlledResources.SetResourceStatus(componentName, ResourceTypeComponent, Running)
 	} else {
 		return nil
 	}
 	return nil
 }
 
-func (r *TriggerReconciler) handleSubscriber(trigger *openfunctionevent.Trigger, componentsPendingDelete map[string]bool, workloadsPendingDelete map[string]bool) error {
+func (r *TriggerReconciler) handleSubscriber(trigger *openfunctionevent.Trigger) error {
 	var components []*componentsv1alpha1.Component
 
 	sinks := map[*openfunction.SinkSpec]bool{}
@@ -325,14 +319,13 @@ func (r *TriggerReconciler) handleSubscriber(trigger *openfunctionevent.Trigger,
 
 	for _, component := range components {
 		c := component
-		if componentsPendingDelete[component.Name] {
-			componentsPendingDelete[component.Name] = false
-		}
+		r.controlledResources.SetResourceStatusToActive(c.Name, ResourceTypeComponent)
 		if _, err := ctrl.CreateOrUpdate(r.ctx, r.Client, c, mutateDaprComponent(r.Scheme, c, trigger)); err != nil {
 			return err
 		}
+		r.controlledResources.SetResourceStatus(c.Name, ResourceTypeComponent, Running)
 		// Create the workload for Trigger.
-		if _, err := r.createOrUpdateTriggerWorkload(trigger, workloadsPendingDelete); err != nil {
+		if _, err := r.createOrUpdateTriggerWorkload(trigger); err != nil {
 			return err
 		}
 	}
@@ -387,7 +380,32 @@ func (r *TriggerReconciler) handleDeprecatedWorkloads(trigger *openfunctionevent
 	return nil
 }
 
-func (r *TriggerReconciler) createOrUpdateTriggerWorkload(trigger *openfunctionevent.Trigger, workloadsPendingDelete map[string]bool) (runtime.Object, error) {
+func (r *TriggerReconciler) handleDeprecatedResources(trigger *openfunctionevent.Trigger) error {
+	log := r.Log.WithName("handleDeprecatedResources")
+
+	// handle deprecated workloads
+	for workloadName, workloadStatus := range r.controlledResources.Workloads {
+		if workloadStatus.IsDeprecated {
+			if err := r.Delete(r.ctx, workloadStatus.Object); util.IgnoreNotFound(err) != nil {
+				log.Error(err, "Failed to delete deprecated workload", "namespace", trigger.Namespace, "name", workloadName)
+				return err
+			}
+		}
+	}
+
+	// handle deprecated components
+	for componentName, componentStatus := range r.controlledResources.Components {
+		if componentStatus.IsDeprecated {
+			if err := r.Delete(r.ctx, componentStatus.Object); util.IgnoreNotFound(err) != nil {
+				log.Error(err, "Failed to delete deprecated component", "namespace", trigger.Namespace, "name", componentName)
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (r *TriggerReconciler) createOrUpdateTriggerWorkload(trigger *openfunctionevent.Trigger) (runtime.Object, error) {
 	log := r.Log.WithName("createOrUpdateTriggerWorkload")
 
 	obj := &appsv1.Deployment{}
@@ -396,15 +414,13 @@ func (r *TriggerReconciler) createOrUpdateTriggerWorkload(trigger *openfunctione
 	accessor, _ := meta.Accessor(obj)
 	accessor.SetName(workloadName)
 	accessor.SetNamespace(trigger.Namespace)
-	if workloadsPendingDelete[workloadName] {
-		workloadsPendingDelete[workloadName] = false
-	}
+	r.controlledResources.SetResourceStatusToActive(workloadName, ResourceTypeWorkload)
 
 	_, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, obj, r.mutateHandler(obj, trigger))
 	if err != nil {
 		log.Error(err, "Failed to create or update trigger handler", "namespace", trigger.Namespace, "name", trigger.Name)
 	}
-
+	r.controlledResources.SetResourceStatus(workloadName, ResourceTypeWorkload, Running)
 	log.V(1).Info("Create trigger handler", "namespace", trigger.Namespace, "name", trigger.Name)
 	return obj, nil
 }
@@ -470,6 +486,28 @@ func (r *TriggerReconciler) mutateHandler(obj runtime.Object, trigger *openfunct
 	}
 }
 
+func (r *TriggerReconciler) mutateTrigger(trigger *openfunctionevent.Trigger) controllerutil.MutateFn {
+	return func() error {
+		if trigger.GetLabels() == nil {
+			trigger.SetLabels(make(map[string]string))
+		}
+		trigger.Labels[EventBusNameLabel] = trigger.Spec.EventBus
+		return nil
+	}
+}
+
+func (r *TriggerReconciler) updateStatus(trigger *openfunctionevent.Trigger, status *openfunctionevent.TriggerStatus) error {
+	status.ComponentStatistics = r.controlledResources.GenResourceStatistics(ResourceTypeComponent)
+	status.WorkloadStatistics = r.controlledResources.GenResourceStatistics(ResourceTypeWorkload)
+	status.ComponentStatus = r.controlledResources.GenResourceStatus(ResourceTypeComponent)
+	status.WorkloadStatus = r.controlledResources.GenResourceStatus(ResourceTypeWorkload)
+	status.DeepCopyInto(&trigger.Status)
+	if err := r.Status().Update(r.ctx, trigger); err != nil {
+		return err
+	}
+	return nil
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *TriggerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
@@ -504,7 +542,8 @@ func (r *TriggerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			triggerList := &openfunctionevent.TriggerList{}
 			c := mgr.GetClient()
 
-			err := c.List(context.TODO(), triggerList)
+			selector := labels.SelectorFromSet(labels.Set(map[string]string{EventBusNameLabel: object.GetName()}))
+			err := c.List(context.TODO(), triggerList, &client.ListOptions{LabelSelector: selector})
 			if err != nil {
 				return []reconcile.Request{}
 			}
@@ -513,20 +552,15 @@ func (r *TriggerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			for _, trigger := range triggerList.Items {
 				if &trigger != nil {
 					var eventBus openfunctionevent.EventBus
-					if err := c.Get(context.TODO(), client.ObjectKey{Namespace: trigger.Namespace, Name: trigger.Spec.EventBus}, &eventBus); util.IgnoreNotFound(err) != nil {
+					if err := c.Get(context.TODO(), client.ObjectKey{Namespace: trigger.Namespace, Name: trigger.Spec.EventBus}, &eventBus); err == nil {
 						continue
 					}
-					if &eventBus != nil {
-						continue
-					}
-					if trigger.Spec.EventBus == object.GetName() {
-						reconcileRequests = append(reconcileRequests, reconcile.Request{
-							NamespacedName: types.NamespacedName{
-								Namespace: trigger.Namespace,
-								Name:      trigger.Name,
-							},
-						})
-					}
+					reconcileRequests = append(reconcileRequests, reconcile.Request{
+						NamespacedName: types.NamespacedName{
+							Namespace: trigger.Namespace,
+							Name:      trigger.Name,
+						},
+					})
 				}
 			}
 			return reconcileRequests
