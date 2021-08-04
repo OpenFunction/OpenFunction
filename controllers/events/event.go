@@ -4,10 +4,13 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
@@ -23,6 +26,7 @@ import (
 const (
 	EventSourceControlledLabel = "controlled-by-eventsource"
 	TriggerControlledLabel     = "controlled-by-trigger"
+	EventBusNameLabel          = "eventbus-name"
 
 	// EventSourceComponentNameTmpl => eventsource-{eventSourceName}-{sourceKind}-{eventName}
 	EventSourceComponentNameTmpl = "eventsource-%s-%s-%s"
@@ -47,6 +51,13 @@ const (
 	SourceKindCron = "cron"
 	// SourceKindRedis indicates redis event source
 	SourceKindRedis = "redis"
+
+	Pending = "Pending"
+	Running = "Running"
+	Error   = "Error"
+
+	ResourceTypeComponent = "Component"
+	ResourceTypeWorkload  = "Workload"
 )
 
 type EventSourceConfig struct {
@@ -73,6 +84,24 @@ type SubscriberConfigs struct {
 	DeadLetterSinkComponentName string `json:"deadLetterSinkComponentName,omitempty"`
 	TopicName                   string `json:"topicName,omitempty"`
 	DeadLetterTopicName         string `json:"deadLetterTopicName,omitempty"`
+}
+
+type ControlledResources struct {
+	Components map[string]*ControlledComponent `json:"components,omitempty"`
+	Workloads  map[string]*ControlledWorkload  `json:"workloads,omitempty"`
+}
+
+type ControlledComponent struct {
+	IsDeprecated bool                          `json:"isDeprecated"`
+	Object       *componentsv1alpha1.Component `json:"object"`
+	Status       string                        `json:"status,omitempty"`
+}
+
+type ControlledWorkload struct {
+	Name         string             `json:"name"`
+	IsDeprecated bool               `json:"isDeprecated"`
+	Object       *appsv1.Deployment `json:"object"`
+	Status       string             `json:"status,omitempty"`
 }
 
 func (e *EventSourceConfig) EncodeConfig() (string, error) {
@@ -125,6 +154,78 @@ func decodeConfig(encodedConfig string) ([]byte, error) {
 		return configSpec, nil
 	}
 	return nil, errors.New("string length is zero")
+}
+
+func (r *ControlledResources) SetResourceStatusToActive(name string, resourceType string) {
+	switch resourceType {
+	case ResourceTypeComponent:
+		if component, ok := r.Components[name]; ok {
+			component.IsDeprecated = false
+		}
+	case ResourceTypeWorkload:
+		if workload, ok := r.Workloads[name]; ok {
+			workload.IsDeprecated = false
+		}
+	}
+}
+
+func (r *ControlledResources) SetResourceStatus(name string, resourceType string, status string) {
+	switch resourceType {
+	case ResourceTypeComponent:
+		if component, ok := r.Components[name]; ok {
+			component.Status = status
+		}
+	case ResourceTypeWorkload:
+		if workload, ok := r.Workloads[name]; ok {
+			workload.Status = status
+		}
+	}
+}
+
+func (r *ControlledResources) GenResourceStatistics(resourceType string) string {
+	total := 0
+	running := 0
+	switch resourceType {
+	case ResourceTypeComponent:
+		for _, component := range r.Components {
+			if !component.IsDeprecated {
+				total += 1
+				if component.Status == Running {
+					running += 1
+				}
+			}
+		}
+	case ResourceTypeWorkload:
+		for _, workload := range r.Workloads {
+			if !workload.IsDeprecated {
+				total += 1
+				if workload.Status == Running {
+					running += 1
+				}
+			}
+		}
+	}
+	return fmt.Sprintf("%d/%d", running, total)
+}
+
+func (r *ControlledResources) GenResourceStatus(resourceType string) []*openfunctionevent.OwnedResourceStatus {
+	var statuses []*openfunctionevent.OwnedResourceStatus
+
+	switch resourceType {
+	case ResourceTypeComponent:
+		for name, component := range r.Components {
+			if !component.IsDeprecated {
+				statuses = append(statuses, &openfunctionevent.OwnedResourceStatus{State: component.Status, Name: name})
+			}
+		}
+	case ResourceTypeWorkload:
+		for name, workload := range r.Workloads {
+			if !workload.IsDeprecated {
+				statuses = append(statuses, &openfunctionevent.OwnedResourceStatus{State: workload.Status, Name: name})
+			}
+		}
+	}
+	return statuses
 }
 
 func mutateDaprComponent(scheme *runtime.Scheme, component *componentsv1alpha1.Component, object v1.Object) controllerutil.MutateFn {
@@ -183,4 +284,45 @@ func retrieveClusterEventBus(ctx context.Context, c client.Client, eventBusName 
 		return nil
 	}
 	return &clusterEventBus
+}
+
+func retrieveControlledResources(ctx context.Context, c client.Client, selector labels.Selector, cr *ControlledResources) error {
+	var components componentsv1alpha1.ComponentList
+	var workloads appsv1.DeploymentList
+
+	cr.Components = map[string]*ControlledComponent{}
+	cr.Workloads = map[string]*ControlledWorkload{}
+
+	// handle controlled components
+	if err := c.List(ctx, &components, &client.ListOptions{LabelSelector: selector}); err != nil {
+		return err
+	}
+	if &components != nil {
+		for _, component := range components.Items {
+			r := component
+			resource := &ControlledComponent{
+				Status:       Pending,
+				Object:       &r,
+				IsDeprecated: true,
+			}
+			cr.Components[r.Name] = resource
+		}
+	}
+
+	// handle controlled workloads
+	if err := c.List(ctx, &workloads, &client.ListOptions{LabelSelector: selector}); err != nil {
+		return err
+	}
+	if &workloads != nil {
+		for _, workload := range workloads.Items {
+			r := workload
+			resource := &ControlledWorkload{
+				Status:       Pending,
+				Object:       &r,
+				IsDeprecated: true,
+			}
+			cr.Workloads[r.Name] = resource
+		}
+	}
+	return nil
 }

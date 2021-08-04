@@ -23,14 +23,13 @@ import (
 	"fmt"
 	"strings"
 
-	"k8s.io/apimachinery/pkg/labels"
-
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
@@ -53,10 +52,11 @@ const (
 // EventSourceReconciler reconciles a EventSource object
 type EventSourceReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
-	ctx    context.Context
-	envs   *EventSourceConfig
+	Log                 logr.Logger
+	Scheme              *runtime.Scheme
+	ctx                 context.Context
+	envs                *EventSourceConfig
+	controlledResources *ControlledResources
 }
 
 //+kubebuilder:rbac:groups=events.openfunction.io,resources=eventsources,verbs=get;list;watch;create;update;patch;delete
@@ -80,16 +80,39 @@ func (r *EventSourceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	var eventSource openfunctionevent.EventSource
 	r.envs = &EventSourceConfig{}
+	r.controlledResources = &ControlledResources{}
 
 	if err := r.Get(ctx, req.NamespacedName, &eventSource); err != nil {
 		log.V(1).Info("EventSource deleted", "error", err)
 		return ctrl.Result{}, util.IgnoreNotFound(err)
 	}
 
-	if _, err := r.createOrUpdateEventSource(&eventSource); err != nil {
+	// Get all exist components and workloads owned by the EventSource and mark them with status of pending deletion (set to true)
+	// In the later reconcile, the resources that still need to be kept are set to non-pending deletion status (set to false) based on the latest list of resources to be created
+	controlledLabelSelector := labels.SelectorFromSet(labels.Set(map[string]string{EventSourceControlledLabel: eventSource.Name}))
+	err := retrieveControlledResources(r.ctx, r.Client, controlledLabelSelector, r.controlledResources)
+	if err != nil {
+		log.Error(err, "Failed to retrieve exist controlled resources", "namespace", eventSource.Namespace, "name", eventSource.Name)
+		if err := r.updateStatus(&eventSource, &openfunctionevent.EventSourceStatus{State: Error, Message: fmt.Sprintln(err)}); err != nil {
+			log.Error(err, "Failed to update eventsource status", "namespace", eventSource.Namespace, "name", eventSource.Name)
+			return ctrl.Result{}, err
+		}
 		return ctrl.Result{}, err
 	}
 
+	if _, err := r.createOrUpdateEventSource(&eventSource); err != nil {
+		log.Error(err, "Failed to create or update eventsource", "namespace", eventSource.Namespace, "name", eventSource.Name)
+		if err := r.updateStatus(&eventSource, &openfunctionevent.EventSourceStatus{State: Error, Message: fmt.Sprintln(err)}); err != nil {
+			log.Error(err, "Failed to update eventsource status", "namespace", eventSource.Namespace, "name", eventSource.Name)
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, err
+	}
+
+	if err := r.updateStatus(&eventSource, &openfunctionevent.EventSourceStatus{State: Running, Message: ""}); err != nil {
+		log.Error(err, "Failed to update eventsource status", "namespace", eventSource.Namespace, "name", eventSource.Name)
+		return ctrl.Result{}, err
+	}
 	return ctrl.Result{}, nil
 }
 
@@ -110,40 +133,14 @@ func (r *EventSourceReconciler) createOrUpdateEventSource(eventSource *openfunct
 	log := r.Log.WithName("createOrUpdateEventSource")
 
 	if eventSource.Spec.EventBus == "" && eventSource.Spec.Sink == nil {
-		err := errors.New("no output configuration (eventBus or sink) found ")
+		err := errors.New("spec.evenBus or spec.sink must be set")
 		log.Error(err, "Failed to find output configuration (eventBus or sink).", "namespace", eventSource.Namespace, "name", eventSource.Name)
 		return ctrl.Result{}, err
 	}
 
-	// Get all exist components and workloads owned by the EventSource and mark them with status of pending deletion (set to true)
-	// In the later reconcile, the resources that still need to be kept are set to non-pending deletion status (set to false) based on the latest list of resources to be created
-	var existComponents componentsv1alpha1.ComponentList
-	var existWorkloads appsv1.DeploymentList
-	controlledLabelSelector := labels.SelectorFromSet(labels.Set(map[string]string{EventSourceControlledLabel: eventSource.Name}))
-
-	if err := r.List(r.ctx, &existComponents, &client.ListOptions{LabelSelector: controlledLabelSelector}); err != nil {
-		log.Error(err, "Failed to retrieve exist controlled components", "namespace", eventSource.Namespace, "name", eventSource.Name)
-		return ctrl.Result{}, err
-	}
-	componentsPendingDelete := map[string]bool{}
-	for _, component := range existComponents.Items {
-		c := component
-		componentsPendingDelete[c.Name] = true
-	}
-
-	if err := r.List(r.ctx, &existWorkloads, &client.ListOptions{LabelSelector: controlledLabelSelector}); err != nil {
-		log.Error(err, "Failed to retrieve exist controlled workloads", "namespace", eventSource.Namespace, "name", eventSource.Name)
-		return ctrl.Result{}, err
-	}
-	workloadsPendingDelete := map[string]bool{}
-	for _, workload := range existWorkloads.Items {
-		w := workload
-		workloadsPendingDelete[w.Name] = true
-	}
-
 	// Handle EventBus reconcile.
 	if eventSource.Spec.EventBus != "" {
-		if err := r.handleEventBus(eventSource, componentsPendingDelete); err != nil {
+		if err := r.handleEventBus(eventSource); err != nil {
 			log.Error(err, "Failed to handle EventBus", "namespace", eventSource.Namespace, "name", eventSource.Name)
 			return ctrl.Result{}, err
 		}
@@ -151,33 +148,33 @@ func (r *EventSourceReconciler) createOrUpdateEventSource(eventSource *openfunct
 
 	// Handle Sink reconcile.
 	if eventSource.Spec.Sink != nil {
-		if err := r.handleSink(eventSource, componentsPendingDelete); err != nil {
+		if err := r.handleSink(eventSource); err != nil {
 			log.Error(err, "Failed to handle Sink", "namespace", eventSource.Namespace, "name", eventSource.Name)
 			return ctrl.Result{}, err
 		}
 	}
 
 	// Handle EventSource reconcile.
-	if err := r.handleEventSource(eventSource, componentsPendingDelete, workloadsPendingDelete); err != nil {
+	if err := r.handleEventSource(eventSource); err != nil {
 		log.Error(err, "Failed to handle EventSource", "namespace", eventSource.Namespace, "name", eventSource.Name)
 		return ctrl.Result{}, err
 	}
 
 	// Clean up resources to be deprecated
-	if err := r.handleDeprecatedComponents(eventSource, componentsPendingDelete); err != nil {
-		log.Error(err, "Failed to handle deprecated components", "namespace", eventSource.Namespace, "name", eventSource.Name)
+	if err := r.handleDeprecatedResources(eventSource); err != nil {
+		log.Error(err, "Failed to handle deprecated resources", "namespace", eventSource.Namespace, "name", eventSource.Name)
 		return ctrl.Result{}, err
 	}
 
-	if err := r.handleDeprecatedWorkloads(eventSource, workloadsPendingDelete); err != nil {
-		log.Error(err, "Failed to handle deprecated workloads", "namespace", eventSource.Namespace, "name", eventSource.Name)
+	if _, err := ctrl.CreateOrUpdate(r.ctx, r.Client, eventSource, r.mutateEventSource(eventSource)); err != nil {
+		log.Error(err, "Failed to update eventsource", "namespace", eventSource.Namespace, "name", eventSource.Name)
 		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
 }
 
-func (r *EventSourceReconciler) handleEventBus(eventSource *openfunctionevent.EventSource, componentsPendingDelete map[string]bool) error {
+func (r *EventSourceReconciler) handleEventBus(eventSource *openfunctionevent.EventSource) error {
 
 	// Retrieve the specification of EventBus associated with the EventSource
 	var eventBusSpec openfunctionevent.EventBusSpec
@@ -185,7 +182,7 @@ func (r *EventSourceReconciler) handleEventBus(eventSource *openfunctionevent.Ev
 	if eventBus == nil {
 		clusterEventBus := retrieveClusterEventBus(r.ctx, r.Client, eventSource.Spec.EventBus)
 		if clusterEventBus == nil {
-			return errors.New("cannot retrieve eventBus and clusterEventBus")
+			return errors.New("cannot retrieve eventBus or clusterEventBus")
 		} else {
 			eventBusSpec = clusterEventBus.Spec
 		}
@@ -194,9 +191,7 @@ func (r *EventSourceReconciler) handleEventBus(eventSource *openfunctionevent.Ev
 	}
 
 	componentName := fmt.Sprintf(EventSourceBusComponentNameTmpl, eventSource.Name)
-	if componentsPendingDelete[componentName] {
-		componentsPendingDelete[componentName] = false
-	}
+	r.controlledResources.SetResourceStatusToActive(componentName, ResourceTypeComponent)
 
 	// Set SourceConfig.EventBusComponentName.
 	r.envs.EventBusComponentName = componentName
@@ -224,17 +219,16 @@ func (r *EventSourceReconciler) handleEventBus(eventSource *openfunctionevent.Ev
 		if _, err := ctrl.CreateOrUpdate(r.ctx, r.Client, component, mutateDaprComponent(r.Scheme, component, eventSource)); err != nil {
 			return err
 		}
+		r.controlledResources.SetResourceStatus(componentName, ResourceTypeComponent, Running)
 		return nil
 	}
 
 	return errors.New("no specification found for create dapr component")
 }
 
-func (r *EventSourceReconciler) handleSink(eventSource *openfunctionevent.EventSource, cpd map[string]bool) error {
+func (r *EventSourceReconciler) handleSink(eventSource *openfunctionevent.EventSource) error {
 	componentName := fmt.Sprintf(EventSourceSinkComponentNameTmpl, eventSource.Name)
-	if cpd[componentName] {
-		cpd[componentName] = false
-	}
+	r.controlledResources.SetResourceStatusToActive(componentName, ResourceTypeComponent)
 
 	// Set SourceConfig.SinkComponentName.
 	r.envs.SinkComponentName = componentName
@@ -265,11 +259,11 @@ func (r *EventSourceReconciler) handleSink(eventSource *openfunctionevent.EventS
 	if _, err := ctrl.CreateOrUpdate(r.ctx, r.Client, component, mutateDaprComponent(r.Scheme, component, eventSource)); err != nil {
 		return err
 	}
-
+	r.controlledResources.SetResourceStatus(componentName, ResourceTypeComponent, Running)
 	return nil
 }
 
-func (r *EventSourceReconciler) handleEventSource(eventSource *openfunctionevent.EventSource, componentsPendingDelete map[string]bool, workloadsPendingDelete map[string]bool) error {
+func (r *EventSourceReconciler) handleEventSource(eventSource *openfunctionevent.EventSource) error {
 	type sourceSpec struct {
 		*componentsv1alpha1.Component
 		SourceTopic string
@@ -371,9 +365,7 @@ func (r *EventSourceReconciler) handleEventSource(eventSource *openfunctionevent
 		component := ss.Component
 		spec := &component.Spec
 
-		if componentsPendingDelete[component.Name] {
-			componentsPendingDelete[component.Name] = false
-		}
+		r.controlledResources.SetResourceStatusToActive(component.Name, ResourceTypeComponent)
 		r.envs.EventSourceComponentName = component.Name
 		r.envs.EventSourceTopic = ss.SourceTopic
 		r.envs.EventBusTopic = fmt.Sprintf(EventBusTopicNameTmpl, eventSource.Namespace, eventSource.Name, ss.EventName)
@@ -390,31 +382,33 @@ func (r *EventSourceReconciler) handleEventSource(eventSource *openfunctionevent
 		if _, err := ctrl.CreateOrUpdate(r.ctx, r.Client, component, mutateDaprComponent(r.Scheme, component, eventSource)); err != nil {
 			return err
 		}
+		r.controlledResources.SetResourceStatus(component.Name, ResourceTypeComponent, Running)
 
 		// Create the workload for EventSource.
-		if _, err := r.createOrUpdateEventSourceWorkload(eventSource, ss.SourceKind, ss.EventName, workloadsPendingDelete); err != nil {
+		if _, err := r.createOrUpdateEventSourceWorkload(eventSource, ss.SourceKind, ss.EventName); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (r *EventSourceReconciler) handleDeprecatedComponents(eventSource *openfunctionevent.EventSource, cpd map[string]bool) error {
-	log := r.Log.WithName("handleDeprecatedComponents")
-	var component componentsv1alpha1.Component
-	for componentName, isDeprecated := range cpd {
-		if isDeprecated {
-			err := r.Get(r.ctx, types.NamespacedName{Namespace: eventSource.Namespace, Name: componentName}, &component)
-			if err != nil {
-				if util.IsNotFound(err) {
-					continue
+func (r *EventSourceReconciler) handleDeprecatedResources(eventSource *openfunctionevent.EventSource) error {
+	log := r.Log.WithName("handleDeprecatedResources")
 
-				} else {
-					log.Error(err, "Failed to get deprecated component", "namespace", eventSource.Namespace, "name", componentName)
-					return err
-				}
+	// handle deprecated workloads
+	for workloadName, workloadStatus := range r.controlledResources.Workloads {
+		if workloadStatus.IsDeprecated {
+			if err := r.Delete(r.ctx, workloadStatus.Object); util.IgnoreNotFound(err) != nil {
+				log.Error(err, "Failed to delete deprecated workload", "namespace", eventSource.Namespace, "name", workloadName)
+				return err
 			}
-			if err := r.Delete(r.ctx, &component); err != nil {
+		}
+	}
+
+	// handle deprecated components
+	for componentName, componentStatus := range r.controlledResources.Components {
+		if componentStatus.IsDeprecated {
+			if err := r.Delete(r.ctx, componentStatus.Object); util.IgnoreNotFound(err) != nil {
 				log.Error(err, "Failed to delete deprecated component", "namespace", eventSource.Namespace, "name", componentName)
 				return err
 			}
@@ -423,31 +417,7 @@ func (r *EventSourceReconciler) handleDeprecatedComponents(eventSource *openfunc
 	return nil
 }
 
-func (r *EventSourceReconciler) handleDeprecatedWorkloads(eventSource *openfunctionevent.EventSource, wpd map[string]bool) error {
-	log := r.Log.WithName("handleDeprecatedWorkloads")
-	var workload appsv1.Deployment
-	for workloadName, isDeprecated := range wpd {
-		if isDeprecated {
-			err := r.Get(r.ctx, types.NamespacedName{Namespace: eventSource.Namespace, Name: workloadName}, &workload)
-			if err != nil {
-				if util.IsNotFound(err) {
-					continue
-
-				} else {
-					log.Error(err, "Failed to get deprecated workload", "namespace", eventSource.Namespace, "name", workloadName)
-					return err
-				}
-			}
-			if err := r.Delete(r.ctx, &workload); err != nil {
-				log.Error(err, "Failed to delete deprecated workload", "namespace", eventSource.Namespace, "name", workloadName)
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func (r *EventSourceReconciler) createOrUpdateEventSourceWorkload(eventSource *openfunctionevent.EventSource, sourceKind string, eventName string, workloadsPendingDelete map[string]bool) (runtime.Object, error) {
+func (r *EventSourceReconciler) createOrUpdateEventSourceWorkload(eventSource *openfunctionevent.EventSource, sourceKind string, eventName string) (runtime.Object, error) {
 	log := r.Log.WithName("createOrUpdateEventSourceWorkload")
 
 	obj := &appsv1.Deployment{}
@@ -456,15 +426,13 @@ func (r *EventSourceReconciler) createOrUpdateEventSourceWorkload(eventSource *o
 	accessor, _ := meta.Accessor(obj)
 	accessor.SetName(workloadName)
 	accessor.SetNamespace(eventSource.Namespace)
-	if workloadsPendingDelete[workloadName] {
-		workloadsPendingDelete[workloadName] = false
-	}
+	r.controlledResources.SetResourceStatusToActive(workloadName, ResourceTypeWorkload)
 
 	_, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, obj, r.mutateHandler(obj, eventSource))
 	if err != nil {
 		log.Error(err, "Failed to create or update eventsource handler", "namespace", eventSource.Namespace, "name", eventSource.Name)
 	}
-
+	r.controlledResources.SetResourceStatus(workloadName, ResourceTypeWorkload, Running)
 	log.V(1).Info("Create eventsource handler", "namespace", eventSource.Namespace, "name", eventSource.Name)
 	return obj, nil
 }
@@ -531,8 +499,23 @@ func (r *EventSourceReconciler) mutateHandler(obj runtime.Object, eventSource *o
 	}
 }
 
-func (r *EventSourceReconciler) updateStatus(eventSource *openfunctionevent.EventSource, status *openfunctionevent.EventSourceStatus) error {
+func (r *EventSourceReconciler) mutateEventSource(eventSource *openfunctionevent.EventSource) controllerutil.MutateFn {
+	return func() error {
+		if eventSource.GetLabels() == nil {
+			eventSource.SetLabels(make(map[string]string))
+		}
+		if eventSource.Spec.EventBus != "" {
+			eventSource.Labels[EventBusNameLabel] = eventSource.Spec.EventBus
+		}
+		return nil
+	}
+}
 
+func (r *EventSourceReconciler) updateStatus(eventSource *openfunctionevent.EventSource, status *openfunctionevent.EventSourceStatus) error {
+	status.ComponentStatistics = r.controlledResources.GenResourceStatistics(ResourceTypeComponent)
+	status.WorkloadStatistics = r.controlledResources.GenResourceStatistics(ResourceTypeWorkload)
+	status.ComponentStatus = r.controlledResources.GenResourceStatus(ResourceTypeComponent)
+	status.WorkloadStatus = r.controlledResources.GenResourceStatus(ResourceTypeWorkload)
 	status.DeepCopyInto(&eventSource.Status)
 	if err := r.Status().Update(r.ctx, eventSource); err != nil {
 		return err
@@ -575,7 +558,8 @@ func (r *EventSourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			eventSourceList := &openfunctionevent.EventSourceList{}
 			c := mgr.GetClient()
 
-			err := c.List(context.TODO(), eventSourceList)
+			selector := labels.SelectorFromSet(labels.Set(map[string]string{EventBusNameLabel: object.GetName()}))
+			err := c.List(context.TODO(), eventSourceList, &client.ListOptions{LabelSelector: selector})
 			if err != nil {
 				return []reconcile.Request{}
 			}
@@ -583,23 +567,17 @@ func (r *EventSourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			reconcileRequests := make([]reconcile.Request, len(eventSourceList.Items))
 			for _, eventSource := range eventSourceList.Items {
 				if &eventSource != nil {
-					if eventSource.Spec.EventBus != "" {
-						var eventBus openfunctionevent.EventBus
-						if err := c.Get(context.TODO(), client.ObjectKey{Namespace: eventSource.Namespace, Name: eventSource.Spec.EventBus}, &eventBus); util.IgnoreNotFound(err) != nil {
-							continue
-						}
-						if &eventBus != nil {
-							continue
-						}
-						if eventSource.Spec.EventBus == object.GetName() {
-							reconcileRequests = append(reconcileRequests, reconcile.Request{
-								NamespacedName: types.NamespacedName{
-									Namespace: eventSource.Namespace,
-									Name:      eventSource.Name,
-								},
-							})
-						}
+					var eventBus openfunctionevent.EventBus
+					if err := c.Get(context.TODO(), client.ObjectKey{Namespace: eventSource.Namespace, Name: eventSource.Spec.EventBus}, &eventBus); err == nil {
+						continue
 					}
+
+					reconcileRequests = append(reconcileRequests, reconcile.Request{
+						NamespacedName: types.NamespacedName{
+							Namespace: eventSource.Namespace,
+							Name:      eventSource.Name,
+						},
+					})
 				}
 			}
 			return reconcileRequests
