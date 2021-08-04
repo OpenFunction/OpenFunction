@@ -11,7 +11,7 @@ RUN GOPROXY="https://goproxy.cn" go mod download
 
 # Copy the go source
 COPY main.go main.go
-COPY api/ api/
+COPY apis/ apis/
 COPY controllers/ controllers/
 COPY pkg/ pkg/
 
@@ -23,6 +23,6 @@ RUN GOPROXY="https://goproxy.cn" CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODU
 FROM openfunction/distroless-static:nonroot
 WORKDIR /
 COPY --from=builder /workspace/openfunction .
-USER nonroot:nonroot
+USER 65532:65532
 
 ENTRYPOINT ["/openfunction"]
