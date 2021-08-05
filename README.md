@@ -18,7 +18,7 @@ OpenFunction features but not limited to the following:
 
 ### Events CRDs
 
-OpenFunction also provides an event handling framework that complements the event-driven capabilities of OpenFunction as a FaaS framework.
+OpenFunction provides an event handling framework called OpenFunction events that complements the event-driven capabilities of OpenFunction as a FaaS framework.
 
 You can refer to [OpenFunction Events Framework Concepts](docs/concepts/OpenFunction-events-framework.md) for more information.
 
