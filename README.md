@@ -16,6 +16,12 @@ OpenFunction features but not limited to the following:
 
 ## CustomResourceDefinitions
 
+### Events CRDs
+
+OpenFunction also provides an event handling framework that complements the event-driven capabilities of OpenFunction as a FaaS framework.
+
+You can refer to [OpenFunction Events Framework Concepts](docs/concepts/OpenFunction-events-framework.md) for more information.
+
 ### Core CRDs
 
 The core capability of OpenFunction is to enable users to develop, run and manage applications as executable function code. OpenFunction implements the following [custom resource definitions (CRDs)](https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/):  
@@ -63,12 +69,6 @@ OpenFuncAsync is an event-driven Serving runtime. It is implemented based on KED
 You can refer to [Prerequisites](#prerequisites) and use `--with-openFuncAsync` to install OpenFuncAsync runtime.
 
 The OpenFuncAsync runtime can be triggered by a variety of event types, such as MQ, cronjob, DB events, etc. In Kubernetes cluster, OpenFuncAsync will be triggered in the form of deployments or jobs.
-
-### Events CRDs
-
-OpenFunction also provides an event handling framework that complements the event-driven capabilities of OpenFunction as a FaaS framework.
-
-You can refer to [OpenFunction Events Framework Concepts](docs/concepts/OpenFunction-events-framework.md) for more information.
 
 ## QuickStart
 
