@@ -25,13 +25,13 @@
 
 ## Architecture
 
-![openfunction events](../images/OpenFunction-events-architecture.png)
+![openfunction events](../images/openfunction-events-architecture.png)
 
 ## EventSource
 
 Represents the producer of an event, such as a Kafka service, an object storage service, and can also be a function.
 
-The **EventSource** contains a description of these event producers  and is also responsible for directing where the events they generate should go.
+The **EventSource** contains descriptions of these event producers. It also contains information like where to send the events.
 
 ### Available
 
@@ -43,11 +43,11 @@ The **EventSource** contains a description of these event producers  and is also
 
 The event bus is responsible for aggregating events and persisting them.
 
-The **EventBus** contains a description of the event bus backend service (usually a MQ server such as NATS, Kafka, etc.) and then provides these configurations for EventSource and Trigger.
+The **EventBus** contains descriptions of an event bus broker (usually a message queue such as NATS Streaming, Kafka, etc.) and then provides these configurations for EventSource and Trigger.
 
 EventBus will take care of event bus adaptation for namespaced scope by default, while we provide an event bus adapter **ClusterEventBus** for clustered scope. **ClusterEventBus** will take effect when other components do not find an EventBus under the namespace.
 
-### Available
+### Supported EventBus brokers
 
 - NATS Streaming
 
