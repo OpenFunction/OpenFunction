@@ -67,7 +67,7 @@ spec:
                 type: object
               dockerfile:
                 description: Dockerfile is the path to the Dockerfile to be used for
-                  build strategies which bank on the Dockerfile for building an image.
+                  build strategies that rely on the Dockerfile for building an image.
                 type: string
               env:
                 additionalProperties:
@@ -104,8 +104,9 @@ spec:
                       the image.
                     properties:
                       kind:
-                        description: BuildStrategyKind indicates the kind of the buildstrategy,
-                          BuildStrategy or ClusterBuildStrategy, default is BuildStrategy.
+                        description: BuildStrategyKind indicates the kind of the build
+                          strategy BuildStrategy or ClusterBuildStrategy, default
+                          to BuildStrategy.
                         type: string
                       name:
                         description: 'Name of the referent; More info: http://kubernetes.io/docs/user-guide/identifiers#names'
@@ -708,12 +709,12 @@ spec:
             description: FunctionSpec defines the desired state of Function
             properties:
               build:
-                description: Information needed to build a function. If the `Build`
-                  is nil, it will skip the build step.
+                description: Information needed to build a function. The build step
+                  will be skipped if Build is nil.
                 properties:
                   builder:
                     description: Builder refers to the image containing the build
-                      tools inside which the source code would be built.
+                      tools to build the source code.
                     type: string
                   builderCredentials:
                     description: BuilderCredentials references a Secret that contains
@@ -725,14 +726,13 @@ spec:
                         type: string
                     type: object
                   dockerfile:
-                    description: Dockerfile is the path to the Dockerfile to be used
-                      for build strategies which bank on the Dockerfile for building
-                      an image.
+                    description: Dockerfile is the path to the Dockerfile used by
+                      build strategies that rely on the Dockerfile to build an image.
                     type: string
                   env:
                     additionalProperties:
                       type: string
-                    description: Environment params to pass to the builder.
+                    description: Environment variables to pass to the builder.
                     type: object
                   params:
                     additionalProperties:
@@ -742,11 +742,11 @@ spec:
                       avoid: Defining a parameter name that doesn''t match one of
                       the `spec.parameters` defined in the `BuildStrategy`. Defining
                       a parameter name that collides with the Shipwright reserved
-                      parameters. These are _BUILDER_IMAGE_,_DOCKERFILE_,_CONTEXT_DIR_
-                      and any name starting with _shp-_.'
+                      parameters including BUILDER_IMAGE,DOCKERFILE,CONTEXT_DIR and
+                      any name starting with shp-.'
                     type: object
                   shipwright:
-                    description: The configuration for `Shipwright` build engine.
+                    description: The configuration for the `Shipwright` build engine.
                     properties:
                       strategy:
                         description: Strategy references the BuildStrategy to use
@@ -754,8 +754,8 @@ spec:
                         properties:
                           kind:
                             description: BuildStrategyKind indicates the kind of the
-                              buildstrategy, BuildStrategy or ClusterBuildStrategy,
-                              default is BuildStrategy.
+                              build strategy BuildStrategy or ClusterBuildStrategy,
+                              default to BuildStrategy.
                             type: string
                           name:
                             description: 'Name of the referent; More info: http://kubernetes.io/docs/user-guide/identifiers#names'
@@ -815,8 +815,8 @@ spec:
                 format: int32
                 type: integer
               serving:
-                description: Information needed to run a function. If the `Serving`
-                  is nil, it will skip the serving step.
+                description: Information needed to run a function. The serving step
+                  will be skipped if `Serving` is nil.
                 properties:
                   openFuncAsync:
                     description: Parameters of asyncFunc runtime, must not be nil
