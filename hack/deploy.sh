@@ -1,9 +1,9 @@
 #!/bin/bash
 
-TEMP=$(getopt -o an:p --long all,with-tekton,with-knative,with-openFuncAsync,poor-network,tekton-dashboard-nodeport: -- "$@")
+TEMP=$(getopt -o an:p --long all,with-shipwright,with-knative,with-openFuncAsync,poor-network,tekton-dashboard-nodeport: -- "$@")
 
 all=false
-with_tekton=false
+with_shipwright=false
 with_knative=false
 with_openFuncAsync=false
 poor_network=false
@@ -23,8 +23,8 @@ while true; do
     all=true
     shift
     ;;
-  --with-tekton)
-    with_tekton=true
+  --with-shipwright)
+    with_shipwright=true
     shift
     ;;
   --with-knative)
@@ -55,12 +55,12 @@ while true; do
 done
 
 if [ "$all" = "true" ]; then
-  with_tekton=true
+  with_shipwright=true
   with_knative=true
   with_openFuncAsync=true
 fi
 
-if [ "$with_tekton" = "true" ]; then
+if [ "$with_shipwright" = "true" ]; then
   if [ "$poor_network" = "false" ]; then
     # Install Tekton pipeline
     kubectl apply --filename https://storage.googleapis.com/tekton-releases/pipeline/latest/release.yaml
@@ -77,6 +77,11 @@ if [ "$with_tekton" = "true" ]; then
     # Install Tekton Dashboard
     kubectl apply --filename https://openfunction.sh1a.qingstor.com/tekton/dashboard/v0.16.0/release.yaml
   fi
+
+  # Install the Shipwright deployment
+  kubectl apply --filename https://github.com/shipwright-io/build/releases/download/nightly/nightly-2021-08-07-1628312894.yaml
+  # Install the Shipwright strategies
+  kubectl apply --filename https://github.com/shipwright-io/build/releases/download/nightly/default_strategies.yaml
 
   if [ "$tekton_dashboard_nodeport" != "0" ]; then
 

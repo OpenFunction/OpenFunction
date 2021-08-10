@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -25,31 +26,54 @@ import (
 
 // BuilderSpec defines the desired state of Builder
 type BuilderSpec struct {
-	// Function version in format like v1.0.0
-	Version *string `json:"version,omitempty"`
-	// Environment variables to pass to the build process
+	// Params is a list of key/value that could be used to set strategy parameters.
 	Params map[string]string `json:"params,omitempty"`
-	// Cloud Native Buildpacks builders
-	Builder string `json:"builder"`
+	// Environment params to pass to the builder.
+	Env map[string]string `json:"env,omitempty"`
+	// Builder refers to the image containing the build tools inside which
+	// the source code would be built.
+	//
+	// +optional
+	Builder *string `json:"builder"`
+	// BuilderCredentials references a Secret that contains credentials to access
+	// the builder image repository.
+	//
+	// +optional
+	BuilderCredentials *v1.LocalObjectReference `json:"builderCredentials,omitempty"`
+	// The configuration for `Shipwright` build engine.
+	Shipwright *ShipwrightEngine `json:"shipwright,omitempty"`
 	// Git repository info of a function
 	SrcRepo *GitRepo `json:"srcRepo"`
 	// Function image name
 	Image string `json:"image"`
-	// Image registry of the function image
-	Registry *Registry `json:"registry"`
+	// ImageCredentials references a Secret that contains credentials to access
+	// the image repository.
+	//
+	// +optional
+	ImageCredentials *v1.LocalObjectReference `json:"imageCredentials,omitempty"`
 	// The port on which the function will be invoked
 	Port *int32 `json:"port,omitempty"`
+	// Dockerfile is the path to the Dockerfile to be used for
+	// build strategies that rely on the Dockerfile for building an image.
+	//
+	// +optional
+	Dockerfile *string `json:"dockerfile,omitempty"`
 }
 
 // BuilderStatus defines the observed state of Builder
 type BuilderStatus struct {
 	Phase string `json:"phase,omitempty"`
 	State string `json:"state,omitempty"`
+	// Associate resources.
+	ResourceRef map[string]string `json:"resourceRef,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:resource:shortName=fb
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
+//+kubebuilder:printcolumn:name="State",type=string,JSONPath=`.status.state`
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // Builder is the Schema for the builders API
 type Builder struct {

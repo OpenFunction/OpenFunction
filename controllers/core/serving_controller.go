@@ -18,21 +18,17 @@ package core
 
 import (
 	"context"
-	"fmt"
-	"strings"
-
-	"github.com/openfunction/pkg/util"
 
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	kservingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	openfunction "github.com/openfunction/apis/core/v1alpha1"
+	"github.com/openfunction/pkg/core"
+	"github.com/openfunction/pkg/core/serving/knative"
+	"github.com/openfunction/pkg/core/serving/openfuncasync"
+	"github.com/openfunction/pkg/util"
 )
 
 // ServingReconciler reconciles a Serving object
@@ -51,6 +47,7 @@ type ServingReconciler struct {
 //+kubebuilder:rbac:groups=keda.sh,resources=scaledjobs;scaledobjects,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=apps,resources=deployments;statefulsets,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -68,172 +65,50 @@ func (r *ServingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	var s openfunction.Serving
 
 	if err := r.Get(ctx, req.NamespacedName, &s); err != nil {
-		log.V(1).Info("Serving deleted", "error", err)
+		if util.IsNotFound(err) {
+			log.V(1).Info("Serving deleted")
+		}
 		return ctrl.Result{}, util.IgnoreNotFound(err)
 	}
 
-	if _, err := r.createOrUpdateServing(&s); err != nil {
-		log.Error(err, "Failed to create serving", "Serving", req.NamespacedName.String())
-		return ctrl.Result{}, err
-	}
-
-	return ctrl.Result{}, nil
-}
-
-func (r *ServingReconciler) mutateKsvc(ksvc *kservingv1.Service, s *openfunction.Serving) controllerutil.MutateFn {
-	return func() error {
-
-		template := s.Spec.Template
-		if template == nil {
-			template = &corev1.PodSpec{}
-		}
-
-		var container *corev1.Container
-		for index := range template.Containers {
-			if template.Containers[index].Name == FunctionContainer {
-				container = &template.Containers[index]
-			}
-		}
-
-		appended := false
-		if container == nil {
-			container = &corev1.Container{
-				Name:            FunctionContainer,
-				ImagePullPolicy: corev1.PullIfNotPresent,
-			}
-			appended = true
-		}
-
-		container.Image = s.Spec.Image
-
-		port := corev1.ContainerPort{}
-		if s.Spec.Port != nil {
-			port.ContainerPort = *s.Spec.Port
-			container.Ports = append(container.Ports, port)
-		}
-
-		if s.Spec.Params != nil {
-			for k, v := range s.Spec.Params {
-				container.Env = append(container.Env, corev1.EnvVar{
-					Name:  k,
-					Value: v,
-				})
-			}
-		}
-
-		if appended {
-			template.Containers = append(template.Containers, *container)
-		}
-
-		objectMeta := metav1.ObjectMeta{
-			Namespace: s.Namespace,
-		}
-		if s.Spec.Version != nil {
-			objectMeta.Name = fmt.Sprintf("%s-%s", ksvc.Name, strings.ReplaceAll(*s.Spec.Version, ".", ""))
-		}
-
-		expected := kservingv1.Service{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "serving.knative.dev/v1",
-				Kind:       "Service",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      s.Name,
-				Namespace: s.Namespace,
-			},
-			Spec: kservingv1.ServiceSpec{
-				ConfigurationSpec: kservingv1.ConfigurationSpec{
-					Template: kservingv1.RevisionTemplateSpec{
-						ObjectMeta: objectMeta,
-						Spec: kservingv1.RevisionSpec{
-							PodSpec: *template,
-						},
-					},
-				},
-			},
-		}
-
-		expected.Spec.DeepCopyInto(&ksvc.Spec)
-		ksvc.SetOwnerReferences(nil)
-		return ctrl.SetControllerReference(s, ksvc, r.Scheme)
-	}
-}
-
-func (r *ServingReconciler) createOrUpdateServing(s *openfunction.Serving) (ctrl.Result, error) {
-	if s.Status.Phase == openfunction.ServingPhase && s.Status.State == openfunction.Launched {
+	// Serving is running, no need to create.
+	if s.Status.Phase != "" && s.Status.State != "" {
 		return ctrl.Result{}, nil
 	}
 
-	log := r.Log.WithName("createOrUpdateServing")
+	servingRun := r.getServingRun(&s)
+	if util.InterfaceIsNil(servingRun) {
+		log.Error(nil, "Unknown runtime", "runtime", *s.Spec.Runtime)
+		return ctrl.Result{}, nil
+	}
 
-	status := openfunction.ServingStatus{Phase: openfunction.ServingPhase, State: openfunction.Launching}
-	if err := r.updateStatus(s, &status); err != nil {
-		log.Error(err, "Failed to update serving Launching status", "name", s.Name, "namespace", s.Namespace)
+	if err := servingRun.Run(&s); err != nil {
+		log.Error(err, "Failed to run serving", "name", s.Name, "namespace", s.Namespace)
 		return ctrl.Result{}, err
 	}
 
-	switch *s.Spec.Runtime {
-	case openfunction.Knative:
-		if err := r.createOrUpdateKnativeService(s); err != nil {
-			log.Error(err, "Failed to CreateOrUpdate knative service", "error", err.Error())
-			return ctrl.Result{}, err
-		}
-		break
-	case openfunction.OpenFuncAsync:
-		if err := r.createOrUpdateOpenFuncAsyncService(s); err != nil {
-			log.Error(err, "Failed to CreateOrUpdate dapr service", "error", err.Error())
-			return ctrl.Result{}, err
-		}
-		break
-	default:
-		err := fmt.Errorf("unknow runtime %s", *s.Spec.Runtime)
-		log.Error(err, "unknown runtime", "runtime", *s.Spec.Runtime)
+	s.Status.Phase = openfunction.ServingPhase
+	s.Status.State = openfunction.Running
+	if err := r.Status().Update(r.ctx, &s); err != nil {
+		log.Error(err, "Failed to update serving status", "name", s.Name, "namespace", s.Namespace)
 		return ctrl.Result{}, err
 	}
 
-	status = openfunction.ServingStatus{Phase: openfunction.ServingPhase, State: openfunction.Launched}
-	if err := r.updateStatus(s, &status); err != nil {
-		log.Error(err, "Failed to update serving Launched status", "name", s.Name, "namespace", s.Namespace)
-		return ctrl.Result{}, err
-	}
-
-	log.V(1).Info("Create serving", "name", s.Name, "namespace", s.Namespace)
+	log.V(1).Info("Serving is running", "name", s.Name, "namespace", s.Namespace)
 
 	return ctrl.Result{}, nil
 }
 
-func (r *ServingReconciler) createOrUpdateKnativeService(s *openfunction.Serving) error {
+func (r *ServingReconciler) getServingRun(s *openfunction.Serving) core.ServingRun {
 
-	log := r.Log.WithName("createOrUpdateKnativeService")
-	ksvc := kservingv1.Service{}
-	ksvc.Name = fmt.Sprintf("%s-%s", s.Name, "ksvc")
-	ksvc.Namespace = s.Namespace
-
-	if err := r.Delete(r.ctx, &ksvc); util.IgnoreNotFound(err) != nil {
-		log.Error(err, "Failed to delete old knative service", "name", ksvc.Name, "namespace", ksvc.Namespace)
-		return err
+	switch *s.Spec.Runtime {
+	case openfunction.OpenFuncAsync:
+		return openfuncasync.NewServingRun(r.ctx, r.Client, r.Scheme, r.Log)
+	case openfunction.Knative:
+		return knative.NewServingRun(r.ctx, r.Client, r.Scheme, r.Log)
+	default:
+		return nil
 	}
-
-	if err := r.mutateKsvc(&ksvc, s)(); err != nil {
-		log.Error(err, "Failed to mutate knative service", "name", s.Name, "namespace", s.Namespace)
-		return err
-	}
-
-	if err := r.Create(r.ctx, &ksvc); err != nil {
-		log.Error(err, "Failed to Create knative service", "name", s.Name, "namespace", s.Namespace)
-		return err
-	}
-
-	return nil
-}
-
-func (r *ServingReconciler) updateStatus(s *openfunction.Serving, status *openfunction.ServingStatus) error {
-
-	status.DeepCopyInto(&s.Status)
-	if err := r.Status().Update(r.ctx, s); err != nil {
-		return err
-	}
-	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

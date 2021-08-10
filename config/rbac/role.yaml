@@ -34,10 +34,6 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - configmaps
-  - persistentvolumeclaims
-  - secrets
-  - serviceaccounts
   - services
   verbs:
   - create
@@ -256,12 +252,10 @@ rules:
   - update
   - watch
 - apiGroups:
-  - tekton.dev
+  - shipwright.io
   resources:
-  - pipelineresources
-  - pipelineruns
-  - pipelines
-  - tasks
+  - buildruns
+  - builds
   verbs:
   - create
   - delete

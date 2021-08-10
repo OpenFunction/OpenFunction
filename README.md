@@ -24,7 +24,7 @@ You can refer to [OpenFunction Events Framework Concepts](docs/concepts/OpenFunc
 
 ### Core CRDs
 
-The core capability of OpenFunction is to enable users to develop, run and manage applications as executable function code. OpenFunction implements the following [custom resource definitions (CRDs)](https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/):  
+The core capability of OpenFunction is to enable users to develop, run and manage applications as executable function code. OpenFunction implements the following [custom resource definitions (CRDs)](https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/):
 
 - **Function**, defines a function.
 - **Builder**, defines a function builder.
@@ -42,15 +42,15 @@ The goal of Builder is to compile the user's function source code into an applic
 
 It will fetch the code from the code repository, build the application image locally and publish it to the container image repository.
 
-Currently, OpenFunction Builder uses [Tekton and Cloud Native Buildpacks](#tekton-and-cloud-native-buildpacks) to build container images.
+Currently, OpenFunction Builder uses [Shipwright and Cloud Native Buildpacks](#shipwright-and-cloud-native-buildpacks) to build container images.
 
-##### Tekton and Cloud Native Buildpacks
+##### Shipwright and Cloud Native Buildpacks
 
-Tekton is a CI/CD system that provides task pipelining capabilities. 
+Shipwright is an extensible framework for building container images on Kubernetes.
 
 Cloud Native Buildpacks is an OCI standard image building framework that transform your application source code into images that can run on any cloud.
 
-OpenFunction Builder controls the build process of application images by Tekton, including fetching code, building and publishing images via Cloud Native Buildpacks.
+OpenFunction Builder controls the build process of application images by Shipwright, including fetching code, building and publishing images via Cloud Native Buildpacks.
 
 #### Serving
 
@@ -78,7 +78,7 @@ The current version of OpenFunction requires that you have a Kubernetes cluster 
 
 In addition, you need to deploy several dependencies for the OpenFunction ```Builder``` and ```Serving```.
 
-You can refer to the [Installation Guide](docs/installation/README.md) to setup OpenFunction ```Builder``` and ```Serving```, 
+You can refer to the [Installation Guide](docs/installation/README.md) to setup OpenFunction ```Builder``` and ```Serving```,
 or use the following command to easily setup OpenFunction ```Builder``` and ```Serving```.
 
 ```shell
@@ -92,7 +92,7 @@ You can also customize the installation with the following parameters:
 |Parameter|Comment|
 |---|---|
 | --all                              | Install all supported ```Builder``` and ```Serving``` |
-| --with-tekton                      | Install Tekton builder |
+| --with-shipwright                  | Install Shipwright builder |
 | --with-knative                     | Install Knative serving runtime |
 | --with-openFuncAsync               | Install OpenFuncAsync serving runtime |
 | --poor-network                     | Use this when you having poor network connectivity to GitHub/Googleapis |

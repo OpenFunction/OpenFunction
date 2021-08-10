@@ -42,6 +42,11 @@ type KedaScaledObject struct {
 }
 
 type KedaScaledJob struct {
+	// Restart policy for all containers within the pod.
+	// One of OnFailure, Never.
+	// Default to Never.
+	// +optional
+	RestartPolicy *v1.RestartPolicy `json:"restartPolicy,omitempty"`
 	// +optional
 	PollingInterval *int32 `json:"pollingInterval,omitempty"`
 	// +optional
@@ -89,10 +94,10 @@ type Dapr struct {
 	// Annotations for dapr
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty"`
-	// Components of dapr
+	// Components of dapr.
 	// +optional
 	Components []DaprComponent `json:"components,omitempty"`
-	// Subscriptions of dapr
+	// Subscriptions of dapr.
 	// +optional
 	Subscriptions []DaprSubscription `json:"subscriptions,omitempty"`
 	// Function inputs from Dapr components including binding, pubsub, and service invocation
@@ -125,10 +130,15 @@ type ServingSpec struct {
 	Version *string `json:"version,omitempty"`
 	// Function image name
 	Image string `json:"image"`
+	// ImageCredentials references a Secret that contains credentials to access
+	// the image repository.
+	//
+	// +optional
+	ImageCredentials *v1.LocalObjectReference `json:"imageCredentials,omitempty"`
 	// The port on which the function will be invoked
 	Port *int32 `json:"port,omitempty"`
 	// The backend runtime to run a function, for example Knative
-	Runtime *Runtime `json:"runtime,omitempty"`
+	Runtime *Runtime `json:"runtime"`
 	// Parameters to pass to the serving.
 	// All parameters will be injected into the pod as environment variables.
 	// Function code can use these parameters by getting environment variables
@@ -147,11 +157,16 @@ type ServingSpec struct {
 type ServingStatus struct {
 	Phase string `json:"phase,omitempty"`
 	State string `json:"state,omitempty"`
+	// Associate resources.
+	ResourceRef map[string]string `json:"resourceRef,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:resource:shortName=fs
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
+//+kubebuilder:printcolumn:name="State",type=string,JSONPath=`.status.state`
+//+kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Serving is the Schema for the servings API
 type Serving struct {

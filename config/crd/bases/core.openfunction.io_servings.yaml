@@ -18,7 +18,17 @@ spec:
     singular: serving
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.state
+      name: State
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: Serving is the Schema for the servings API
@@ -41,6 +51,15 @@ spec:
               image:
                 description: Function image name
                 type: string
+              imageCredentials:
+                description: ImageCredentials references a Secret that contains credentials
+                  to access the image repository.
+                properties:
+                  name:
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                      TODO: Add other useful fields. apiVersion, kind, uid?'
+                    type: string
+                type: object
               openFuncAsync:
                 description: Parameters of OpenFuncAsync runtime.
                 properties:
@@ -53,7 +72,7 @@ spec:
                         description: Annotations for dapr
                         type: object
                       components:
-                        description: Components of dapr
+                        description: Components of dapr.
                         items:
                           properties:
                             ignoreErrors:
@@ -178,7 +197,7 @@ spec:
                           type: object
                         type: array
                       subscriptions:
-                        description: Subscriptions of dapr
+                        description: Subscriptions of dapr.
                         items:
                           properties:
                             name:
@@ -215,6 +234,10 @@ spec:
                           pollingInterval:
                             format: int32
                             type: integer
+                          restartPolicy:
+                            description: Restart policy for all containers within
+                              the pod. One of OnFailure, Never. Default to Never.
+                            type: string
                           scalingStrategy:
                             description: ScalingStrategy defines the strategy of Scaling
                             properties:
@@ -6486,12 +6509,18 @@ spec:
                 type: string
             required:
             - image
+            - runtime
             type: object
           status:
             description: ServingStatus defines the observed state of Serving
             properties:
               phase:
                 type: string
+              resourceRef:
+                additionalProperties:
+                  type: string
+                description: Associate resources.
+                type: object
               state:
                 type: string
             type: object
