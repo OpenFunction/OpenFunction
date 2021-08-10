@@ -63,7 +63,7 @@ spec:
                 type: object
               dockerfile:
                 description: Dockerfile is the path to the Dockerfile to be used for
-                  build strategies which bank on the Dockerfile for building an image.
+                  build strategies that rely on the Dockerfile for building an image.
                 type: string
               env:
                 additionalProperties:
@@ -100,8 +100,9 @@ spec:
                       the image.
                     properties:
                       kind:
-                        description: BuildStrategyKind indicates the kind of the buildstrategy,
-                          BuildStrategy or ClusterBuildStrategy, default is BuildStrategy.
+                        description: BuildStrategyKind indicates the kind of the build
+                          strategy BuildStrategy or ClusterBuildStrategy, default
+                          to BuildStrategy.
                         type: string
                       name:
                         description: 'Name of the referent; More info: http://kubernetes.io/docs/user-guide/identifiers#names'
