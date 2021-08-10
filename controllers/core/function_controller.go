@@ -85,7 +85,7 @@ func (r *FunctionReconciler) createBuilder(fn *openfunction.Function) error {
 	log := r.Log.WithName("CreateBuilder")
 
 	if !r.needToCreateBuilder(fn) {
-		if err := r.updateFunctionUsingBuilderStatus(fn); err != nil {
+		if err := r.updateFuncWithBuilderStatus(fn); err != nil {
 			return err
 		}
 
@@ -159,9 +159,9 @@ func (r *FunctionReconciler) createBuilder(fn *openfunction.Function) error {
 	return nil
 }
 
-// Update the status of the function according to the result of the build.
-func (r *FunctionReconciler) updateFunctionUsingBuilderStatus(fn *openfunction.Function) error {
-	log := r.Log.WithName("UpdateFunctionUsingBuilderStatus")
+// Update the status of the function with the result of the build.
+func (r *FunctionReconciler) updateFuncWithBuilderStatus(fn *openfunction.Function) error {
+	log := r.Log.WithName("UpdateFuncWithBuilderStatus")
 
 	// Build had not created or not completed, no need to update function status.
 	if fn.Status.Build == nil || fn.Status.Build.State == "" {
@@ -182,7 +182,7 @@ func (r *FunctionReconciler) updateFunctionUsingBuilderStatus(fn *openfunction.F
 		return util.IgnoreNotFound(err)
 	}
 
-	// Build has not completely.
+	// The build is still in process.
 	if builder.Status.Phase != openfunction.BuildPhase || builder.Status.State == openfunction.Building {
 		return nil
 	}
@@ -445,7 +445,7 @@ func (r *FunctionReconciler) needToCreateServing(fn *openfunction.Function) bool
 
 	log := r.Log.WithName("NeedToCreateServing")
 
-	// The build is not completed, no need to create or update serving.
+	// The build is still in process, no need to create or update serving.
 	if fn.Status.Serving == nil {
 		log.V(1).Info("Build not completed", "namespace", fn.Namespace, "name", fn.Name)
 		return false

@@ -54,7 +54,7 @@ type BuilderSpec struct {
 	// The port on which the function will be invoked
 	Port *int32 `json:"port,omitempty"`
 	// Dockerfile is the path to the Dockerfile to be used for
-	// build strategies which bank on the Dockerfile for building an image.
+	// build strategies that rely on the Dockerfile for building an image.
 	//
 	// +optional
 	Dockerfile *string `json:"dockerfile,omitempty"`

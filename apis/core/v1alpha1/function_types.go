@@ -51,7 +51,7 @@ const (
 	BuildPhase             = "Build"
 	ServingPhase           = "Serving"
 	Created                = "Created"
-	Building               = "building"
+	Building               = "Building"
 	Running                = "Running"
 	Succeeded              = "Succeeded"
 	Failed                 = "Failed"
@@ -64,8 +64,7 @@ const (
 type Strategy struct {
 	// Name of the referent; More info: http://kubernetes.io/docs/user-guide/identifiers#names
 	Name string `json:"name"`
-
-	// BuildStrategyKind indicates the kind of the buildstrategy, BuildStrategy or ClusterBuildStrategy, default is BuildStrategy.
+	// BuildStrategyKind indicates the kind of the build strategy BuildStrategy or ClusterBuildStrategy, default to BuildStrategy.
 	Kind *string `json:"kind,omitempty"`
 }
 
@@ -81,8 +80,7 @@ type ShipwrightEngine struct {
 }
 
 type BuildImpl struct {
-	// Builder refers to the image containing the build tools inside which
-	// the source code would be built.
+	// Builder refers to the image containing the build tools to build the source code.
 	//
 	// +optional
 	Builder *string `json:"builder"`
@@ -91,19 +89,18 @@ type BuildImpl struct {
 	//
 	// +optional
 	BuilderCredentials *v1.LocalObjectReference `json:"builderCredentials,omitempty"`
-	// The configuration for `Shipwright` build engine.
+	// The configuration for the `Shipwright` build engine.
 	Shipwright *ShipwrightEngine `json:"shipwright,omitempty"`
 	// Params is a list of key/value that could be used to set strategy parameters.
 	// When using _params_, users should avoid:
 	// Defining a parameter name that doesn't match one of the `spec.parameters` defined in the `BuildStrategy`.
-	// Defining a parameter name that collides with the Shipwright reserved parameters. These are _BUILDER_IMAGE_,_DOCKERFILE_,_CONTEXT_DIR_ and any name starting with _shp-_.
+	// Defining a parameter name that collides with the Shipwright reserved parameters including BUILDER_IMAGE,DOCKERFILE,CONTEXT_DIR and any name starting with shp-.
 	Params map[string]string `json:"params,omitempty"`
-	// Environment params to pass to the builder.
+	// Environment variables to pass to the builder.
 	Env map[string]string `json:"env,omitempty"`
 	// Function Source code repository
 	SrcRepo *GitRepo `json:"srcRepo"`
-	// Dockerfile is the path to the Dockerfile to be used for
-	// build strategies which bank on the Dockerfile for building an image.
+	// Dockerfile is the path to the Dockerfile used by build strategies that rely on the Dockerfile to build an image.
 	//
 	// +optional
 	Dockerfile *string `json:"dockerfile,omitempty"`
@@ -138,9 +135,9 @@ type FunctionSpec struct {
 	ImageCredentials *v1.LocalObjectReference `json:"imageCredentials,omitempty"`
 	// The port on which the function will be invoked
 	Port *int32 `json:"port,omitempty"`
-	// Information needed to build a function. If the `Build` is nil, it will skip the build step.
+	// Information needed to build a function. The build step will be skipped if Build is nil.
 	Build *BuildImpl `json:"build,omitempty"`
-	// Information needed to run a function. If the `Serving` is nil, it will skip the serving step.
+	// Information needed to run a function. The serving step will be skipped if `Serving` is nil.
 	Serving *ServingImpl `json:"serving,omitempty"`
 }
 
