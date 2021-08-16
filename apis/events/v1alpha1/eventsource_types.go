@@ -34,13 +34,13 @@ type EventSourceSpec struct {
 	EventBus string `json:"eventBus,omitempty"`
 	// Redis event source, the Key is used to refer to the name of the event
 	// +optional
-	Redis map[string]*SourceSpec `json:"redis,omitempty"`
+	Redis map[string]*RedisSpec `json:"redis,omitempty"`
 	// Kafka event source, the Key is used to refer to the name of the event
 	// +optional
-	Kafka map[string]*SourceSpec `json:"kafka,omitempty"`
+	Kafka map[string]*KafkaSpec `json:"kafka,omitempty"`
 	// Cron event source, the Key is used to refer to the name of the event
 	// +optional
-	Cron map[string]*SourceSpec `json:"cron,omitempty"`
+	Cron map[string]*CronSpec `json:"cron,omitempty"`
 	// Sink is a callable address, such as Knative Service
 	// +optional
 	Sink *SinkSpec `json:"sink,omitempty"`

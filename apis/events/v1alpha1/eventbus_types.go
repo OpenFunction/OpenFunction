@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -34,7 +33,7 @@ type EventBusSpec struct {
 	// +optional
 	Topic string `json:"topic,omitempty"`
 	// Use Nats streaming as the default backend for event bus
-	Nats *componentsv1alpha1.ComponentSpec `json:"nats,omitempty"`
+	NatsStreaming *NatsStreamingSpec `json:"natsStreaming,omitempty"`
 }
 
 //+kubebuilder:object:root=true

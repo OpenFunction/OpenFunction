@@ -5,7 +5,6 @@ go 1.15
 require (
 	github.com/OpenFunction/functions-framework-go v0.0.0-20210628081257-4137e46a99a6
 	github.com/dapr/dapr v1.2.2
-	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-logr/logr v0.4.0
 	github.com/json-iterator/go v1.1.11
 	github.com/kedacore/keda/v2 v2.2.0
@@ -13,7 +12,6 @@ require (
 	github.com/onsi/ginkgo v1.16.2
 	github.com/onsi/gomega v1.12.0
 	github.com/shipwright-io/build v0.5.2-0.20210715083206-5d8fb411a1eb
-	github.com/tektoncd/pipeline v0.25.0
 	go.uber.org/zap v1.17.0
 	k8s.io/api v0.20.4
 	k8s.io/apimachinery v0.20.4

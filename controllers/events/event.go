@@ -61,29 +61,36 @@ const (
 )
 
 type EventSourceConfig struct {
-	EventSourceComponentName string `json:"eventSourceComponentName"`
-	EventSourceTopic         string `json:"eventSourceTopic,omitempty"`
-	EventBusComponentName    string `json:"eventBusComponentName,omitempty"`
-	EventBusTopic            string `json:"eventBusTopic,omitempty"`
-	SinkComponentName        string `json:"sinkComponentName,omitempty"`
-	EventSourceSpecEncode    string `json:"eventSourceSpecEncode,omitempty"`
-	EventBusSpecEncode       string `json:"eventBusSpecEncode,omitempty"`
-	SinkSpecEncode           string `json:"sinkSpecEncode,omitempty"`
+	EventSourceComponent  string `json:"eventSourceComponent"`
+	EventSourceTopic      string `json:"eventSourceTopic,omitempty"`
+	EventBusComponent     string `json:"eventBusComponent,omitempty"`
+	EventBusTopic         string `json:"eventBusTopic,omitempty"`
+	SinkComponent         string `json:"sinkComponent,omitempty"`
+	EventSourceSpecEncode string `json:"eventSourceSpecEncode,omitempty"`
+	EventBusSpecEncode    string `json:"eventBusSpecEncode,omitempty"`
+	SinkSpecEncode        string `json:"sinkSpecEncode,omitempty"`
 }
 
 type TriggerConfig struct {
-	EventBusComponentName string               `json:"eventBusComponentName"`
-	EventBusTopics        []string             `json:"eventBusTopics,omitempty"`
-	Subscribers           []*SubscriberConfigs `json:"subscribers,omitempty"`
-	EventBusSpecEncode    string               `json:"eventBusSpecEncode,omitempty"`
-	SinkSpecEncode        string               `json:"sinkSpecEncode,omitempty"`
+	EventBusComponent  string                 `json:"eventBusComponent"`
+	Inputs             []*Input               `json:"inputs,omitempty"`
+	Subscribers        map[string]*Subscriber `json:"subscribers,omitempty"`
+	EventBusSpecEncode string                 `json:"eventBusSpecEncode,omitempty"`
+	SinkSpecEncode     string                 `json:"sinkSpecEncode,omitempty"`
 }
 
-type SubscriberConfigs struct {
-	SinkComponentName           string `json:"sinkComponentName,omitempty"`
-	DeadLetterSinkComponentName string `json:"deadLetterSinkComponentName,omitempty"`
-	TopicName                   string `json:"topicName,omitempty"`
-	DeadLetterTopicName         string `json:"deadLetterTopicName,omitempty"`
+type Input struct {
+	Name        string `json:"name"`
+	Namespace   string `json:"namespace,omitempty"`
+	EventSource string `json:"eventSource"`
+	Event       string `json:"event"`
+}
+
+type Subscriber struct {
+	SinkComponent   string `json:"sinkComponent,omitempty"`
+	DLSinkComponent string `json:"deadLetterSinkComponent,omitempty"`
+	Topic           string `json:"topic,omitempty"`
+	DLTopic         string `json:"deadLetterTopic,omitempty"`
 }
 
 type ControlledResources struct {
@@ -228,7 +235,7 @@ func (r *ControlledResources) GenResourceStatus(resourceType string) []*openfunc
 	return statuses
 }
 
-func mutateDaprComponent(scheme *runtime.Scheme, component *componentsv1alpha1.Component, object v1.Object) controllerutil.MutateFn {
+func mutateDaprComponent(scheme *runtime.Scheme, component *componentsv1alpha1.Component, spec *componentsv1alpha1.ComponentSpec, object v1.Object) controllerutil.MutateFn {
 	return func() error {
 		var controlledByLabel string
 		switch object.(type) {
@@ -237,6 +244,7 @@ func mutateDaprComponent(scheme *runtime.Scheme, component *componentsv1alpha1.C
 		case *openfunctionevent.Trigger:
 			controlledByLabel = TriggerControlledLabel
 		}
+		component.Spec = *spec
 		component.SetLabels(map[string]string{controlledByLabel: object.GetName()})
 		component.SetOwnerReferences(nil)
 		return ctrl.SetControllerReference(object, component, scheme)

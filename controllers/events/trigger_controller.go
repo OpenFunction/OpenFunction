@@ -47,7 +47,7 @@ import (
 
 const (
 	triggerContainerName = "trigger"
-	triggerHandlerImage  = "openfunctiondev/trigger-handler:latest"
+	triggerHandlerImage  = "openfunctiondev/trigger-handler:v1"
 )
 
 // TriggerReconciler reconciles a Trigger object
@@ -96,6 +96,7 @@ func (r *TriggerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	var trigger openfunctionevent.Trigger
 	r.envs = &TriggerConfig{}
+	r.envs.Subscribers = map[string]*Subscriber{}
 	r.controlledResources = &ControlledResources{}
 
 	if err := r.Get(ctx, req.NamespacedName, &trigger); err != nil {
@@ -131,7 +132,7 @@ func (r *TriggerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 // createOrUpdateTrigger will do:
 // 1. Generate a dapr component specification for the EventBus associated with the Trigger
 //    and create the dapr component (will check if it needs to be updated)
-//    and set the TriggerConfig.EventBusComponentName, TriggerConfig.EventBusTopic, TriggerConfig.EventBusSpecEncode.
+//    and set the TriggerConfig.EventBusComponent, TriggerConfig.EventBusSpecEncode.
 // 2. Generate dapr component specifications for the subscribers
 //    and create the dapr components (will check if they need to be updated)
 //    and set the TriggerConfig.Subscribers, TriggerConfig.SinkSpecEncode.
@@ -187,24 +188,18 @@ func (r *TriggerReconciler) handleEventBus(trigger *openfunctionevent.Trigger) e
 	r.controlledResources.SetResourceStatusToActive(componentName, ResourceTypeComponent)
 
 	// Set TriggerConfig.EventBusComponentName and TriggerConfig.EventBusTopics.
-	r.envs.EventBusComponentName = componentName
-	for _, input := range trigger.Spec.Inputs {
-		if input.EventSourceNamespace == "" {
-			input.EventSourceNamespace = trigger.Namespace
+	r.envs.EventBusComponent = componentName
+	for inputName, input := range trigger.Spec.Inputs {
+		in := input
+		if in.Namespace == "" {
+			in.Namespace = trigger.Namespace
 		}
-		r.envs.EventBusTopics = append(r.envs.EventBusTopics, fmt.Sprintf(EventBusTopicNameTmpl, input.EventSourceNamespace, input.EventSourceName, input.EventName))
+		r.envs.Inputs = append(r.envs.Inputs, &Input{Name: inputName, Namespace: in.Namespace, EventSource: in.EventSource, Event: in.Event})
 	}
 
 	// Generate a dapr component based on the specification of EventBus.
-	component := &componentsv1alpha1.Component{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      componentName,
-			Namespace: trigger.Namespace,
-		},
-	}
-
-	if eventBusSpec.Nats != nil {
-		specBytes, err := json.Marshal(eventBusSpec.Nats)
+	if eventBusSpec.NatsStreaming != nil {
+		specBytes, err := json.Marshal(eventBusSpec.NatsStreaming)
 		if err != nil {
 			return err
 		}
@@ -214,8 +209,18 @@ func (r *TriggerReconciler) handleEventBus(trigger *openfunctionevent.Trigger) e
 		r.envs.EventBusSpecEncode = base64.StdEncoding.EncodeToString(specBytes)
 
 		// Create the dapr component for Trigger to retrieve event from EventBus.
-		component.Spec = *eventBusSpec.Nats
-		if _, err := ctrl.CreateOrUpdate(r.ctx, r.Client, component, mutateDaprComponent(r.Scheme, component, trigger)); err != nil {
+		// We need to assign a separate consumerID name to each nats streaming component
+		metadataMap := eventBusSpec.NatsStreaming.ConvertToMetadataMap()
+		metadataMap = append(metadataMap, map[string]interface{}{
+			"name":  "consumerID",
+			"value": fmt.Sprintf("%s-%s", trigger.Namespace, componentName),
+		})
+		component, err := eventBusSpec.NatsStreaming.GenComponent(trigger.Namespace, componentName, metadataMap)
+		if err != nil {
+			return err
+		}
+		spec := component.Spec
+		if _, err := ctrl.CreateOrUpdate(r.ctx, r.Client, component, mutateDaprComponent(r.Scheme, component, &spec, trigger)); err != nil {
 			return err
 		}
 		r.controlledResources.SetResourceStatus(componentName, ResourceTypeComponent, Running)
@@ -247,12 +252,12 @@ func (r *TriggerReconciler) handleSubscriber(trigger *openfunctionevent.Trigger)
 		//    3. component specifications for aggregate de-duplication of above 1 and 2
 		for _, subscriber := range trigger.Spec.Subscribers {
 			sub := subscriber
-			sc := &SubscriberConfigs{}
+			s := &Subscriber{}
 
 			if sub.Sink != nil && !sinks[sub.Sink] {
 				sinks[sub.Sink] = true
 				componentName := fmt.Sprintf(TriggerSinkComponentNameTmpl, trigger.Name, sub.Sink.Ref.Namespace, sub.Sink.Ref.Name)
-				sc.SinkComponentName = componentName
+				s.SinkComponent = componentName
 				if !totalSinks[sub.Sink] {
 					totalSinks[sub.Sink] = true
 					component := &componentsv1alpha1.Component{
@@ -274,7 +279,7 @@ func (r *TriggerReconciler) handleSubscriber(trigger *openfunctionevent.Trigger)
 			if sub.DeadLetterSink != nil && !deadLetterSinks[sub.DeadLetterSink] {
 				deadLetterSinks[sub.DeadLetterSink] = true
 				componentName := fmt.Sprintf(TriggerSinkComponentNameTmpl, trigger.Name, sub.DeadLetterSink.Ref.Namespace, sub.DeadLetterSink.Ref.Name)
-				sc.DeadLetterSinkComponentName = componentName
+				s.DLSinkComponent = componentName
 				if !totalSinks[sub.DeadLetterSink] {
 					totalSinks[sub.DeadLetterSink] = true
 					component := &componentsv1alpha1.Component{
@@ -295,7 +300,7 @@ func (r *TriggerReconciler) handleSubscriber(trigger *openfunctionevent.Trigger)
 
 			if sub.Topic != "" && !topics[sub.Topic] {
 				topics[sub.Topic] = true
-				sc.TopicName = sub.Topic
+				s.Topic = sub.Topic
 				if !totalTopics[sub.Topic] {
 					totalTopics[sub.Topic] = true
 				}
@@ -303,13 +308,12 @@ func (r *TriggerReconciler) handleSubscriber(trigger *openfunctionevent.Trigger)
 
 			if sub.DeadLetterTopic != "" && !deadLetterTopics[sub.DeadLetterTopic] {
 				deadLetterTopics[sub.DeadLetterTopic] = true
-				sc.DeadLetterTopicName = sub.DeadLetterTopic
+				s.DLTopic = sub.DeadLetterTopic
 				if !totalTopics[sub.DeadLetterTopic] {
 					totalTopics[sub.DeadLetterTopic] = true
 				}
 			}
-
-			r.envs.Subscribers = append(r.envs.Subscribers, sc)
+			r.envs.Subscribers[sub.Condition] = s
 		}
 		specListBytes, err := json.Marshal(sinkSpecList)
 		if err != nil {
@@ -326,8 +330,9 @@ func (r *TriggerReconciler) handleSubscriber(trigger *openfunctionevent.Trigger)
 
 	for _, component := range components {
 		c := component
+		spec := c.Spec
 		r.controlledResources.SetResourceStatusToActive(c.Name, ResourceTypeComponent)
-		if _, err := ctrl.CreateOrUpdate(r.ctx, r.Client, c, mutateDaprComponent(r.Scheme, c, trigger)); err != nil {
+		if _, err := ctrl.CreateOrUpdate(r.ctx, r.Client, c, mutateDaprComponent(r.Scheme, c, &spec, trigger)); err != nil {
 			return err
 		}
 		r.controlledResources.SetResourceStatus(c.Name, ResourceTypeComponent, Running)
