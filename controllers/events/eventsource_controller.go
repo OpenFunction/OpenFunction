@@ -46,7 +46,7 @@ import (
 
 const (
 	handlerContainerName    = "eventsource"
-	eventSourceHandlerImage = "openfunctiondev/eventsource-handler:latest"
+	eventSourceHandlerImage = "openfunctiondev/eventsource-handler:v1"
 )
 
 // EventSourceReconciler reconciles a EventSource object
@@ -125,16 +125,16 @@ func (r *EventSourceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 // createOrUpdateEventSource will do:
 // 1. Generate a dapr component specification for the EventBus associated with the EventSource (if spec.eventBus is set)
 //    and create the dapr component (will check if it needs to be updated)
-//    and set the SourceConfig.EventBusComponentName, SourceConfig.EventBusTopic, SourceConfig.EventBusSpecEncode.
+//    and set the EventSourceConfig.EventBusComponent, EventSourceConfig.EventBusTopic, EventSourceConfig.EventBusSpecEncode.
 // 2. Generate a dapr component specification for the Sink set in EventSource (if spec.sink is set)
 //    and create the dapr component (will check if it needs to be updated)
-//    and set the SourceConfig.SinkComponentName, SourceConfig.SinkSpecEncode.
+//    and set the EventSourceConfig.SinkComponent, EventSourceConfig.SinkSpecEncode.
 // 3. Generate dapr component specifications for the event sources
 //    and create the dapr components (will check if they need to be updated)
-//    and set the SourceConfig.EventSourceComponentName, SourceConfig.EventSourceTopic, SourceConfig.EventSourceSpecEncode.
-// 4. Generate SourceConfig and convert it to a base64-encoded string.
+//    and set the EventSourceConfig.EventSourceComponent, EventSourceConfig.EventSourceTopic, EventSourceConfig.EventSourceSpecEncode.
+// 4. Generate EventSourceConfig and convert it to a base64-encoded string.
 // 5. Create an EventSource workload for each event source (will check if they need to be updated)
-//    and pass in the SourceConfig as an environment variable.
+//    and pass in the EventSourceConfig as an environment variable.
 func (r *EventSourceReconciler) createOrUpdateEventSource(eventSource *openfunctionevent.EventSource) (ctrl.Result, error) {
 	log := r.Log.WithName("createOrUpdateEventSource")
 
@@ -199,30 +199,34 @@ func (r *EventSourceReconciler) handleEventBus(eventSource *openfunctionevent.Ev
 	componentName := fmt.Sprintf(EventSourceBusComponentNameTmpl, eventSource.Name)
 	r.controlledResources.SetResourceStatusToActive(componentName, ResourceTypeComponent)
 
-	// Set SourceConfig.EventBusComponentName.
-	r.envs.EventBusComponentName = componentName
+	// Set EventSourceConfig.EventBusComponent.
+	r.envs.EventBusComponent = componentName
 
 	// Generate a dapr component based on the specification of EventBus.
-	component := &componentsv1alpha1.Component{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      componentName,
-			Namespace: eventSource.Namespace,
-		},
-	}
-
-	if eventBusSpec.Nats != nil {
-		specBytes, err := json.Marshal(eventBusSpec.Nats)
+	if eventBusSpec.NatsStreaming != nil {
+		specBytes, err := json.Marshal(eventBusSpec.NatsStreaming)
 		if err != nil {
 			return err
 		}
 
-		// Set the SourceConfig.EventBusSpecEncode which will reflect the specification content changes of dapr component back to the EventSource workload,
+		// Set the EventSourceConfig.EventBusSpecEncode which will reflect the specification content changes of dapr component back to the EventSource workload,
 		// informing it that it needs to rebuild.
 		r.envs.EventBusSpecEncode = base64.StdEncoding.EncodeToString(specBytes)
 
 		// Create the dapr component for EventSource to send event to EventBus.
-		component.Spec = *eventBusSpec.Nats
-		if _, err := ctrl.CreateOrUpdate(r.ctx, r.Client, component, mutateDaprComponent(r.Scheme, component, eventSource)); err != nil {
+		// We need to assign a separate consumerID name to each nats streaming component
+		metadataMap := eventBusSpec.NatsStreaming.ConvertToMetadataMap()
+		metadataMap = append(metadataMap, map[string]interface{}{
+			"name":  "consumerID",
+			"value": fmt.Sprintf("%s-%s", eventSource.Namespace, componentName),
+		})
+
+		component, err := eventBusSpec.NatsStreaming.GenComponent(eventSource.Namespace, componentName, metadataMap)
+		if err != nil {
+			return err
+		}
+		spec := component.Spec
+		if _, err := ctrl.CreateOrUpdate(r.ctx, r.Client, component, mutateDaprComponent(r.Scheme, component, &spec, eventSource)); err != nil {
 			return err
 		}
 		r.controlledResources.SetResourceStatus(componentName, ResourceTypeComponent, Running)
@@ -236,8 +240,8 @@ func (r *EventSourceReconciler) handleSink(eventSource *openfunctionevent.EventS
 	componentName := fmt.Sprintf(EventSourceSinkComponentNameTmpl, eventSource.Name)
 	r.controlledResources.SetResourceStatusToActive(componentName, ResourceTypeComponent)
 
-	// Set SourceConfig.SinkComponentName.
-	r.envs.SinkComponentName = componentName
+	// Set EventSourceConfig.SinkComponent.
+	r.envs.SinkComponent = componentName
 
 	// Generate a dapr component based on the specification of Sink.
 	component := &componentsv1alpha1.Component{
@@ -251,18 +255,17 @@ func (r *EventSourceReconciler) handleSink(eventSource *openfunctionevent.EventS
 	if err != nil {
 		return err
 	}
-	component.Spec = *spec
 	specBytes, err := json.Marshal(spec)
 	if err != nil {
 		return err
 	}
 
-	// Set the SourceConfig.SinkSpecEncode which will reflect the specification content changes of dapr component back to the EventSource workload,
+	// Set the EventSourceConfig.SinkSpecEncode which will reflect the specification content changes of dapr component back to the EventSource workload,
 	// informing it that it needs to rebuild.
 	r.envs.SinkSpecEncode = base64.StdEncoding.EncodeToString(specBytes)
 
 	// Create the dapr component for EventSource to retrieve event from EventBus.
-	if _, err := ctrl.CreateOrUpdate(r.ctx, r.Client, component, mutateDaprComponent(r.Scheme, component, eventSource)); err != nil {
+	if _, err := ctrl.CreateOrUpdate(r.ctx, r.Client, component, mutateDaprComponent(r.Scheme, component, spec, eventSource)); err != nil {
 		return err
 	}
 	r.controlledResources.SetResourceStatus(componentName, ResourceTypeComponent, Running)
@@ -282,49 +285,23 @@ func (r *EventSourceReconciler) handleEventSource(eventSource *openfunctionevent
 	if eventSource.Spec.Kafka != nil {
 		for eventName, spec := range eventSource.Spec.Kafka {
 			ss := &sourceSpec{}
-			componentSpec := spec.ComponentSpec
 			componentName := fmt.Sprintf(EventSourceComponentNameTmpl, eventSource.Name, SourceKindKafka, eventName)
 
 			// We need to assign a separate consumerGroup name to each kafka component
-			var newMetadataItem []componentsv1alpha1.MetadataItem
-			consumerGroup := map[string]string{"name": "consumerGroup", "value": fmt.Sprintf("%s-%s", eventSource.Namespace, componentName)}
-			consumerGroupBytes, err := json.Marshal(consumerGroup)
-			if err != nil {
-				return err
-			}
-			var consumerGroupItem componentsv1alpha1.MetadataItem
-			err = json.Unmarshal(consumerGroupBytes, &consumerGroupItem)
+			metadataMap := spec.ConvertToMetadataMap()
+			metadataMap = append(metadataMap, map[string]interface{}{
+				"name":  "consumerGroup",
+				"value": fmt.Sprintf("%s-%s", eventSource.Namespace, componentName),
+			})
+
+			component, err := spec.GenComponent(eventSource.Namespace, componentName, metadataMap)
 			if err != nil {
 				return err
 			}
 
-			found := false
-			for _, md := range componentSpec.Metadata {
-				if md.Name == "consumerGroup" {
-					newMetadataItem = append(newMetadataItem, consumerGroupItem)
-					found = true
-					continue
-				}
-				newMetadataItem = append(newMetadataItem, md)
-			}
-			if !found {
-				newMetadataItem = append(newMetadataItem, consumerGroupItem)
-			}
-			componentSpec.Metadata = newMetadataItem
-
-			component := &componentsv1alpha1.Component{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      componentName,
-					Namespace: eventSource.Namespace,
-				},
-			}
-			component.Spec = *componentSpec
 			ss.Component = component
 			ss.SourceKind = SourceKindKafka
 			ss.EventName = eventName
-			if spec.SourceTopic != "" {
-				ss.SourceTopic = spec.SourceTopic
-			}
 			sourceSpecs = append(sourceSpecs, ss)
 		}
 	}
@@ -332,15 +309,13 @@ func (r *EventSourceReconciler) handleEventSource(eventSource *openfunctionevent
 	if eventSource.Spec.Redis != nil {
 		for eventName, spec := range eventSource.Spec.Cron {
 			ss := &sourceSpec{}
-			componentSpec := spec.ComponentSpec
 			componentName := fmt.Sprintf(EventSourceComponentNameTmpl, eventSource.Name, SourceKindRedis, eventName)
-			component := &componentsv1alpha1.Component{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      componentName,
-					Namespace: eventSource.Namespace,
-				},
+
+			metadataMap := spec.ConvertToMetadataMap()
+			component, err := spec.GenComponent(eventSource.Namespace, componentName, metadataMap)
+			if err != nil {
+				return err
 			}
-			component.Spec = *componentSpec
 			ss.Component = component
 			ss.SourceKind = SourceKindRedis
 			ss.EventName = eventName
@@ -351,15 +326,13 @@ func (r *EventSourceReconciler) handleEventSource(eventSource *openfunctionevent
 	if eventSource.Spec.Cron != nil {
 		for eventName, spec := range eventSource.Spec.Cron {
 			ss := &sourceSpec{}
-			componentSpec := spec.ComponentSpec
 			componentName := fmt.Sprintf(EventSourceComponentNameTmpl, eventSource.Name, SourceKindCron, eventName)
-			component := &componentsv1alpha1.Component{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      componentName,
-					Namespace: eventSource.Namespace,
-				},
+
+			metadataMap := spec.ConvertToMetadataMap()
+			component, err := spec.GenComponent(eventSource.Namespace, componentName, metadataMap)
+			if err != nil {
+				return err
 			}
-			component.Spec = *componentSpec
 			ss.Component = component
 			ss.SourceKind = SourceKindCron
 			ss.EventName = eventName
@@ -372,7 +345,7 @@ func (r *EventSourceReconciler) handleEventSource(eventSource *openfunctionevent
 		spec := &component.Spec
 
 		r.controlledResources.SetResourceStatusToActive(component.Name, ResourceTypeComponent)
-		r.envs.EventSourceComponentName = component.Name
+		r.envs.EventSourceComponent = component.Name
 		r.envs.EventSourceTopic = ss.SourceTopic
 		r.envs.EventBusTopic = fmt.Sprintf(EventBusTopicNameTmpl, eventSource.Namespace, eventSource.Name, ss.EventName)
 		specBytes, err := json.Marshal(spec)
@@ -380,12 +353,12 @@ func (r *EventSourceReconciler) handleEventSource(eventSource *openfunctionevent
 			return err
 		}
 
-		// Set the SourceConfig.EventSourceSpecEncode which will reflect the specification content changes of dapr components back to the EventSource workload,
+		// Set the EventSourceConfig.EventSourceSpecEncode which will reflect the specification content changes of dapr components back to the EventSource workload,
 		// informing it that it needs to rebuild.
 		r.envs.EventSourceSpecEncode = base64.StdEncoding.EncodeToString(specBytes)
 
 		// Create the dapr component for EventSource to retrieve event from EventBus.
-		if _, err := ctrl.CreateOrUpdate(r.ctx, r.Client, component, mutateDaprComponent(r.Scheme, component, eventSource)); err != nil {
+		if _, err := ctrl.CreateOrUpdate(r.ctx, r.Client, component, mutateDaprComponent(r.Scheme, component, spec, eventSource)); err != nil {
 			return err
 		}
 		r.controlledResources.SetResourceStatus(component.Name, ResourceTypeComponent, Running)

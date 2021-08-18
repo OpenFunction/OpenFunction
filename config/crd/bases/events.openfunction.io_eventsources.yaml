@@ -61,50 +61,10 @@ spec:
               cron:
                 additionalProperties:
                   properties:
-                    ignoreErrors:
-                      type: boolean
-                    initTimeout:
-                      type: string
-                    metadata:
-                      items:
-                        description: MetadataItem is a name/value pair for a metadata
-                        properties:
-                          name:
-                            type: string
-                          secretKeyRef:
-                            description: SecretKeyRef is a reference to a secret holding
-                              the value for the metadata item. Name is the secret
-                              name, and key is the field in the secret.
-                            properties:
-                              key:
-                                type: string
-                              name:
-                                type: string
-                            required:
-                            - key
-                            - name
-                            type: object
-                          value:
-                            description: DynamicValue is a dynamic value struct for
-                              the component.metadata pair value
-                            type: object
-                            x-kubernetes-preserve-unknown-fields: true
-                        required:
-                        - name
-                        type: object
-                      type: array
-                    srcTopic:
-                      description: SourceTopic is used to specify the topic name of
-                        the event source in Pub/Sub mode scenario
-                      type: string
-                    type:
-                      type: string
-                    version:
+                    schedule:
                       type: string
                   required:
-                  - metadata
-                  - type
-                  - version
+                  - schedule
                   type: object
                 description: Cron event source, the Key is used to refer to the name
                   of the event
@@ -116,50 +76,22 @@ spec:
               kafka:
                 additionalProperties:
                   properties:
-                    ignoreErrors:
+                    authRequired:
                       type: boolean
-                    initTimeout:
+                    brokers:
                       type: string
-                    metadata:
-                      items:
-                        description: MetadataItem is a name/value pair for a metadata
-                        properties:
-                          name:
-                            type: string
-                          secretKeyRef:
-                            description: SecretKeyRef is a reference to a secret holding
-                              the value for the metadata item. Name is the secret
-                              name, and key is the field in the secret.
-                            properties:
-                              key:
-                                type: string
-                              name:
-                                type: string
-                            required:
-                            - key
-                            - name
-                            type: object
-                          value:
-                            description: DynamicValue is a dynamic value struct for
-                              the component.metadata pair value
-                            type: object
-                            x-kubernetes-preserve-unknown-fields: true
-                        required:
-                        - name
-                        type: object
-                      type: array
-                    srcTopic:
-                      description: SourceTopic is used to specify the topic name of
-                        the event source in Pub/Sub mode scenario
+                    maxMessageBytes:
+                      format: int64
+                      type: integer
+                    saslPassword:
                       type: string
-                    type:
+                    saslUsername:
                       type: string
-                    version:
+                    topic:
                       type: string
                   required:
-                  - metadata
-                  - type
-                  - version
+                  - authRequired
+                  - brokers
                   type: object
                 description: Kafka event source, the Key is used to refer to the name
                   of the event
@@ -167,50 +99,55 @@ spec:
               redis:
                 additionalProperties:
                   properties:
-                    ignoreErrors:
+                    dialTimeout:
+                      type: string
+                    enableTLS:
                       type: boolean
-                    initTimeout:
+                    failover:
+                      type: boolean
+                    idleCheckFrequency:
                       type: string
-                    metadata:
-                      items:
-                        description: MetadataItem is a name/value pair for a metadata
-                        properties:
-                          name:
-                            type: string
-                          secretKeyRef:
-                            description: SecretKeyRef is a reference to a secret holding
-                              the value for the metadata item. Name is the secret
-                              name, and key is the field in the secret.
-                            properties:
-                              key:
-                                type: string
-                              name:
-                                type: string
-                            required:
-                            - key
-                            - name
-                            type: object
-                          value:
-                            description: DynamicValue is a dynamic value struct for
-                              the component.metadata pair value
-                            type: object
-                            x-kubernetes-preserve-unknown-fields: true
-                        required:
-                        - name
-                        type: object
-                      type: array
-                    srcTopic:
-                      description: SourceTopic is used to specify the topic name of
-                        the event source in Pub/Sub mode scenario
+                    idleTimeout:
                       type: string
-                    type:
+                    maxConnAge:
                       type: string
-                    version:
+                    minIdleConns:
+                      format: int64
+                      type: integer
+                    poolSize:
+                      format: int64
+                      type: integer
+                    poolTimeout:
+                      type: string
+                    processingTimeout:
+                      type: string
+                    readTimeout:
+                      type: string
+                    redeliverInterval:
+                      type: string
+                    redisDB:
+                      format: int64
+                      type: integer
+                    redisHost:
+                      type: string
+                    redisMaxRetries:
+                      format: int64
+                      type: integer
+                    redisMaxRetryInterval:
+                      type: string
+                    redisMinRetryInterval:
+                      type: string
+                    redisPassword:
+                      type: string
+                    redisType:
+                      type: string
+                    sentinelMasterName:
+                      type: string
+                    writeTimeout:
                       type: string
                   required:
-                  - metadata
-                  - type
-                  - version
+                  - redisHost
+                  - redisPassword
                   type: object
                 description: Redis event source, the Key is used to refer to the name
                   of the event

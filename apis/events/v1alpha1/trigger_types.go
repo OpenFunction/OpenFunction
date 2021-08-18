@@ -31,20 +31,18 @@ type TriggerSpec struct {
 	// EventBus allows you to specify a specific EventBus to be used instead of the "default" one
 	EventBus string `json:"eventBus"`
 	// Inputs defines the event sources associated with the Trigger
-	Inputs []*Input `json:"inputs"`
+	Inputs map[string]*Input `json:"inputs"`
 	// Subscribers defines the subscribers associated with the Trigger
 	Subscribers []*Subscriber `json:"subscribers"`
 }
 
 type Input struct {
-	// Name, name of input
-	Name string `json:"name"`
-	// EventSourceNamespace, namespace of EventSource, default to namespace of Trigger
-	EventSourceNamespace string `json:"eventSourceNamespace,omitempty"`
-	// EventSourceName, name of EventSource
-	EventSourceName string `json:"eventSourceName"`
-	// EventName, name of event
-	EventName string `json:"eventName"`
+	// Namespace, namespace of EventSource, default to namespace of Trigger
+	Namespace string `json:"namespace,omitempty"`
+	// EventSource, name of EventSource
+	EventSource string `json:"eventSource"`
+	// Event, name of event
+	Event string `json:"event"`
 }
 
 type Subscriber struct {

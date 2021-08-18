@@ -58,29 +58,25 @@ spec:
                   be used instead of the "default" one
                 type: string
               inputs:
-                description: Inputs defines the event sources associated with the
-                  Trigger
-                items:
+                additionalProperties:
                   properties:
-                    eventName:
-                      description: EventName, name of event
+                    event:
+                      description: Event, name of event
                       type: string
-                    eventSourceName:
-                      description: EventSourceName, name of EventSource
+                    eventSource:
+                      description: EventSource, name of EventSource
                       type: string
-                    eventSourceNamespace:
-                      description: EventSourceNamespace, namespace of EventSource,
-                        default to namespace of Trigger
-                      type: string
-                    name:
-                      description: Name, name of input
+                    namespace:
+                      description: Namespace, namespace of EventSource, default to
+                        namespace of Trigger
                       type: string
                   required:
-                  - eventName
-                  - eventSourceName
-                  - name
+                  - event
+                  - eventSource
                   type: object
-                type: array
+                description: Inputs defines the event sources associated with the
+                  Trigger
+                type: object
               subscribers:
                 description: Subscribers defines the subscribers associated with the
                   Trigger

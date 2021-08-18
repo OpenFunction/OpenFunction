@@ -38,49 +38,41 @@ spec:
           spec:
             description: EventBusSpec defines the desired state of EventBus and ClusterEventBus
             properties:
-              nats:
+              natsStreaming:
                 description: Use Nats streaming as the default backend for event bus
                 properties:
-                  ignoreErrors:
+                  ackWaitTime:
+                    type: string
+                  deliverAll:
                     type: boolean
-                  initTimeout:
+                  deliverNew:
+                    type: boolean
+                  durableSubscriptionName:
                     type: string
-                  metadata:
-                    items:
-                      description: MetadataItem is a name/value pair for a metadata
-                      properties:
-                        name:
-                          type: string
-                        secretKeyRef:
-                          description: SecretKeyRef is a reference to a secret holding
-                            the value for the metadata item. Name is the secret name,
-                            and key is the field in the secret.
-                          properties:
-                            key:
-                              type: string
-                            name:
-                              type: string
-                          required:
-                          - key
-                          - name
-                          type: object
-                        value:
-                          description: DynamicValue is a dynamic value struct for
-                            the component.metadata pair value
-                          type: object
-                          x-kubernetes-preserve-unknown-fields: true
-                      required:
-                      - name
-                      type: object
-                    type: array
-                  type:
+                  maxInFlight:
+                    format: int64
+                    type: integer
+                  natsStreamingClusterID:
                     type: string
-                  version:
+                  natsURL:
+                    type: string
+                  startAtSequence:
+                    format: int64
+                    type: integer
+                  startAtTime:
+                    type: string
+                  startAtTimeDelta:
+                    type: string
+                  startAtTimeFormat:
+                    type: string
+                  startWithLastReceived:
+                    type: boolean
+                  subscriptionType:
                     type: string
                 required:
-                - metadata
-                - type
-                - version
+                - natsStreamingClusterID
+                - natsURL
+                - subscriptionType
                 type: object
               topic:
                 description: Topic indicates the name of the message channel of eventbus
