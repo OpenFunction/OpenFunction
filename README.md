@@ -32,13 +32,13 @@ The core capability of OpenFunction is to enable users to develop, run and manag
 
 #### Function
 
-The goal of Function is to control the lifecycle management from user code to the final application that can respond to events through a single profile.
+The goal of `Function` is to control the lifecycle management from user code to the final application that can respond to events through a single profile.
 
-Function will manage and coordinate Builder and Serving resources to handle the details of the process.
+`Function` manages and coordinates `Builder` and `Serving` resources to handle the details of the process.
 
 #### Builder
 
-The goal of Builder is to compile the user's function source code into an application image that can be run in a cloud-native environment.
+The goal of `Builder` is to compile the user's function source code into an application image.
 
 It will fetch the code from the code repository, build the application image locally and publish it to the container image repository.
 
@@ -46,17 +46,17 @@ Currently, OpenFunction Builder uses [Shipwright and Cloud Native Buildpacks](#s
 
 ##### Shipwright and Cloud Native Buildpacks
 
-Shipwright is an extensible framework for building container images on Kubernetes.
+[Shipwright](https://github.com/shipwright-io/build) is an extensible framework for building container images on Kubernetes.
 
-Cloud Native Buildpacks is an OCI standard image building framework that transform your application source code into images that can run on any cloud.
+Cloud Native Buildpacks is an OCI standard image building framework that transforms your application source code into container images without a Dockerfile.
 
-OpenFunction Builder controls the build process of application images by Shipwright, including fetching code, building and publishing images via Cloud Native Buildpacks.
+OpenFunction Builder controls the build process of application images by [Shipwright](https://github.com/shipwright-io/build), including fetching code, building and publishing images via Cloud Native Buildpacks.
 
 #### Serving
 
-The goal of Serving is to serving user functions and implementing event-driven functions response.
+The goal of `Serving` is to serving user functions in a highly elastic manner (dynamically scale 0 <-> N).
 
-Currently, OpenFunction supports two serving runtimes, [Knative](#knative) and [OpenFuncAsync](#openfuncasync). At least one of these runtimes needs to be installed.
+Currently, OpenFunction supports two serving runtimes, [Knative](#knative) and [OpenFuncAsync](#openfuncasync). At least one of these runtimes is required.
 
 ##### Knative
 
@@ -68,7 +68,7 @@ OpenFuncAsync is an event-driven Serving runtime. It is implemented based on KED
 
 You can refer to [Prerequisites](#prerequisites) and use `--with-openFuncAsync` to install OpenFuncAsync runtime.
 
-The OpenFuncAsync runtime can be triggered by a variety of event types, such as MQ, cronjob, DB events, etc. In Kubernetes cluster, OpenFuncAsync will be triggered in the form of deployments or jobs.
+The OpenFuncAsync functions can be triggered by various event types, such as MQ, cronjob, DB events, etc. In a Kubernetes cluster, OpenFuncAsync functions run in the form of deployments or jobs.
 
 ## QuickStart
 
@@ -79,7 +79,7 @@ The current version of OpenFunction requires that you have a Kubernetes cluster 
 In addition, you need to deploy several dependencies for the OpenFunction ```Builder``` and ```Serving```.
 
 You can refer to the [Installation Guide](docs/installation/README.md) to setup OpenFunction ```Builder``` and ```Serving```,
-or use the following command to easily setup OpenFunction ```Builder``` and ```Serving```.
+or use the following command:
 
 ```shell
 sh hack/deploy.sh --all
@@ -95,8 +95,8 @@ You can also customize the installation with the following parameters:
 | --with-shipwright                  | Install Shipwright builder |
 | --with-knative                     | Install Knative serving runtime |
 | --with-openFuncAsync               | Install OpenFuncAsync serving runtime |
-| --poor-network                     | Use this when you having poor network connectivity to GitHub/Googleapis |
-| --tekton-dashboard-nodeport <port> | Expose the Tekton dashboard service with nodeport |
+| --poor-network                     | Use this if you have poor network connectivity to GitHub/Googleapis |
+| --tekton-dashboard-nodeport <port> | Expose the Tekton dashboard service with NodePort |
 
 ### Install
 
