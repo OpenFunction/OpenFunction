@@ -10,6 +10,7 @@
   * [Sample 2: Use of event bus and triggers](#sample-2-use-of-event-bus-and-triggers)
   * [Sample 3: Multi sources in one EventSource](#sample-3-multi-sources-in-one-eventsource)
   * [Sample 4: EventBus and ClusterEventBus](#sample-4-eventbus-and-clustereventbus)
+  * [Sample 5: Use Trigger conditions](#sample-5-use-trigger-conditions)
 
 # Overview
 
@@ -69,7 +70,7 @@ In this sample, the event source is a Kafka server and the target function is a 
 
   You can refer to [Sample Function Go](https://github.com/OpenFunction/samples/tree/main/functions/Knative/hello-world-go) to create a Knative runtime function.
 
-  Here I assume that the name of this function (Knative Service) is `function-sample-serving-ksvc` . You should be able to see this value with the `kubectl get ksvc` command
+  Here I assume that the name of this function (Knative Service) is `function-sample-serving-qrdx8-ksvc-fwml8` . You should be able to see this value with the `kubectl get ksvc` command
 
 - A Kafka server (event source)
 
@@ -91,24 +92,14 @@ metadata:
 spec:
   kafka:
     sample-one:
-      version: v1
-      type: bindings.kafka
-      metadata:
-        - name: brokers
-          value: dapr-kafka.kafka:9092
-        - name: topics
-          value: sample
-        - name: consumerGroup
-          value: group1
-        - name: publishTopic
-          value: sample
-        - name: authRequired
-          value: "false"
+      brokers: dapr-kafka.kafka:9092
+      topic: sample
+      authRequired: false
   sink:
     ref:
       apiVersion: serving.knative.dev/v1
       kind: Service
-      name: function-sample-serving-ksvc
+      name: function-sample-serving-qrdx8-ksvc-fwml8
       namespace: default
 ```
 
@@ -123,7 +114,7 @@ You will observe the following changes:
 > In the synchronous sample, the workflow of the EventSource controller is as follows :
 >
 > 1. Create the EventSource CR called "my-eventsource"
-> 2. Create a Dapr Component called "eventsource-my-eventsource-sample-one" for associating the event source
+> 2. Create a Dapr Component called "eventsource-my-eventsource-kafka-sample-one" for associating the event source
 > 3. Create a Dapr Component called "eventsource-sink-my-eventsource" for associating the target function
 > 4. Create a Deployments called "eventsource-my-eventsource-kafka-sample-one" for processing events
 
@@ -196,13 +187,13 @@ eventsource-my-eventsource-kafka-sample-one-789b767c79-45bdf   2/2     Running  
 events-producer-86b49654-8stj6                                 0/2     ContainerCreating   0          1s
 events-producer-86b49654-8stj6                                 1/2     Running             0          5s
 events-producer-86b49654-8stj6                                 2/2     Running             0          8s
-function-sample-serving-ksvc-v100-deployment-5df4f559db-2nbp4   0/2     Pending             0          0s
-function-sample-serving-ksvc-v100-deployment-5df4f559db-2nbp4   0/2     Pending             0          0s
-function-sample-serving-ksvc-v100-deployment-5df4f559db-2nbp4   0/2     ContainerCreating   0          0s
-function-sample-serving-ksvc-v100-deployment-5df4f559db-2nbp4   0/2     ContainerCreating   0          2s
-function-sample-serving-ksvc-v100-deployment-5df4f559db-2nbp4   1/2     Running             0          4s
-function-sample-serving-ksvc-v100-deployment-5df4f559db-2nbp4   1/2     Running             0          4s
-function-sample-serving-ksvc-v100-deployment-5df4f559db-2nbp4   2/2     Running             0          4s
+function-sample-serving-qrdx8-ksvc-fwml8-v100-deployment-8cpxsj   0/2     Pending             0          0s
+function-sample-serving-qrdx8-ksvc-fwml8-v100-deployment-8cpxsj   0/2     Pending             0          0s
+function-sample-serving-qrdx8-ksvc-fwml8-v100-deployment-8cpxsj   0/2     ContainerCreating   0          0s
+function-sample-serving-qrdx8-ksvc-fwml8-v100-deployment-8cpxsj   0/2     ContainerCreating   0          2s
+function-sample-serving-qrdx8-ksvc-fwml8-v100-deployment-8cpxsj   1/2     Running             0          4s
+function-sample-serving-qrdx8-ksvc-fwml8-v100-deployment-8cpxsj   1/2     Running             0          4s
+function-sample-serving-qrdx8-ksvc-fwml8-v100-deployment-8cpxsj   2/2     Running             0          4s
 ```
 
 ## Sample 2: Use of event bus and triggers
@@ -227,6 +218,78 @@ function-sample-serving-ksvc-v100-deployment-5df4f559db-2nbp4   2/2     Running 
 
   Here I assume that the access address of this NATS Streaming server is `nats://nats.default:4222` and the cluster ID is `stan` .
 
+- A OpenFuncAsync runtime function (target function)
+
+  We create a function `openfuncasync-function.yaml`, which serves to print the received message
+
+  > You can set **spec.imageCredentials** by referring to [pubsub sample](https://github.com/OpenFunction/samples/tree/main/functions/OpenFuncAsync/pubsub)
+  >
+  > You need to change **spec.image** to your dockerhub address
+
+  ```yaml
+  apiVersion: core.openfunction.io/v1alpha1
+  kind: Function
+  metadata:
+    name: autoscaling-subscriber
+  spec:
+    version: "v1.0.0"
+    image: <your dockerhub id>/autoscaling-subscriber:latest
+    imageCredentials:
+      name: push-secret
+    build:
+      builder: openfunctiondev/go115-builder:v0.2.0
+      env:
+        FUNC_NAME: "Subscriber"
+      srcRepo:
+        url: "https://github.com/OpenFunction/samples.git"
+        sourceSubPath: "functions/OpenFuncAsync/pubsub/subscriber"
+    serving:
+      runtime: "OpenFuncAsync"
+      openFuncAsync:
+        dapr:
+          inputs:
+            - name: autoscaling-pubsub
+              type: pubsub
+              topic: metrics
+          annotations:
+            dapr.io/log-level: "debug"
+          components:
+            - name: autoscaling-pubsub
+              type: pubsub.natsstreaming
+              version: v1
+              metadata:
+                - name: natsURL
+                  value: "nats://nats.default:4222"
+                - name: natsStreamingClusterID
+                  value: "stan"
+                - name: subscriptionType
+                  value: "queue"
+                - name: durableSubscriptionName
+                  value: "ImDurable"
+                - name: consumerID
+                  value: "grp1"
+        keda:
+          scaledObject:
+            pollingInterval: 15
+            minReplicaCount: 0
+            maxReplicaCount: 10
+            cooldownPeriod: 30
+            triggers:
+              - type: stan
+                metadata:
+                  natsServerMonitoringEndpoint: "stan-0.stan.default.svc.cluster.local:8222"
+                  queueGroup: "grp1"
+                  durableName: "ImDurable"
+                  subject: "metrics"
+                  lagThreshold: "10"
+  ```
+
+  Apply it:
+
+  ```shell
+  kubectl apply -f openfuncasync-function.yaml
+  ```
+
 Create an EventBus configuration `eventbus-default.yaml` ：
 
 ```yaml
@@ -235,16 +298,10 @@ kind: EventBus
 metadata:
   name: default
 spec:
-  nats:
-    version: v1
-    type: pubsub.natsstreaming
-    metadata:
-      - name: natsURL
-        value: "nats://nats.default:4222"
-      - name: natsStreamingClusterID
-        value: "stan"
-      - name: subscriptionType
-        value: queue
+  natsStreaming:
+    natsURL: "nats://nats.default:4222"
+    natsStreamingClusterID: "stan"
+    subscriptionType: queue
 ```
 
 Create an EventSource configuration `eventsource-eventbus.yaml` ：
@@ -260,19 +317,9 @@ spec:
   eventBus: "default"
   kafka:
     sample-two:
-      version: v1
-      type: bindings.kafka
-      metadata:
-        - name: brokers
-          value: dapr-kafka.kafka:9092
-        - name: topics
-          value: sample
-        - name: consumerGroup
-          value: group1
-        - name: publishTopic
-          value: sample
-        - name: authRequired
-          value: "false"
+      brokers: dapr-kafka.kafka:9092
+      topic: sample
+      authRequired: false
 ```
 
 Apply them :
@@ -289,8 +336,8 @@ You will observe the following changes:
 > 1. Create EventSource CR called "my-eventsource"
 > 2. Retrieve and reorganize the configuration of the EventBus (used to pass in the Deployments in step 5), including:
      >    1. The EventBus name ("default" in this sample)
->    2. The name of the Dapr Component associated with the EventBus ("eventbus-eventsource-my-eventsource" in this sample)
-> 3. Create a Dapr Component called "eventbus-eventsource-my-eventsource" for associating the event bus
+>    2. The name of the Dapr Component associated with the EventBus ("eventsource-eventbus-my-eventsource" in this sample)
+> 3. Create a Dapr Component called "eventsource-eventbus-my-eventsource" for associating the event bus
 > 4. Create a Dapr Component called "eventsource-my-eventsource-kafka-sample-two" for associating the event source
 > 5. Create a Deployments called "eventsource-my-eventsource-kafka-sample-two" for processing events
 
@@ -305,7 +352,7 @@ default   10m
 
 ~# kubectl get components
 NAME                                          AGE
-eventbus-eventsource-my-eventsource           28s
+eventsource-eventbus-my-eventsource           28s
 eventsource-my-eventsource-kafka-sample-two   28s
 
 ~# kubectl get deployments.apps
@@ -321,9 +368,7 @@ Create a Trigger configuration `trigger.yaml` :
 >
 > `spec.inputs` is used to set the event input source.
 >
-> In `spec.subscribers` , `subscriber.condition` will perform a logical operation on `input.name` in `spec.inputs`. When the result is true, the event will be processed according to the `subscriber.sink` or `subscriber.topic` configuration. (In Development ...)
->
-> Here we set up a very simple trigger that will collect events from the "default" EventBus. When it retrieves a "sample-two" event from the "my-eventsource" EventSource, it will trigger a Knative Service called "function-sample-serving-ksvc" and send the event to the "metrics" topic of the event bus at the same time.
+> Here we set up a very simple trigger that will collect events from the "default" EventBus. When it retrieves a "sample-two" event from the "my-eventsource" EventSource, it will trigger a Knative Service called "function-sample-serving-qrdx8-ksvc-fwml8" and send the event to the "metrics" topic of the event bus at the same time.
 
 ```yaml
 apiVersion: events.openfunction.io/v1alpha1
@@ -333,16 +378,16 @@ metadata:
 spec:
   eventBus: "default"
   inputs:
-    - name: "input-demo"
-      eventSourceName: "my-eventsource"
-      eventName: "sample-two"
+    inputDemo:
+      eventSource: "my-eventsource"
+      event: "sample-two"
   subscribers:
-  - condition: input-demo
+  - condition: inputDemo
     sink:
       ref:
         apiVersion: serving.knative.dev/v1
         kind: Service
-        name: function-sample-serving-ksvc
+        name: function-sample-serving-qrdx8-ksvc-fwml8
         namespace: default
     topic: "metrics"
 ```
@@ -359,11 +404,11 @@ You will observe the following changes :
 >
 > 1. Create a Trigger CR called "my-trigger"
 > 2. Retrieve and reorganize the configuration of the EventBus (used to pass in the Deployments in step 5), including:
-     >    1. The EventBus name ("default" in this sample)
+>    1. The EventBus name ("default" in this sample)
 >    2. The name of the Dapr Component associated with the EventBus ("eventbus-trigger-my-trigger" in this sample)
-> 3. Create a Dapr Component called "eventbus-trigger-my-trigger" for associating the event bus
-> 4. Create a Dapr Component called "trigger-sink-my-trigger-default-function-sample-serving-ksvc" for associating the target function
-> 5. Create a Deployments called "trigger-my-trigger" to handle trigger tasks
+> 3. Create a Dapr Component called "eventbus-trigger-my-trigger " for associating the event bus
+> 4. Create a Dapr Component called "trigger-sink-my-trigger-default-function-sample-serving-qrdx8-ksvc-fwml8" for associating the target Knative function
+> 5. Create a Deployments called "trigger-my-trigger" for processing trigger tasks
 
 ```shell
 ~# kubectl get triggers.events.openfunction.io
@@ -375,9 +420,11 @@ NAME      AGE
 default   62m
 
 ~# kubectl get components
-NAME                                                           AGE
-eventbus-trigger-my-trigger                                    34m
-trigger-sink-my-trigger-default-function-sample-serving-ksvc   34m
+autoscaling-pubsub                                                         90m
+eventbus-eventsource-my-eventsource                                        161m
+eventbus-trigger-my-trigger                                                161m
+eventsource-my-eventsource-kafka-sample-two                                161m
+trigger-sink-my-trigger-default-function-sample-serving-qrdx8-ksvc-fwml8   161m
 
 ~# kubectl get deployments.apps
 NAME                    READY   UP-TO-DATE   AVAILABLE   AGE
@@ -439,13 +486,19 @@ trigger-my-trigger-7b799c7f7d-4ph77                            2/2     Running  
 events-producer-86679d99fb-4tlbt                               0/2     ContainerCreating   0          2s
 events-producer-86679d99fb-4tlbt                               1/2     Running             0          6s
 events-producer-86679d99fb-4tlbt                               2/2     Running             0          10s
-function-sample-serving-ksvc-v100-deployment-5df4f559db-h69xj   0/2     Pending             0          0s
-function-sample-serving-ksvc-v100-deployment-5df4f559db-h69xj   0/2     Pending             0          0s
-function-sample-serving-ksvc-v100-deployment-5df4f559db-h69xj   0/2     ContainerCreating   0          0s
-function-sample-serving-ksvc-v100-deployment-5df4f559db-h69xj   0/2     ContainerCreating   0          2s
-function-sample-serving-ksvc-v100-deployment-5df4f559db-h69xj   1/2     Running             0          3s
-function-sample-serving-ksvc-v100-deployment-5df4f559db-h69xj   1/2     Running             0          4s
-function-sample-serving-ksvc-v100-deployment-5df4f559db-h69xj   2/2     Running             0          4s
+function-sample-serving-qrdx8-ksvc-fwml8-v100-deployment-8cpxsj   0/2     Pending             0          0s
+function-sample-serving-qrdx8-ksvc-fwml8-v100-deployment-8cpxsj   0/2     Pending             0          0s
+function-sample-serving-qrdx8-ksvc-fwml8-v100-deployment-8cpxsj   0/2     ContainerCreating   0          0s
+function-sample-serving-qrdx8-ksvc-fwml8-v100-deployment-8cpxsj   0/2     ContainerCreating   0          2s
+function-sample-serving-qrdx8-ksvc-fwml8-v100-deployment-8cpxsj   1/2     Running             0          3s
+function-sample-serving-qrdx8-ksvc-fwml8-v100-deployment-8cpxsj   1/2     Running             0          4s
+function-sample-serving-qrdx8-ksvc-fwml8-v100-deployment-8cpxsj   2/2     Running             0          4s
+autoscaling-subscriber-serving-5qzlq-v100-xp9dw-77bc8cc88d8bf6m   0/2     Pending             0          0s
+autoscaling-subscriber-serving-5qzlq-v100-xp9dw-77bc8cc88d8bf6m   0/2     Pending             0          0s
+autoscaling-subscriber-serving-5qzlq-v100-xp9dw-77bc8cc88d8bf6m   0/2     ContainerCreating   0          0s
+autoscaling-subscriber-serving-5qzlq-v100-xp9dw-77bc8cc88d8bf6m   0/2     ContainerCreating   0          1s
+autoscaling-subscriber-serving-5qzlq-v100-xp9dw-77bc8cc88d8bf6m   1/2     Running             0          3s
+autoscaling-subscriber-serving-5qzlq-v100-xp9dw-77bc8cc88d8bf6m   2/2     Running             0          11s
 ```
 
 ## Sample 3: Multi sources in one EventSource
@@ -466,38 +519,25 @@ metadata:
 spec:
   kafka:
     sample-three:
-      version: v1
-      type: bindings.kafka
-      metadata:
-        - name: brokers
-          value: dapr-kafka.kafka:9092
-        - name: topics
-          value: sample
-        - name: consumerGroup
-          value: group1
-        - name: publishTopic
-          value: sample
-        - name: authRequired
-          value: "false"
+      brokers: dapr-kafka.kafka:9092
+      topic: sample
+      consumerGroup: group1
+      authRequired: false
   cron:
     sample-three:
-      version: v1
-      type: bindings.cron
-      metadata:
-        - name: schedule
-          value: "@every 5s"  
+      schedule: "@every 5s" 
   sink:
     ref:
       apiVersion: serving.knative.dev/v1
       kind: Service
-      name: function-sample-serving-ksvc
+      name: function-sample-serving-x6qjw-ksvc-x72j7
       namespace: default
 ```
 
 Apply it :
 
 ```shell
-kubectl apply -f eventsource-sink.yaml
+kubectl apply -f eventsource-multi.yaml
 ```
 
 You will observe the following changes:
@@ -533,16 +573,10 @@ kind: ClusterEventBus
 metadata:
   name: default
 spec:
-  nats:
-    version: v1
-    type: pubsub.natsstreaming
-    metadata:
-      - name: natsURL
-        value: "nats://nats.default:4222"
-      - name: natsStreamingClusterID
-        value: "stan"
-      - name: subscriptionType
-        value: queue
+  natsStreaming:
+    natsURL: "nats://nats.default:4222"
+    natsStreamingClusterID: "stan"
+    subscriptionType: queue
 ```
 
 Delete EventBus:
@@ -570,4 +604,121 @@ default   21s
 
 If there are no other changes, you can see that the event bus is still working properly in the whole sample.
 
+## Sample 5: Use Trigger conditions
 
+Based on [Sample 2](#sample-2-use-of-event-bus-and-triggers), we use condition to control the triggering of events.
+
+Define two event sources:
+
+A kafka event source called `eventsource-a.yaml`:
+
+```yaml
+apiVersion: events.openfunction.io/v1alpha1
+kind: EventSource
+metadata:
+  name: eventsource-a
+spec:
+  eventBus: "default"
+  kafka:
+    sample-five:
+      brokers: dapr-kafka.kafka:9092
+      topic: sample
+      authRequired: false
+```
+
+And a cron schedule event source called `eventsource-b.yaml`:
+
+```yaml
+apiVersion: events.openfunction.io/v1alpha1
+kind: EventSource
+metadata:
+  name: eventsource-b
+spec:
+  eventBus: "default"
+  cron:
+    sample-five:
+      schedule: "@every 5s" 
+```
+
+Create a trigger with condition called `condition-trigger.yaml` :
+
+> Note that we have set up two input sources and two subscribers, and their triggering relationship is as follows.
+>
+> - When input eventB is received, the input event is sent to the knative service
+>
+> - When input eventB and input eventA are received, the input event is sent to the metrics topic of the event bus (The above step is also effective)
+
+```yaml
+apiVersion: events.openfunction.io/v1alpha1
+kind: Trigger
+metadata:
+  name: condition-trigger
+spec:
+  eventBus: "default"
+  inputs:
+    eventA:
+      eventSource: "eventsource-a"
+      event: "sample-five"
+    eventB:
+      eventSource: "eventsource-b"
+      event: "sample-five"
+  subscribers:
+  - condition: eventB
+    sink:
+      ref:
+        apiVersion: serving.knative.dev/v1
+        kind: Service
+        name: function-sample-serving-qrdx8-ksvc-fwml8
+        namespace: default
+  - condition: eventA && eventB
+    topic: "metrics"
+```
+
+Apply them:
+
+```shell
+kubectl apply -f eventsource-a.yaml
+kubectl apply -f eventsource-b.yaml
+kubectl apply -f condition-trigger.yaml
+```
+
+You will observe the following changes:
+
+```shell
+~# kubectl get eventsources.events.openfunction.io
+NAME            EVENTBUS   SINK   STATUS    COMPONENTS   WORKLOADS
+eventsource-a   default           Running   2/2          1/1
+eventsource-b   default           Running   2/2          1/1
+
+~# kubectl get triggers.events.openfunction.io
+NAME                EVENTBUS   STATUS    COMPONENTS   WORKLOADS
+condition-trigger   default    Running   2/2          1/1
+
+~# kubectl get eventbus.events.openfunction.io
+NAME      AGE
+default   12s
+```
+
+Since the event source **eventsource-b** is a cron task, the **condition: eventB** in the Trigger has been matched and the Knative Service has been triggered.
+
+```shell
+~# kubectl get po
+NAME                                                              READY   STATUS    RESTARTS   AGE
+function-sample-serving-qrdx8-ksvc-fwml8-v100-deployment-7n4kpd   2/2     Running   0          11m
+```
+
+We then create an event producer.
+
+> Modity the **TARGET_NAME** to "eventsource-eventsource-a-kafka-sample-five"
+
+```shell
+kubectl apply -f events-producer.yaml
+```
+
+At this point the **condition: eventA && eventB** in the Trigger has been matched and the event is sent to the "metrics" topic of the event bus at the same time. The OpenFuncAsync function will be triggered:
+
+```shell
+~# kubectl get po
+NAME                                                              READY   STATUS    RESTARTS   AGE
+autoscaling-subscriber-serving-5qzlq-v100-xp9dw-77bc8cc88dts99v   2/2     Running   0          6s
+```
