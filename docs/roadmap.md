@@ -16,19 +16,19 @@
 
 ## v0.3.0, July ~ August 2021
 
-- [ ] OpenFunction Events: OpenFunction's own event management
-- [ ] Async function dead letter sink
-- [ ] Build and serving could be launched separately
-- [ ] Support running an application as Serverless workload directly
-- [ ] OpenFunction CLI
-- [ ] Nodejs functions frameworks
+- [x] Add OpenFunction Events: OpenFunction's own event management
+- [x] Support using [ShipWright](https://github.com/shipwright-io/build) as Builder backend to build functions or apps
+- [x] Build and serving can be launched separately
+- [x] Support running an application (container image) as a serverless workload directly
 
 ## v0.4.0+, 2021 Q4
 
+- [ ] OpenFunction CLI
+- [ ] Support more EventSources
+- [ ] Use OpenFunction async functions to drive EventSource & EventTrigger workloads
 - [ ] OpenFunction sync function
-- [ ] Python functions frameworks
+- [ ] Python functions frameworks & builder
+- [ ] Nodejs functions frameworks & builder
 - [ ] OpenFunction Console (WebUI)
 - [ ] Support scheduling functions to Edge nodes (KubeEdge)
-- [ ] Test and support existing application builders to run an application as Serverless workload directly
-- [ ] Support [ShipWright](https://github.com/shipwright-io/build) as Builder backend to build functions or apps with Docker file
-- [ ] Support AI Inference functions, for example, AI models loaded by Tensorflow Serving or KFServing
+- [ ] Use [ShipWright](https://github.com/shipwright-io/build) to build functions or apps source code with Dockerfile.
