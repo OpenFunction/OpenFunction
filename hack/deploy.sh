@@ -71,11 +71,11 @@ if [ "$with_shipwright" = "true" ]; then
   else
     echo 3
     # Install Tekton pipeline
-    kubectl apply --filename https://openfunction.sh1a.qingstor.com/tekton/pipeline/v0.23.0/release.yaml
+    kubectl apply --filename https://openfunction.sh1a.qingstor.com/tekton/pipeline/v0.27.1/release.yaml
     # Install Tekton triggers
-    kubectl apply --filename https://openfunction.sh1a.qingstor.com/tekton/trigger/v0.13.0/release.yaml
+    kubectl apply --filename https://openfunction.sh1a.qingstor.com/tekton/trigger/v0.15.1/release.yaml
     # Install Tekton Dashboard
-    kubectl apply --filename https://openfunction.sh1a.qingstor.com/tekton/dashboard/v0.16.0/release.yaml
+    kubectl apply --filename https://openfunction.sh1a.qingstor.com/tekton/dashboard/v0.19.0/release.yaml
   fi
 
   # Install the Shipwright deployment
@@ -97,19 +97,19 @@ fi
 if [ "$with_knative" = "true" ]; then
   if [ "$poor_network" = "false" ]; then
     # Install the required custom resources
-    kubectl apply -f https://github.com/knative/serving/releases/download/v0.23.0/serving-crds.yaml
+    kubectl apply -f https://github.com/knative/serving/releases/download/v0.24.0/serving-crds.yaml
     # Install the core components of Serving
-    kubectl apply -f https://github.com/knative/serving/releases/download/v0.23.0/serving-core.yaml
+    kubectl apply -f https://github.com/knative/serving/releases/download/v0.24.0/serving-core.yaml
     # Install a networking layer
     # Install the Knative Kourier controller
-    kubectl apply -f https://github.com/knative/net-kourier/releases/download/v0.23.0/kourier.yaml
+    kubectl apply -f https://github.com/knative/net-kourier/releases/download/v0.24.0/kourier.yaml
     # To configure Knative Serving to use Kourier by default
     kubectl patch configmap/config-network \
       --namespace knative-serving \
       --type merge \
       --patch '{"data":{"ingress.class":"kourier.ingress.networking.knative.dev"}}'
     # Configure DNS
-    kubectl apply -f https://github.com/knative/serving/releases/download/v0.23.0/serving-default-domain.yaml
+    kubectl apply -f https://github.com/knative/serving/releases/download/v0.24.0/serving-default-domain.yaml
     ## Install Knative Eventing
     ## Install the required custom resource definitions (CRDs)
     # kubectl apply -f https://github.com/knative/eventing/releases/download/v0.23.0/eventing-crds.yaml
@@ -117,12 +117,12 @@ if [ "$with_knative" = "true" ]; then
     # kubectl apply -f https://github.com/knative/eventing/releases/download/v0.23.0/eventing-core.yaml
   else
     # Install the required custom resources
-    kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/serving/v0.23.0/serving-crds.yaml
+    kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/serving/v0.24.0/serving-crds.yaml
     # Install the core components of Serving
-    kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/serving/v0.23.0/serving-core.yaml
+    kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/serving/v0.24.0/serving-core.yaml
     # Install a networking layer
     # Install the Knative Kourier controller
-    kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/net-kourier/v0.23.0/kourier.yaml
+    kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/net-kourier/v0.24.0/kourier.yaml
     # To configure Knative Serving to use Kourier by default
     kubectl patch configmap/config-network \
       --namespace knative-serving \
@@ -143,5 +143,5 @@ if [ "$with_openFuncAsync" = "true" ]; then
   # Init dapr
   dapr init -k
   # Installs the latest release version
-  kubectl apply -f https://github.com/kedacore/keda/releases/download/v2.2.0/keda-2.2.0.yaml
+  kubectl apply -f https://github.com/kedacore/keda/releases/download/v2.4.0/keda-2.4.0.yaml
 fi
