@@ -125,7 +125,7 @@ If you have already installed the OpenFunction platform, refer to [OpenFunction 
 - Uninstall the latest stable version
 
 ```shell
-kubectl delete -f https://raw.githubusercontent.com/OpenFunction/OpenFunction/release-0.2/config/bundle.yaml
+kubectl delete -f https://raw.githubusercontent.com/OpenFunction/OpenFunction/release-0.3/config/bundle.yaml
 ```
 
 - Uninstall the development version
