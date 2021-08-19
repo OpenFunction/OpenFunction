@@ -15,3 +15,12 @@
 - Support OpenFunctionAsync serving runtime（backed by Dapr + KEDA + Deployment/Job)
 - Functions frameworks async function support
 - Customized go function framework & builders for both Knative and OpenFunctionAsync serving runtime
+
+## 0.3.0 / 2021-08-19
+
+### Features
+
+-  Add OpenFunction Events: OpenFunction's own event management framework. [#78](https://github.com/OpenFunction/OpenFunction/pull/78) [#83](https://github.com/OpenFunction/OpenFunction/pull/83) [#89](https://github.com/OpenFunction/OpenFunction/pull/89) [#90](https://github.com/OpenFunction/OpenFunction/pull/90) [#99](https://github.com/OpenFunction/OpenFunction/pull/99) [#100](https://github.com/OpenFunction/OpenFunction/pull/100) [@tpiperatgod](https://github.com/tpiperatgod)
+-  Support using ShipWright as Builder backend to build functions or apps. [#82](https://github.com/OpenFunction/OpenFunction/pull/82) [#95](https://github.com/OpenFunction/OpenFunction/pull/95) [@wanjunlei](https://github.com/wanjunlei)
+-  Build and serving can be launched separately. [#82](https://github.com/OpenFunction/OpenFunction/pull/82) [#95](https://github.com/OpenFunction/OpenFunction/pull/95) [@wanjunlei](https://github.com/wanjunlei)
+-  Support running an application (container image) as a serverless workload directly. [#82](https://github.com/OpenFunction/OpenFunction/pull/82) [#95](https://github.com/OpenFunction/OpenFunction/pull/95) [@wanjunlei](https://github.com/wanjunlei)

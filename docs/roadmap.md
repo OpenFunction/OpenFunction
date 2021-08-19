@@ -16,7 +16,7 @@
 
 ## v0.3.0, July ~ August 2021
 
-- [x] Add OpenFunction Events: OpenFunction's own event management
+- [x] Add OpenFunction Events: OpenFunction's own event management framework
 - [x] Support using [ShipWright](https://github.com/shipwright-io/build) as Builder backend to build functions or apps
 - [x] Build and serving can be launched separately
 - [x] Support running an application (container image) as a serverless workload directly
