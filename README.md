@@ -12,9 +12,11 @@ OpenFunction features but not limited to the following:
 - Provide event management functions for trigger functions.
 - Provide additional functions to manage function versions, ingress management etc.
 
-![](docs/images/openfunction-overview.jpg)
+  ![Lifecycle](docs/images/function-lifecycle.png)
 
 ## CustomResourceDefinitions
+
+  ![Architecture](docs/images/openfunction-overview.jpg)
 
 ### Events CRDs
 
