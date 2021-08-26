@@ -85,24 +85,6 @@ webhook-75f5d4845d-lg8j5                 1/1     Running   0          11m
     kubectl apply -f https://github.com/knative/serving/releases/download/v0.23.0/serving-default-domain.yaml
     ```
 
-### Install Knative Eventing
-
-#### Install the core components of Eventing
-
-```bash
-kubectl apply -f https://github.com/knative/eventing/releases/download/v0.23.0/eventing-core.yaml
-```
-
-#### Verify the installation
-
-```bash
-kubectl get pods --namespace knative-eventing
-
-NAME                                   READY   STATUS    RESTARTS   AGE
-eventing-controller-d666b4657-jwsrk    1/1     Running   0          23m
-eventing-webhook-778b6b8cf4-mgjtr      1/1     Running   0          23m
-```
-
 ## Installation when having poor network connectivity to GitHub/Googleapis
 
 ### Install Knative CLI
@@ -184,21 +166,4 @@ webhook-75f5d4845d-lg8j5                 1/1     Running   0          11m
     ```bash
     kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/serving/v0.23.0/serving-default-domain.yaml
     ```
-
-### Install Knative Eventing
-
-#### Install the core components of Eventing
-
-```bash
-kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/eventing/v0.23.0/eventing-core.yaml
-```
-
-#### Verify the installation
-
-```bash
-kubectl get pods --namespace knative-eventing
-
-NAME                                   READY   STATUS    RESTARTS   AGE
-eventing-controller-d666b4657-jwsrk    1/1     Running   0          23m
-eventing-webhook-778b6b8cf4-mgjtr      1/1     Running   0          23m
-```
+  
