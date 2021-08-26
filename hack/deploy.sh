@@ -110,11 +110,6 @@ if [ "$with_knative" = "true" ]; then
       --patch '{"data":{"ingress.class":"kourier.ingress.networking.knative.dev"}}'
     # Configure DNS
     kubectl apply -f https://github.com/knative/serving/releases/download/v0.24.0/serving-default-domain.yaml
-    ## Install Knative Eventing
-    ## Install the required custom resource definitions (CRDs)
-    # kubectl apply -f https://github.com/knative/eventing/releases/download/v0.23.0/eventing-crds.yaml
-    ## Install the core components of Eventing
-    # kubectl apply -f https://github.com/knative/eventing/releases/download/v0.23.0/eventing-core.yaml
   else
     # Install the required custom resources
     kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/serving/v0.24.0/serving-crds.yaml
@@ -130,10 +125,6 @@ if [ "$with_knative" = "true" ]; then
       --patch '{"data":{"ingress.class":"kourier.ingress.networking.knative.dev"}}'
     # Configure DNS
     kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/serving/v0.23.0/serving-default-domain.yaml
-    ## Install the required custom resource definitions (CRDs)
-    # kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/eventing/v0.23.0/eventing-crds.yaml
-    ## Install the core components of Eventing
-    # kubectl apply -f https://openfunction.sh1a.qingstor.com/knative/eventing/v0.23.0/eventing-core.yaml
   fi
 fi
 

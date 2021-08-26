@@ -153,45 +153,6 @@ if [ "$with_knative" = "true" ]; then
   kubectl delete crd sinkbindings.sources.knative.dev
   kubectl delete crd subscriptions.messaging.knative.dev
   kubectl delete crd triggers.eventing.knative.dev
-
-  kubectl delete ns knative-eventing
-  kubectl delete clusterrolebinding.rbac.authorization.k8s.io eventing-controller
-  kubectl delete clusterrolebinding.rbac.authorization.k8s.io eventing-controller-resolver
-  kubectl delete clusterrolebinding.rbac.authorization.k8s.io eventing-controller-source-observer
-  kubectl delete clusterrolebinding.rbac.authorization.k8s.io eventing-controller-sources-controller
-  kubectl delete clusterrolebinding.rbac.authorization.k8s.io eventing-controller-manipulator
-  kubectl delete clusterrolebinding.rbac.authorization.k8s.io knative-eventing-pingsource-mt-adapter
-  kubectl delete clusterrolebinding.rbac.authorization.k8s.io eventing-webhook
-  kubectl delete clusterrolebinding.rbac.authorization.k8s.io eventing-webhook-resolver
-  kubectl delete clusterrolebinding.rbac.authorization.k8s.io eventing-webhook-podspecable-binding
-  kubectl delete clusterrole.rbac.authorization.k8s.io service-addressable-resolver
-  kubectl delete clusterrole.rbac.authorization.k8s.io serving-addressable-resolver
-  kubectl delete clusterrole.rbac.authorization.k8s.io channel-addressable-resolver
-  kubectl delete clusterrole.rbac.authorization.k8s.io broker-addressable-resolver
-  kubectl delete clusterrole.rbac.authorization.k8s.io messaging-addressable-resolver
-  kubectl delete clusterrole.rbac.authorization.k8s.io flows-addressable-resolver
-  kubectl delete clusterrole.rbac.authorization.k8s.io eventing-broker-filter
-  kubectl delete clusterrole.rbac.authorization.k8s.io eventing-broker-ingress
-  kubectl delete clusterrole.rbac.authorization.k8s.io eventing-config-reader
-  kubectl delete clusterrole.rbac.authorization.k8s.io channelable-manipulator
-  kubectl delete clusterrole.rbac.authorization.k8s.io meta-channelable-manipulator
-  kubectl delete clusterrole.rbac.authorization.k8s.io knative-eventing-namespaced-admin
-  kubectl delete clusterrole.rbac.authorization.k8s.io knative-messaging-namespaced-admin
-  kubectl delete clusterrole.rbac.authorization.k8s.io knative-flows-namespaced-admin
-  kubectl delete clusterrole.rbac.authorization.k8s.io knative-sources-namespaced-admin
-  kubectl delete clusterrole.rbac.authorization.k8s.io knative-bindings-namespaced-admin
-  kubectl delete clusterrole.rbac.authorization.k8s.io knative-eventing-namespaced-edit
-  kubectl delete clusterrole.rbac.authorization.k8s.io knative-eventing-namespaced-view
-  kubectl delete clusterrole.rbac.authorization.k8s.io knative-eventing-controller
-  kubectl delete clusterrole.rbac.authorization.k8s.io knative-eventing-pingsource-mt-adapter
-  kubectl delete clusterrole.rbac.authorization.k8s.io builtin-podspecable-binding
-  kubectl delete clusterrole.rbac.authorization.k8s.io eventing-sources-source-observer
-  kubectl delete clusterrole.rbac.authorization.k8s.io knative-eventing-sources-controller
-  kubectl delete clusterrole.rbac.authorization.k8s.io knative-eventing-webhook
-  kubectl delete validatingwebhookconfiguration.admissionregistration.k8s.io config.webhook.eventing.knative.dev
-  kubectl delete mutatingwebhookconfiguration.admissionregistration.k8s.io webhook.eventing.knative.dev
-  kubectl delete validatingwebhookconfiguration.admissionregistration.k8s.io validation.webhook.eventing.knative.dev
-  kubectl delete mutatingwebhookconfiguration.admissionregistration.k8s.io sinkbindings.webhook.sources.knative.dev
 fi
 
 if [ "$with_openFuncAsync" = "true" ]; then

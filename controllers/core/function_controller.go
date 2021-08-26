@@ -115,6 +115,7 @@ func (r *FunctionReconciler) createBuilder(fn *openfunction.Function) error {
 			State:        openfunction.Skipped,
 			ResourceHash: util.Hash(openfunction.BuilderSpec{}),
 		}
+		fn.Status.Serving = &openfunction.Condition{}
 		if err := r.Status().Update(r.ctx, fn); err != nil {
 			log.Error(err, "Failed to update function build status", "namespace", fn.Namespace, "name", fn.Name)
 			return err
@@ -283,6 +284,25 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 
 	if !r.needToCreateServing(fn) {
 		log.V(1).Info("No need to create serving", "namespace", fn.Namespace, "name", fn.Name)
+
+		if running, err := r.isServingRunning(fn); err != nil {
+			log.Error(err, "Failed to get serving status", "namespace", fn.Namespace, "name", fn.Name)
+			return err
+		} else if running {
+			if err := r.deleteOldServing(fn); err != nil {
+				log.Error(err, "Failed to clean old serving", "namespace", fn.Namespace, "name", fn.Name)
+				return err
+			}
+
+			if fn.Status.Serving.State != openfunction.Running {
+				fn.Status.Serving.State = openfunction.Running
+				if err := r.Status().Update(r.ctx, fn); err != nil {
+					log.Error(err, "Failed to update function serving status", "namespace", fn.Namespace, "name", fn.Name)
+					return err
+				}
+			}
+		}
+
 		return nil
 	}
 
@@ -294,11 +314,6 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 	fn.Status.Serving.ResourceHash = ""
 	if err := r.Status().Update(r.ctx, fn); err != nil {
 		log.Error(err, "Failed to update function serving status", "namespace", fn.Namespace, "name", fn.Name)
-		return err
-	}
-
-	if err := r.deleteOldServing(fn); err != nil {
-		log.Error(err, "Failed to clean serving", "namespace", fn.Namespace, "name", fn.Name)
 		return err
 	}
 
@@ -351,9 +366,35 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 	return nil
 }
 
+func (r *FunctionReconciler) isServingRunning(fn *openfunction.Function) (bool, error) {
+
+	if fn.Status.Serving == nil || fn.Status.Serving.State == "" {
+		return false, nil
+	}
+
+	var serving openfunction.Serving
+	serving.Name = fn.Status.Serving.ResourceRef
+	serving.Namespace = fn.Namespace
+
+	if serving.Name == "" {
+		return false, nil
+	}
+
+	if err := r.Get(r.ctx, client.ObjectKey{Namespace: serving.Namespace, Name: serving.Name}, &serving); util.IgnoreNotFound(err) != nil {
+		return false, util.IgnoreNotFound(err)
+	}
+
+	return serving.Status.State == openfunction.Running, nil
+}
+
 // Clean up redundant servings caused by the `createOrUpdateBuilder` function failed.
 func (r *FunctionReconciler) deleteOldServing(fn *openfunction.Function) error {
 	log := r.Log.WithName("DeleteOldServing")
+
+	name := ""
+	if fn.Status.Serving != nil {
+		name = fn.Status.Serving.ResourceRef
+	}
 
 	servings := &openfunction.ServingList{}
 	if err := r.List(r.ctx, servings, client.InNamespace(fn.Namespace), client.MatchingLabels{functionLabel: fn.Name}); err != nil {
@@ -361,7 +402,7 @@ func (r *FunctionReconciler) deleteOldServing(fn *openfunction.Function) error {
 	}
 
 	for _, item := range servings.Items {
-		if strings.HasPrefix(item.Name, fmt.Sprintf("%s-serving", fn.Name)) {
+		if strings.HasPrefix(item.Name, fmt.Sprintf("%s-serving", fn.Name)) && item.Name != name {
 			if err := r.Delete(context.Background(), &item); util.IgnoreNotFound(err) != nil {
 				return err
 			}
