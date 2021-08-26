@@ -1,3 +1,4 @@
+---
 apiVersion: shipwright.io/v1alpha1
 kind: ClusterBuildStrategy
 metadata:
