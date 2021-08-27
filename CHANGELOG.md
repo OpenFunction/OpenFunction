@@ -24,3 +24,10 @@
 -  Support using ShipWright as Builder backend to build functions or apps. [#82](https://github.com/OpenFunction/OpenFunction/pull/82) [#95](https://github.com/OpenFunction/OpenFunction/pull/95) [@wanjunlei](https://github.com/wanjunlei)
 -  Build and serving can be launched separately. [#82](https://github.com/OpenFunction/OpenFunction/pull/82) [#95](https://github.com/OpenFunction/OpenFunction/pull/95) [@wanjunlei](https://github.com/wanjunlei)
 -  Support running an application (container image) as a serverless workload directly. [#82](https://github.com/OpenFunction/OpenFunction/pull/82) [#95](https://github.com/OpenFunction/OpenFunction/pull/95) [@wanjunlei](https://github.com/wanjunlei)
+
+
+## 0.3.1 / 2021-08-27
+
+### Enhancement
+
+-  Delete old serving after new serving running. #107
