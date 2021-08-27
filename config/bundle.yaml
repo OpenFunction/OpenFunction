@@ -14643,7 +14643,7 @@ spec:
         - --leader-elect
         command:
         - /openfunction
-        image: openfunction/openfunction:v0.3.0
+        image: openfunction/openfunction:v0.3.1
         livenessProbe:
           httpGet:
             path: /healthz
