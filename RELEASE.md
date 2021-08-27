@@ -9,6 +9,7 @@ This page describes the release process and the currently planned schedule for u
 | v0.1.0           | 2021-05-17                                 | Benjamin Huo (GitHub: @benjaminhuo) |
 | v0.2.0           | 2020-06-30                                 | Benjamin Huo (GitHub: @benjaminhuo) |
 | v0.3.0           | 2020-08-19                                 | Laminar (GitHub: @tpiperatgod) |
+| v0.3.1           | 2020-08-27                                 | Wanjun Lei (GitHub: @wanjunlei) |
 
 # How to cut a new release
 
