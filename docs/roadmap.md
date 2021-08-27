@@ -30,5 +30,6 @@
 - [ ] Python functions frameworks & builder
 - [ ] Nodejs functions frameworks & builder
 - [ ] OpenFunction Console (WebUI)
-- [ ] Support scheduling functions to Edge nodes (KubeEdge)
-- [ ] Use [ShipWright](https://github.com/shipwright-io/build) to build functions or apps source code with Dockerfile.
+- [ ] Support scheduling functions to Edge
+- [ ] Use [ShipWright](https://github.com/shipwright-io/build) to build functions or apps with Dockerfile.
+- [ ] Support Rust functions & WebAssembly runtime.
