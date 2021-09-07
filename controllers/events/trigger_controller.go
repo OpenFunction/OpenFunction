@@ -106,13 +106,6 @@ func (r *TriggerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// Get all exist components and workloads owned by the Trigger and mark them with status of pending deletion (set to true)
 	// In the later reconcile, the resources that still need to be kept are set to non-pending deletion status (set to false) based on the latest list of resources to be created
-	controlledLabelSelector := labels.SelectorFromSet(labels.Set(map[string]string{TriggerControlledLabel: trigger.Name}))
-	err := retrieveControlledResources(r.ctx, r.Client, controlledLabelSelector, r.controlledResources)
-	if err != nil {
-		log.Error(err, "Failed to retrieve exist controlled resources", "namespace", trigger.Namespace, "name", trigger.Name)
-		return ctrl.Result{}, err
-	}
-
 	if _, err := r.createOrUpdateTrigger(&trigger); err != nil {
 		log.Error(err, "Failed to create or update trigger", "namespace", trigger.Namespace, "name", trigger.Name)
 		if err := r.updateStatus(&trigger, &openfunctionevent.TriggerStatus{State: Error, Message: fmt.Sprintln(err)}); err != nil {

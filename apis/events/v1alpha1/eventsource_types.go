@@ -17,12 +17,20 @@ limitations under the License.
 package v1alpha1
 
 import (
-	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+
+// EventSourceCreationStatus describes the creation status
+// of the scaler's additional resources such as Services, Ingresses and Deployments
+// +kubebuilder:validation:Enum=Created;Error;Pending;Unknown;Terminating;Terminated;Ready
+type EventSourceCreationStatus string
+
+// EventSourceConditionReason describes the reason why the condition transitioned
+// +kubebuilder:validation:Enum=ErrorConfiguration;ErrorToFindExistEventBus;ErrorGenerateComponent;ErrorGenerateScaledObject;ErrorCreatingEventSourceWorkload;ErrorCreatingEventSource;EventSourceWorkloadCreated;PendingCreation;EventSourceIsReady
+type EventSourceConditionReason string
 
 // EventSourceSpec defines the desired state of EventSource
 type EventSourceSpec struct {
@@ -46,12 +54,6 @@ type EventSourceSpec struct {
 	Sink *SinkSpec `json:"sink,omitempty"`
 }
 
-type SourceSpec struct {
-	// SourceTopic is used to specify the topic name of the event source in Pub/Sub mode scenario
-	SourceTopic                       string `json:"srcTopic,omitempty"`
-	*componentsv1alpha1.ComponentSpec `json:",inline"`
-}
-
 // SinkSpec describes an event source for the Kafka.
 type SinkSpec struct {
 	Ref *Reference `json:"ref,omitempty"`
@@ -73,18 +75,25 @@ type Reference struct {
 type EventSourceStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-
-	State               string                 `json:"state,omitempty"`
-	Message             string                 `json:"message,omitempty"`
-	ComponentStatus     []*OwnedResourceStatus `json:"componentStatus,omitempty"`
-	ComponentStatistics string                 `json:"componentStatistics,omitempty"`
-	WorkloadStatus      []*OwnedResourceStatus `json:"workloadStatus,omitempty"`
-	WorkloadStatistics  string                 `json:"workloadStatistics,omitempty"`
+	Conditions []EventSourceCondition `json:"conditions,omitempty" description:"List of auditable conditions of the operator"`
 }
 
-type OwnedResourceStatus struct {
-	Name  string `json:"name"`
-	State string `json:"state"`
+type EventSourceCondition struct {
+	// Timestamp of the condition
+	// +optional
+	Timestamp string `json:"timestamp" description:"Timestamp of this condition"`
+	// Type of condition
+	// +required
+	Type EventSourceCreationStatus `json:"type" description:"type of status condition"`
+	// Status of the condition, one of True, False, Unknown.
+	// +required
+	Status metav1.ConditionStatus `json:"status" description:"status of the condition, one of True, False, Unknown"`
+	// The reason for the condition's last transition.
+	// +optional
+	Reason EventSourceConditionReason `json:"reason,omitempty" description:"one-word CamelCase reason for the condition's last transition"`
+	// A human readable message indicating details about the transition.
+	// +optional
+	Message string `json:"message,omitempty" description:"human-readable message indicating details about last transition"`
 }
 
 //+kubebuilder:object:root=true
@@ -94,10 +103,7 @@ type OwnedResourceStatus struct {
 // EventSource is the Schema for the eventsources API
 //+kubebuilder:printcolumn:name="EventBus",type=string,JSONPath=`.spec.eventBus`
 //+kubebuilder:printcolumn:name="Sink",type=string,JSONPath=`.spec.sink.ref.name`
-//+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.state`
-//+kubebuilder:printcolumn:name="Components",type=string,JSONPath=`.status.componentStatistics`
-//+kubebuilder:printcolumn:name="Workloads",type=string,JSONPath=`.status.workloadStatistics`
-//+kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.message`,priority=10
+//+kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[-1].type"
 type EventSource struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

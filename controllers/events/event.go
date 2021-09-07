@@ -5,12 +5,14 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"strings"
+
+	openfunctioncore "github.com/openfunction/apis/core/v1alpha1"
 
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
@@ -27,6 +29,7 @@ const (
 	EventSourceControlledLabel = "controlled-by-eventsource"
 	TriggerControlledLabel     = "controlled-by-trigger"
 	EventBusNameLabel          = "eventbus-name"
+	EventBusTopicName          = "eventbus-topic-name"
 
 	// EventSourceComponentNameTmpl => eventsource-{eventSourceName}-{sourceKind}-{eventName}
 	EventSourceComponentNameTmpl = "eventsource-%s-%s-%s"
@@ -39,7 +42,7 @@ const (
 	// TriggerSinkComponentNameTmpl => trigger-sink-{triggerName}-{sinkNamespace}-{sinkName}
 	TriggerSinkComponentNameTmpl = "trigger-sink-%s-%s-%s"
 	// EventSourceWorkloadsNameTmpl => eventsource-{eventSourceName}-{sourceKind}-{eventName}
-	EventSourceWorkloadsNameTmpl = "eventsource-%s-%s-%s"
+	EventSourceWorkloadsNameTmpl = "es-%s-%s-%s"
 	// TriggerWorkloadsNameTmpl => trigger-{triggerName}
 	TriggerWorkloadsNameTmpl = "trigger-%s"
 	// EventBusTopicNameTmpl => {namespace}-{eventSourceName}-{eventName}
@@ -61,14 +64,11 @@ const (
 )
 
 type EventSourceConfig struct {
-	EventSourceComponent  string `json:"eventSourceComponent"`
-	EventSourceTopic      string `json:"eventSourceTopic,omitempty"`
-	EventBusComponent     string `json:"eventBusComponent,omitempty"`
-	EventBusTopic         string `json:"eventBusTopic,omitempty"`
-	SinkComponent         string `json:"sinkComponent,omitempty"`
-	EventSourceSpecEncode string `json:"eventSourceSpecEncode,omitempty"`
-	EventBusSpecEncode    string `json:"eventBusSpecEncode,omitempty"`
-	SinkSpecEncode        string `json:"sinkSpecEncode,omitempty"`
+	EventSourceComponent string `json:"eventSourceComponent"`
+	EventSourceTopic     string `json:"eventSourceTopic,omitempty"`
+	EventBusComponent    string `json:"eventBusComponent,omitempty"`
+	EventBusTopic        string `json:"eventBusTopic,omitempty"`
+	SinkComponent        string `json:"sinkComponent,omitempty"`
 }
 
 type TriggerConfig struct {
@@ -294,43 +294,47 @@ func retrieveClusterEventBus(ctx context.Context, c client.Client, eventBusName 
 	return &clusterEventBus
 }
 
-func retrieveControlledResources(ctx context.Context, c client.Client, selector labels.Selector, cr *ControlledResources) error {
-	var components componentsv1alpha1.ComponentList
-	var workloads appsv1.DeploymentList
+func addDaprComponent(function *openfunctioncore.Function, component *componentsv1alpha1.Component, componentType string) *openfunctioncore.Function {
+	spec := function.Spec.Serving.OpenFuncAsync.Dapr
 
-	cr.Components = map[string]*ControlledComponent{}
-	cr.Workloads = map[string]*ControlledWorkload{}
-
-	// handle controlled components
-	if err := c.List(ctx, &components, &client.ListOptions{LabelSelector: selector}); err != nil {
-		return err
+	obj := &openfunctioncore.DaprIO{
+		Name: component.Name,
+		Type: strings.Split(component.Spec.Type, ".")[0],
 	}
-	if &components != nil {
-		for _, component := range components.Items {
-			r := component
-			resource := &ControlledComponent{
-				Status:       Pending,
-				Object:       &r,
-				IsDeprecated: true,
-			}
-			cr.Components[r.Name] = resource
-		}
+	switch componentType {
+	case "input":
+		spec.Inputs = append(spec.Inputs, obj)
+	case "output":
+		spec.Outputs = append(spec.Outputs, obj)
 	}
 
-	// handle controlled workloads
-	if err := c.List(ctx, &workloads, &client.ListOptions{LabelSelector: selector}); err != nil {
-		return err
+	newComponent := &openfunctioncore.DaprComponent{
+		Name:          component.Name,
+		ComponentSpec: component.Spec,
 	}
-	if &workloads != nil {
-		for _, workload := range workloads.Items {
-			r := workload
-			resource := &ControlledWorkload{
-				Status:       Pending,
-				Object:       &r,
-				IsDeprecated: true,
-			}
-			cr.Workloads[r.Name] = resource
-		}
+	spec.Components = append(spec.Components, *newComponent)
+	function.Spec.Serving.OpenFuncAsync.Dapr = spec
+	return function
+}
+
+func addSinkComponent(function *openfunctioncore.Function, component *componentsv1alpha1.Component) *openfunctioncore.Function {
+	spec := function.Spec.Serving.OpenFuncAsync.Dapr
+
+	obj := &openfunctioncore.DaprIO{
+		Name: component.Name,
+		Type: strings.Split(component.Spec.Type, ".")[0],
+		Params: map[string]string{
+			"operation": "post",
+			"type":      strings.Split(component.Spec.Type, ".")[0],
+		},
 	}
-	return nil
+	spec.Outputs = append(spec.Outputs, obj)
+
+	newComponent := &openfunctioncore.DaprComponent{
+		Name:          component.Name,
+		ComponentSpec: component.Spec,
+	}
+	spec.Components = append(spec.Components, *newComponent)
+	function.Spec.Serving.OpenFuncAsync.Dapr = spec
+	return function
 }

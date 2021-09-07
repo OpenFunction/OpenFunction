@@ -69,6 +69,11 @@ type TriggerStatus struct {
 	WorkloadStatistics  string                 `json:"workloadStatistics,omitempty"`
 }
 
+type OwnedResourceStatus struct {
+	Name  string `json:"name"`
+	State string `json:"state"`
+}
+
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 

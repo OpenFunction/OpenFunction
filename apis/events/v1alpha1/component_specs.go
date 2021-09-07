@@ -1,18 +1,38 @@
 package v1alpha1
 
 import (
+	"errors"
+
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
+	kedav1alpha1 "github.com/kedacore/keda/v2/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/json"
+
+	openfunctioncore "github.com/openfunction/apis/core/v1alpha1"
 )
 
 const (
 	ComponentVersion    = "v1"
 	BindingsKafka       = "bindings.kafka"
+	ScaleKafka          = "kafka"
+	ScaleRedis          = "redis"
+	ScaleCron           = "cron"
 	BindingsRedis       = "bindings.redis"
 	BindingsCron        = "bindings.cron"
 	PubsubNatsStreaming = "pubsub.natsstreaming"
+	ScaledDeployment    = "Deployment"
 )
+
+type ScaleOption struct {
+	WorkloadType    string                            `json:"workloadType,omitempty"`
+	PollingInterval *int32                            `json:"pollingInterval,omitempty"`
+	CooldownPeriod  *int32                            `json:"cooldownPeriod,omitempty"`
+	MinReplicaCount *int32                            `json:"minReplicaCount,omitempty"`
+	MaxReplicaCount *int32                            `json:"maxReplicaCount,omitempty"`
+	Advanced        *kedav1alpha1.AdvancedConfig      `json:"advanced,omitempty"`
+	Metadata        map[string]string                 `json:"metadata,omitempty"`
+	AuthRef         *kedav1alpha1.ScaledObjectAuthRef `json:"authRef,omitempty"`
+}
 
 type NatsStreamingSpec struct {
 	NatsURL                 string  `json:"natsURL"`
@@ -97,12 +117,13 @@ func (spec *NatsStreamingSpec) GenComponent(namespace string, name string, metad
 }
 
 type KafkaSpec struct {
-	Brokers         string  `json:"brokers"`
-	AuthRequired    bool    `json:"authRequired"`
-	Topic           string  `json:"topic,omitempty"`
-	SaslUsername    *string `json:"saslUsername,omitempty"`
-	SaslPassword    *string `json:"saslPassword,omitempty"`
-	MaxMessageBytes *int64  `json:"maxMessageBytes,omitempty"`
+	Brokers         string       `json:"brokers"`
+	AuthRequired    bool         `json:"authRequired"`
+	Topic           string       `json:"topic,omitempty"`
+	SaslUsername    *string      `json:"saslUsername,omitempty"`
+	SaslPassword    *string      `json:"saslPassword,omitempty"`
+	MaxMessageBytes *int64       `json:"maxMessageBytes,omitempty"`
+	ScaleOption     *ScaleOption `json:"scaleOption,omitempty"`
 }
 
 func (spec *KafkaSpec) ConvertToMetadataMap() []map[string]interface{} {
@@ -149,6 +170,29 @@ func (spec *KafkaSpec) GenComponent(namespace string, name string, metadataMap [
 	component.Spec.Metadata = metadataItems
 
 	return component, nil
+}
+
+func (spec *KafkaSpec) GenScaledObject() (*openfunctioncore.KedaScaledObject, error) {
+	if spec.ScaleOption == nil {
+		return nil, nil
+	}
+	scaledObject := &openfunctioncore.KedaScaledObject{}
+	trigger := &kedav1alpha1.ScaleTriggers{}
+
+	scaledObject.MinReplicaCount = spec.ScaleOption.MinReplicaCount
+	scaledObject.MaxReplicaCount = spec.ScaleOption.MaxReplicaCount
+	scaledObject.CooldownPeriod = spec.ScaleOption.CooldownPeriod
+	scaledObject.PollingInterval = spec.ScaleOption.PollingInterval
+	trigger.Type = ScaleKafka
+
+	if spec.ScaleOption.Metadata != nil {
+		trigger.Metadata = spec.ScaleOption.Metadata
+		trigger.Metadata["bootstrapServers"] = spec.Brokers
+		trigger.Metadata["topic"] = spec.Topic
+		scaledObject.Triggers = []kedav1alpha1.ScaleTriggers{*trigger}
+		return scaledObject, nil
+	}
+	return nil, errors.New("scaleOption metadata is empty")
 }
 
 type RedisSpec struct {
