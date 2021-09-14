@@ -1,4 +1,4 @@
-# ![OpenFunction](docs/images/logo.png)
+<div align=center><img  width="334" height="117" src=docs/images/logo.png></div>
 
 ## Overview
 
