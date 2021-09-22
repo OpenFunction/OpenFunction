@@ -150,11 +150,11 @@ import (
 	"encoding/json"
 	"log"
   
-  ofctx "github.com/OpenFunction/functions-framework-go/openfunction-context"
+	ofctx "github.com/OpenFunction/functions-framework-go/openfunction-context"
 )
 
 func BindingsOutput(ctx *ofctx.OpenFunctionContext, in []byte) int {
-  log.Printf("receive greeting: %s", string(in))
+	log.Printf("receive greeting: %s", string(in))
 	_ := ctx.SendTo(in, "another-target")
 	return 200
 }
