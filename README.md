@@ -120,7 +120,45 @@ kubectl apply -f https://raw.githubusercontent.com/OpenFunction/OpenFunction/mai
 
 ### Sample: Run a function.
 
-If you have already installed the OpenFunction platform, refer to [OpenFunction samples](https://github.com/OpenFunction/samples) to run a sample function.
+If you have already installed the OpenFunction platform, refer to [OpenFunction samples](https://github.com/OpenFunction/samples) to find more samples.
+
+Here is an example of a sync function.
+
+> This function will write "Hello, World!" to the HTTP response.
+
+```go
+package hello
+
+import (
+	"net/http"
+	"fmt"
+)
+
+func HelloWorld(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprint(w, "Hello, World!\n")
+}
+```
+
+And an async function example.
+
+> This function will receive a greeting message and then send it to "another-target".
+
+```go
+package bindings
+
+import (
+	"encoding/json"
+	"log"
+  
+  ofctx "github.com/OpenFunction/functions-framework-go/openfunction-context"
+)
+
+func BindingsOutput(ctx *ofctx.OpenFunctionContext, in []byte) int {
+  log.Printf("receive greeting: %s", string(in))
+	_ := ctx.SendTo(in, "another-target")
+	return 200
+}
+```
 
 ### Uninstall 
 
