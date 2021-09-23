@@ -4,7 +4,7 @@
 
 **OpenFunction** is a cloud-native open source FaaS (Function as a Service) platform aiming to enable users to focus on their business logic without worrying about the underlying runtime environment and infrastructure. Users only need to submit business-related source code in the form of functions.
 
-<div align=center><img src=docs/images/function-lifecycle.png></div>
+<div align=center><img src=docs/images/function-lifecycle.svg></div>
 
 OpenFunction features but not limited to the following:
 
@@ -16,7 +16,7 @@ OpenFunction features but not limited to the following:
 
 ## CustomResourceDefinitions
 
-<div align=center><img src=docs/images/openfunction-overview.jpg></div>
+<div align=center><img src=docs/images/openfunction-overview.svg></div>
 
 ### Events CRDs
 
