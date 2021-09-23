@@ -26,7 +26,7 @@
 
 ## Architecture
 
-![openfunction events](../images/OpenFunction-events-architecture.png)
+![openfunction events](../images/OpenFunction-events-architecture.svg)
 
 ## EventSource
 
