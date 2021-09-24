@@ -132,7 +132,7 @@ if [ "$with_openFuncAsync" = "true" ]; then
   # Installs the latest Dapr CLI.
   wget -q https://raw.githubusercontent.com/dapr/cli/master/install/install.sh -O - | /bin/bash
   # Init dapr
-  dapr init -k
+  dapr init -k --runtime-version 1.3.1
   # Installs the latest release version
   kubectl apply -f https://github.com/kedacore/keda/releases/download/v2.4.0/keda-2.4.0.yaml
 fi
