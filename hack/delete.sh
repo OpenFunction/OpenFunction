@@ -107,10 +107,10 @@ if [ "$with_shipwright" = "true" ]; then
   kubectl delete Namespace shipwright-build
   kubectl delete ClusterRole shipwright-build-controller
   kubectl delete ClusterRoleBinding shipwright-build-controller
-  kubectl delete CustomResourceDefinition BuildRun
-  kubectl delete CustomResourceDefinition Build
-  kubectl delete CustomResourceDefinition BuildStrategy
-  kubectl delete CustomResourceDefinition ClusterBuildStrategy
+  kubectl delete CustomResourceDefinition buildruns.shipwright.io
+  kubectl delete CustomResourceDefinition builds.shipwright.io
+  kubectl delete CustomResourceDefinition buildstrategies.shipwright.io
+  kubectl delete CustomResourceDefinition clusterbuildstrategies.shipwright.io
 fi
 
 if [ "$with_knative" = "true" ]; then
@@ -153,9 +153,12 @@ if [ "$with_knative" = "true" ]; then
   kubectl delete crd sinkbindings.sources.knative.dev
   kubectl delete crd subscriptions.messaging.knative.dev
   kubectl delete crd triggers.eventing.knative.dev
+  kubectl delete crd clusterdomainclaims.networking.internal.knative.dev
+  kubectl delete crd domainmappings.serving.knative.dev
 fi
 
 if [ "$with_openFuncAsync" = "true" ]; then
-  dapr uninstall -k
-  kubectl delete --ignore-not-found=true -f https://github.com/kedacore/keda/releases/download/v2.2.0/keda-2.2.0.yaml
+  dapr uninstall -k --all
+  kubectl delete ns dapr-system
+  kubectl delete --ignore-not-found=true -f https://github.com/kedacore/keda/releases/download/v2.4.0/keda-2.4.0.yaml
 fi
