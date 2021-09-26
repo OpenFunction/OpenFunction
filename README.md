@@ -80,8 +80,7 @@ The current version of OpenFunction requires that you have a Kubernetes cluster 
 
 In addition, you need to deploy several dependencies for the OpenFunction ```Builder``` and ```Serving```.
 
-You can refer to the [Installation Guide](docs/installation/README.md) to setup OpenFunction ```Builder``` and ```Serving```,
-or use the following command:
+You can use the following command to setup OpenFunction ```Builder``` and ```Serving```:
 
 ```shell
 sh hack/deploy.sh --all
@@ -100,7 +99,7 @@ You can also customize the installation with the following parameters:
 | --poor-network                     | Use this if you have poor network connectivity to GitHub/Googleapis |
 | --tekton-dashboard-nodeport <port> | Expose the Tekton dashboard service with NodePort |
 
-### Install
+### Install OpenFunction
 
 You can install the OpenFunction platform by the following command:
 
@@ -118,6 +117,14 @@ kubectl apply -f https://raw.githubusercontent.com/OpenFunction/OpenFunction/mai
 
 > Note: When using non-default namespaces, make sure that the ClusterRoleBinding in the namespace is adapted.
 
+### Verify the installation
+
+```bash
+kubectl get pods --namespace openfunction
+
+NAME                                               READY   STATUS    RESTARTS   AGE
+openfunction-controller-manager-6955498c9b-hjql7   2/2     Running   0         2m2s
+```
 ### Sample: Run a function.
 
 If you have already installed the OpenFunction platform, refer to [OpenFunction samples](https://github.com/OpenFunction/samples) to find more samples.
@@ -160,7 +167,7 @@ func BindingsOutput(ctx *ofctx.OpenFunctionContext, in []byte) int {
 }
 ```
 
-### Uninstall 
+### Uninstall OpenFunction
 
 - Uninstall the latest stable version
 
