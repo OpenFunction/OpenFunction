@@ -161,6 +161,152 @@ spec:
             type: object
         type: object
     served: true
+    storage: false
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.state
+      name: State
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha2
+    schema:
+      openAPIV3Schema:
+        description: Builder is the Schema for the builders API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: BuilderSpec defines the desired state of Builder
+            properties:
+              builder:
+                description: Builder refers to the image containing the build tools
+                  inside which the source code would be built.
+                type: string
+              builderCredentials:
+                description: BuilderCredentials references a Secret that contains
+                  credentials to access the builder image repository.
+                properties:
+                  name:
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                      TODO: Add other useful fields. apiVersion, kind, uid?'
+                    type: string
+                type: object
+              dockerfile:
+                description: Dockerfile is the path to the Dockerfile to be used for
+                  build strategies that rely on the Dockerfile for building an image.
+                type: string
+              env:
+                additionalProperties:
+                  type: string
+                description: Environment params to pass to the builder.
+                type: object
+              image:
+                description: Function image name
+                type: string
+              imageCredentials:
+                description: ImageCredentials references a Secret that contains credentials
+                  to access the image repository.
+                properties:
+                  name:
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                      TODO: Add other useful fields. apiVersion, kind, uid?'
+                    type: string
+                type: object
+              params:
+                additionalProperties:
+                  type: string
+                description: Params is a list of key/value that could be used to set
+                  strategy parameters.
+                type: object
+              port:
+                description: The port on which the function will be invoked
+                format: int32
+                type: integer
+              shipwright:
+                description: The configuration for `Shipwright` build engine.
+                properties:
+                  strategy:
+                    description: Strategy references the BuildStrategy to use to build
+                      the image.
+                    properties:
+                      kind:
+                        description: BuildStrategyKind indicates the kind of the build
+                          strategy BuildStrategy or ClusterBuildStrategy, default
+                          to BuildStrategy.
+                        type: string
+                      name:
+                        description: 'Name of the referent; More info: http://kubernetes.io/docs/user-guide/identifiers#names'
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  timeout:
+                    description: Timeout defines the maximum amount of time the Build
+                      should take to execute.
+                    format: duration
+                    type: string
+                type: object
+              srcRepo:
+                description: Git repository info of a function
+                properties:
+                  credentials:
+                    description: Credentials references a Secret that contains credentials
+                      to access the repository.
+                    properties:
+                      name:
+                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                        type: string
+                    type: object
+                  revision:
+                    description: Git revision to check out (branch, tag, sha, ref…)
+                      (default:"")
+                    type: string
+                  sourceSubPath:
+                    description: A subpath within the `source` input where the source
+                      to build is located.
+                    type: string
+                  url:
+                    description: Git url to clone
+                    type: string
+                required:
+                - url
+                type: object
+            required:
+            - image
+            - srcRepo
+            type: object
+          status:
+            description: BuilderStatus defines the observed state of Builder
+            properties:
+              phase:
+                type: string
+              resourceRef:
+                additionalProperties:
+                  type: string
+                description: Associate resources.
+                type: object
+              state:
+                type: string
+            type: object
+        type: object
+    served: true
     storage: true
     subresources:
       status: {}

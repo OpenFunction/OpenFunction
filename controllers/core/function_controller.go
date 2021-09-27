@@ -27,7 +27,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	openfunction "github.com/openfunction/apis/core/v1alpha1"
+	openfunction "github.com/openfunction/apis/core/v1alpha2"
 	"github.com/openfunction/pkg/util"
 )
 

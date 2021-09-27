@@ -6,13 +6,9 @@ import (
 	"strings"
 
 	openfunctioncontext "github.com/OpenFunction/functions-framework-go/openfunction-context"
-	jsoniter "github.com/json-iterator/go"
-
-	"github.com/openfunction/pkg/util"
-
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
-	subscriptionsv1alpha1 "github.com/dapr/dapr/pkg/apis/subscriptions/v1alpha1"
 	"github.com/go-logr/logr"
+	jsoniter "github.com/json-iterator/go"
 	kedav1alpha1 "github.com/kedacore/keda/v2/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -24,8 +20,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	openfunction "github.com/openfunction/apis/core/v1alpha1"
+	openfunction "github.com/openfunction/apis/core/v1alpha2"
 	"github.com/openfunction/pkg/core"
+	"github.com/openfunction/pkg/util"
 )
 
 const (
@@ -67,6 +64,11 @@ func (r *servingRun) Run(s *openfunction.Serving) error {
 		return err
 	}
 
+	if err := r.checkComponentSpecExist(s); err != nil {
+		log.Error(err, "Failed to CheckComponentSpecExist", "name", s.Name, "namespace", s.Namespace)
+		return err
+	}
+
 	workload := r.generateWorkload(s)
 	if err := controllerutil.SetControllerReference(s, workload, r.scheme); err != nil {
 		log.Error(err, "Failed to SetControllerReference", "name", s.Name, "namespace", s.Namespace)
@@ -95,11 +97,6 @@ func (r *servingRun) Run(s *openfunction.Serving) error {
 
 	if err := r.createOrUpdateComponents(s); err != nil {
 		log.Error(err, "Failed to create dapr components", "name", s.Name, "namespace", s.Namespace)
-		return err
-	}
-
-	if err := r.createOrUpdateSubscriptions(s); err != nil {
-		log.Error(err, "Failed to create dapr subscriptions", "name", s.Name, "namespace", s.Namespace)
 		return err
 	}
 
@@ -506,21 +503,21 @@ func (r *servingRun) createOrUpdateComponents(s *openfunction.Serving) error {
 	}
 
 	value := ""
-	for _, dc := range dapr.Components {
+	for name, dc := range dapr.Components {
 		component := &componentsv1alpha1.Component{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      dc.Name,
+				Name:      name,
 				Namespace: s.Namespace,
 			},
 		}
 
-		if _, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, component, r.mutateComponent(component, dc.ComponentSpec, s)); err != nil {
-			log.Error(err, "Failed to CreateOrUpdate dapr component", "namespace", s.Namespace, "serving", s.Name, "component", dc.Name)
+		if _, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, component, r.mutateComponent(component, *dc, s)); err != nil {
+			log.Error(err, "Failed to CreateOrUpdate dapr component", "namespace", s.Namespace, "serving", s.Name, "component", name)
 			return err
 		}
 
 		value = fmt.Sprintf("%s%s,", value, component.Name)
-		log.V(1).Info("Component CreateOrUpdate", "namespace", s.Namespace, "serving", s.Name, "component", dc.Name)
+		log.V(1).Info("Component CreateOrUpdate", "namespace", s.Namespace, "serving", s.Name, "component", name)
 	}
 
 	if value != "" {
@@ -538,45 +535,27 @@ func (r *servingRun) mutateComponent(component *componentsv1alpha1.Component, sp
 	}
 }
 
-func (r *servingRun) createOrUpdateSubscriptions(s *openfunction.Serving) error {
-	log := r.log.WithName("CreateOrUpdateDaprSubscriptions")
+func (r *servingRun) checkComponentSpecExist(s *openfunction.Serving) error {
+	if s.Spec.OpenFuncAsync != nil && s.Spec.OpenFuncAsync.Dapr != nil {
+		dapr := s.Spec.OpenFuncAsync.Dapr
 
-	dapr := s.Spec.OpenFuncAsync.Dapr
-	if dapr == nil {
-		return nil
-	}
-
-	value := ""
-	for _, ds := range dapr.Subscriptions {
-		subscription := &subscriptionsv1alpha1.Subscription{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      ds.Name,
-				Namespace: s.Namespace,
-			},
+		if dapr.Inputs != nil && len(dapr.Inputs) > 0 {
+			for _, i := range dapr.Inputs {
+				if _, ok := dapr.Components[i.Component]; !ok {
+					return fmt.Errorf("component %s not found", i.Component)
+				}
+			}
 		}
 
-		if _, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, subscription, r.mutateSubscription(subscription, &ds, s)); err != nil {
-			log.Error(err, "Failed to CreateOrUpdate dapr subscription", "namespace", s.Namespace, "serving", s.Name, "subscription", ds.Name)
-			return err
+		if dapr.Outputs != nil && len(dapr.Outputs) > 0 {
+			for _, o := range dapr.Outputs {
+				if _, ok := dapr.Components[o.Component]; !ok {
+					return fmt.Errorf("component %s not found", o.Component)
+				}
+			}
 		}
-
-		value = fmt.Sprintf("%s%s,", value, subscription.Name)
-		log.V(1).Info("Subscription CreateOrUpdate", "namespace", s.Namespace, "serving", s.Name, "subscription", ds.Name)
-	}
-
-	if value != "" {
-		s.Status.ResourceRef[subscriptionName] = strings.TrimSuffix(value, ",")
 	}
 	return nil
-}
-
-func (r *servingRun) mutateSubscription(subscription *subscriptionsv1alpha1.Subscription, ds *openfunction.DaprSubscription, s *openfunction.Serving) controllerutil.MutateFn {
-
-	return func() error {
-		subscription.Spec = ds.SubscriptionSpec
-		subscription.Scopes = ds.Scopes
-		return controllerutil.SetControllerReference(s, subscription, r.scheme)
-	}
 }
 
 func createFunctionContext(s *openfunction.Serving) string {
@@ -607,17 +586,22 @@ func createFunctionContext(s *openfunction.Serving) string {
 		dapr := s.Spec.OpenFuncAsync.Dapr
 
 		if dapr.Inputs != nil && len(dapr.Inputs) > 0 {
-			input := dapr.Inputs[0]
-			fc.Input = openfunctioncontext.Input{
-				Name:   input.Name,
-				Uri:    getUri(input),
-				Params: input.Params,
-			}
+			fc.Inputs = make(map[string]*openfunctioncontext.Input)
 
-			if fc.Input.Params == nil {
-				fc.Input.Params = map[string]string{
-					"type": input.Type,
+			for _, i := range dapr.Inputs {
+				c, _ := dapr.Components[i.Component]
+				componentType := strings.Split(c.Type, ".")[0]
+				uri := i.Topic
+				if componentType == string(openfunctioncontext.OpenFuncBinding) {
+					uri = i.Component
 				}
+				input := openfunctioncontext.Input{
+					Uri:       uri,
+					Component: i.Component,
+					Type:      openfunctioncontext.ResourceType(componentType),
+					Metadata:  i.Params,
+				}
+				fc.Inputs[i.Name] = &input
 			}
 		}
 
@@ -625,17 +609,19 @@ func createFunctionContext(s *openfunction.Serving) string {
 			fc.Outputs = make(map[string]*openfunctioncontext.Output)
 
 			for _, o := range dapr.Outputs {
+				c, _ := dapr.Components[o.Component]
+				componentType := strings.Split(c.Type, ".")[0]
+				uri := o.Topic
+				if componentType == string(openfunctioncontext.OpenFuncBinding) {
+					uri = o.Component
+				}
 				output := openfunctioncontext.Output{
-					Uri:    getUri(o),
-					Params: o.Params,
+					Uri:       uri,
+					Component: o.Component,
+					Type:      openfunctioncontext.ResourceType(componentType),
+					Metadata:  o.Params,
+					Operation: o.Operation,
 				}
-
-				if output.Params == nil {
-					output.Params = map[string]string{
-						"type": o.Type,
-					}
-				}
-
 				fc.Outputs[o.Name] = &output
 			}
 		}
@@ -643,19 +629,6 @@ func createFunctionContext(s *openfunction.Serving) string {
 
 	bs, _ := jsoniter.Marshal(fc)
 	return string(bs)
-}
-
-func getUri(io *openfunction.DaprIO) string {
-	switch io.Type {
-	case string(openfunctioncontext.OpenFuncBinding):
-		return io.Name
-	case string(openfunctioncontext.OpenFuncTopic):
-		return io.Topic
-	case string(openfunctioncontext.OpenFuncService):
-		return io.MethodName
-	default:
-		return ""
-	}
 }
 
 func getFunctionName(s *openfunction.Serving) string {

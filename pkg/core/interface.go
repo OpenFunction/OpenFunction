@@ -1,6 +1,6 @@
 package core
 
-import openfunction "github.com/openfunction/apis/core/v1alpha1"
+import openfunction "github.com/openfunction/apis/core/v1alpha2"
 
 const (
 	FunctionContainer = "function"

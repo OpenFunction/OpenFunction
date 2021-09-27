@@ -3,7 +3,7 @@ module github.com/openfunction
 go 1.15
 
 require (
-	github.com/OpenFunction/functions-framework-go v0.0.0-20210628081257-4137e46a99a6
+	github.com/OpenFunction/functions-framework-go v0.0.0-20210922063920-81a7b2951b8a
 	github.com/dapr/dapr v1.2.2
 	github.com/go-logr/logr v0.4.0
 	github.com/json-iterator/go v1.1.11
