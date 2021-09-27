@@ -145,30 +145,30 @@ func (src *Function) convertServingTo(dst *v1alpha1.Function) error {
 				dst.Spec.Serving.OpenFuncAsync.Dapr.Outputs = append(dst.Spec.Serving.OpenFuncAsync.Dapr.Outputs, &out)
 			}
 		}
-	}
 
-	if src.Spec.Serving.OpenFuncAsync.Keda != nil {
-		dst.Spec.Serving.OpenFuncAsync.Keda = &v1alpha1.Keda{}
-		if src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob != nil {
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob = &v1alpha1.KedaScaledJob{}
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.ScalingStrategy = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.ScalingStrategy
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.Triggers = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.Triggers
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.FailedJobsHistoryLimit = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.FailedJobsHistoryLimit
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.SuccessfulJobsHistoryLimit = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.SuccessfulJobsHistoryLimit
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.MaxReplicaCount = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.MaxReplicaCount
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.PollingInterval = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.PollingInterval
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.RestartPolicy = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.RestartPolicy
-		}
+		if src.Spec.Serving.OpenFuncAsync.Keda != nil {
+			dst.Spec.Serving.OpenFuncAsync.Keda = &v1alpha1.Keda{}
+			if src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob != nil {
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob = &v1alpha1.KedaScaledJob{}
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.ScalingStrategy = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.ScalingStrategy
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.Triggers = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.Triggers
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.FailedJobsHistoryLimit = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.FailedJobsHistoryLimit
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.SuccessfulJobsHistoryLimit = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.SuccessfulJobsHistoryLimit
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.MaxReplicaCount = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.MaxReplicaCount
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.PollingInterval = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.PollingInterval
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.RestartPolicy = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.RestartPolicy
+			}
 
-		if src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject != nil {
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject = &v1alpha1.KedaScaledObject{}
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.PollingInterval = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.PollingInterval
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.CooldownPeriod = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.CooldownPeriod
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.WorkloadType = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.WorkloadType
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Advanced = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Advanced
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.MinReplicaCount = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.MinReplicaCount
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.MaxReplicaCount = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.MaxReplicaCount
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Triggers = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Triggers
+			if src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject != nil {
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject = &v1alpha1.KedaScaledObject{}
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.PollingInterval = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.PollingInterval
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.CooldownPeriod = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.CooldownPeriod
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.WorkloadType = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.WorkloadType
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Advanced = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Advanced
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.MinReplicaCount = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.MinReplicaCount
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.MaxReplicaCount = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.MaxReplicaCount
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Triggers = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Triggers
+			}
 		}
 	}
 	return nil
@@ -292,30 +292,30 @@ func (dst *Function) convertServingFrom(src *v1alpha1.Function) error {
 				}
 			}
 		}
-	}
 
-	if src.Spec.Serving.OpenFuncAsync.Keda != nil {
-		dst.Spec.Serving.OpenFuncAsync.Keda = &Keda{}
-		if src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob != nil {
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob = &KedaScaledJob{}
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.ScalingStrategy = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.ScalingStrategy
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.Triggers = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.Triggers
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.FailedJobsHistoryLimit = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.FailedJobsHistoryLimit
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.SuccessfulJobsHistoryLimit = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.SuccessfulJobsHistoryLimit
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.MaxReplicaCount = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.MaxReplicaCount
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.PollingInterval = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.PollingInterval
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.RestartPolicy = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.RestartPolicy
-		}
+		if src.Spec.Serving.OpenFuncAsync.Keda != nil {
+			dst.Spec.Serving.OpenFuncAsync.Keda = &Keda{}
+			if src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob != nil {
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob = &KedaScaledJob{}
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.ScalingStrategy = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.ScalingStrategy
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.Triggers = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.Triggers
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.FailedJobsHistoryLimit = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.FailedJobsHistoryLimit
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.SuccessfulJobsHistoryLimit = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.SuccessfulJobsHistoryLimit
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.MaxReplicaCount = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.MaxReplicaCount
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.PollingInterval = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.PollingInterval
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.RestartPolicy = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.RestartPolicy
+			}
 
-		if src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject != nil {
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject = &KedaScaledObject{}
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.PollingInterval = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.PollingInterval
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.CooldownPeriod = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.CooldownPeriod
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.WorkloadType = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.WorkloadType
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Advanced = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Advanced
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.MinReplicaCount = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.MinReplicaCount
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.MaxReplicaCount = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.MaxReplicaCount
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Triggers = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Triggers
+			if src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject != nil {
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject = &KedaScaledObject{}
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.PollingInterval = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.PollingInterval
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.CooldownPeriod = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.CooldownPeriod
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.WorkloadType = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.WorkloadType
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Advanced = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Advanced
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.MinReplicaCount = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.MinReplicaCount
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.MaxReplicaCount = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.MaxReplicaCount
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Triggers = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Triggers
+			}
 		}
 	}
 	return nil

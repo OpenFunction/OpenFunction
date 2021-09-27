@@ -36,14 +36,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	openfunctioncore "github.com/openfunction/apis/core/v1alpha1"
-	openfunctionevent "github.com/openfunction/apis/events/v1alpha1"
+	ofcore "github.com/openfunction/apis/core/v1alpha2"
+	ofevent "github.com/openfunction/apis/events/v1alpha1"
 	"github.com/openfunction/pkg/util"
 )
 
 const (
-	handlerContainerName    = "eventsource"
-	eventSourceHandlerImage = "openfunctiondev/eventsource-handler:v1"
+	handlerContainerName      = "eventsource"
+	eventSourceHandlerImage   = "openfunctiondev/eventsource-handler:v1"
+	eventSourceHandlerImageV2 = "zephyrfish/eventsource-handler:v2.1"
 )
 
 // EventSourceReconciler reconciles a EventSource object
@@ -52,7 +53,7 @@ type EventSourceReconciler struct {
 	Log               logr.Logger
 	Scheme            *runtime.Scheme
 	EventSourceConfig *EventSourceConfig
-	FunctionConfig    *openfunctioncore.Function
+	Function          *ofcore.Function
 }
 
 //+kubebuilder:rbac:groups=events.openfunction.io,resources=eventsources,verbs=get;list;watch;create;update;patch;delete
@@ -82,15 +83,13 @@ func (r *EventSourceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	log := r.Log.WithValues("EventSource", req.NamespacedName)
 	log.Info("EventSource reconcile starting...")
 
-	eventSource := &openfunctionevent.EventSource{}
+	eventSource := &ofevent.EventSource{}
 	r.EventSourceConfig = &EventSourceConfig{}
 
 	if err := r.Get(ctx, req.NamespacedName, eventSource); err != nil {
 		log.V(1).Info("EventSource deleted", "error", err)
 		return ctrl.Result{}, util.IgnoreNotFound(err)
 	}
-
-	r.initFunction()
 
 	if err := r.createOrUpdateEventSource(ctx, log, eventSource); err != nil {
 		log.Error(err, "Failed to create or update eventsource", "namespace", eventSource.Namespace, "name", eventSource.Name)
@@ -113,17 +112,19 @@ func (r *EventSourceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 // 4. Generate EventSourceConfig and convert it to a base64-encoded string.
 // 5. Create an EventSource workload for each event source (will check if they need to be updated)
 //    and pass in the EventSourceConfig as an environment variable.
-func (r *EventSourceReconciler) createOrUpdateEventSource(ctx context.Context, log logr.Logger, eventSource *openfunctionevent.EventSource) error {
-	defer eventSource.SaveStatus(context.Background(), log, r.Client)
+func (r *EventSourceReconciler) createOrUpdateEventSource(ctx context.Context, log logr.Logger, eventSource *ofevent.EventSource) error {
+	defer eventSource.SaveStatus(ctx, log, r.Client)
 	log = r.Log.WithName("createOrUpdateEventSource")
 
-	eventSource.AddCondition(*openfunctionevent.CreateCondition(
-		openfunctionevent.Pending, metav1.ConditionUnknown, openfunctionevent.PendingCreation,
+	eventSource.AddCondition(*ofevent.CreateCondition(
+		ofevent.Pending, metav1.ConditionUnknown, ofevent.PendingCreation,
 	).SetMessage("Identified EventSource creation signal"))
 
+	r.Function = InitFunction(eventSourceHandlerImageV2)
+
 	if eventSource.Spec.EventBus == "" && eventSource.Spec.Sink == nil {
-		err := errors.New("spec.evenBus or spec.sink must be set")
-		condition := openfunctionevent.CreateCondition(openfunctionevent.Error, metav1.ConditionFalse, openfunctionevent.ErrorConfiguration).SetMessage(err.Error())
+		err := errors.New("must set spec.eventBus or spec.sink")
+		condition := ofevent.CreateCondition(ofevent.Error, metav1.ConditionFalse, ofevent.ErrorConfiguration).SetMessage(err.Error())
 		eventSource.AddCondition(*condition)
 		log.Error(err, "Failed to find output configuration (eventBus or sink).", "namespace", eventSource.Namespace, "name", eventSource.Name)
 		return err
@@ -149,30 +150,29 @@ func (r *EventSourceReconciler) createOrUpdateEventSource(ctx context.Context, l
 	}
 
 	if _, err := ctrl.CreateOrUpdate(ctx, r.Client, eventSource, r.mutateEventSource(eventSource)); err != nil {
-		condition := openfunctionevent.CreateCondition(openfunctionevent.Error, metav1.ConditionFalse, openfunctionevent.ErrorCreatingEventSource).SetMessage(err.Error())
+		condition := ofevent.CreateCondition(ofevent.Error, metav1.ConditionFalse, ofevent.ErrorCreatingEventSource).SetMessage(err.Error())
 		eventSource.AddCondition(*condition)
 		log.Error(err, "Failed to create or update EventSource", "namespace", eventSource.Namespace, "name", eventSource.Name)
 		return err
 	}
-	condition := openfunctionevent.CreateCondition(openfunctionevent.Ready, metav1.ConditionTrue, openfunctionevent.EventSourceIsReady).SetMessage("EventSource is ready.")
+	condition := ofevent.CreateCondition(ofevent.Ready, metav1.ConditionTrue, ofevent.EventSourceIsReady).SetMessage("EventSource is ready.")
 	eventSource.AddCondition(*condition)
 	eventSource.SaveStatus(ctx, log, r.Client)
 	log.Info("EventSource reconcile success.", "namespace", eventSource.Namespace, "name", eventSource.Name)
 	return nil
 }
 
-func (r *EventSourceReconciler) handleEventBus(ctx context.Context, log logr.Logger, eventSource *openfunctionevent.EventSource) error {
-
+func (r *EventSourceReconciler) handleEventBus(ctx context.Context, log logr.Logger, eventSource *ofevent.EventSource) error {
 	// Retrieve the specification of EventBus associated with the EventSource
-	var eventBusSpec openfunctionevent.EventBusSpec
+	var eventBusSpec ofevent.EventBusSpec
 	eventBus := retrieveEventBus(ctx, r.Client, eventSource.Namespace, eventSource.Spec.EventBus)
 	if eventBus == nil {
 		clusterEventBus := retrieveClusterEventBus(ctx, r.Client, eventSource.Spec.EventBus)
 		if clusterEventBus == nil {
 			err := errors.New("cannot retrieve eventBus or clusterEventBus")
-			condition := openfunctionevent.CreateCondition(openfunctionevent.Error, metav1.ConditionFalse, openfunctionevent.ErrorToFindExistEventBus).SetMessage(err.Error())
+			condition := ofevent.CreateCondition(ofevent.Error, metav1.ConditionFalse, ofevent.ErrorToFindExistEventBus).SetMessage(err.Error())
 			eventSource.AddCondition(*condition)
-			log.Error(err, "Either eventBus nor clusterEventBus exists.", "namespace", eventSource.Namespace, "name", eventSource.Name)
+			log.Error(err, "Neither eventBus nor clusterEventBus exists.", "namespace", eventSource.Namespace, "name", eventSource.Name)
 			return err
 		} else {
 			eventBusSpec = clusterEventBus.Spec
@@ -185,6 +185,7 @@ func (r *EventSourceReconciler) handleEventBus(ctx context.Context, log logr.Log
 
 	// Set EventSourceConfig.EventBusComponent.
 	r.EventSourceConfig.EventBusComponent = componentName
+	r.EventSourceConfig.EventBusOutputName = fmt.Sprintf(EventBusOutputNameTmpl, eventSource.Name)
 
 	// Generate a dapr component spec based on the specification of EventBus.
 	if eventBusSpec.NatsStreaming != nil {
@@ -198,55 +199,46 @@ func (r *EventSourceReconciler) handleEventBus(ctx context.Context, log logr.Log
 
 		component, err := eventBusSpec.NatsStreaming.GenComponent(eventSource.Namespace, componentName, metadataMap)
 		if err != nil {
-			condition := openfunctionevent.CreateCondition(openfunctionevent.Error, metav1.ConditionFalse, openfunctionevent.ErrorGenerateComponent).SetMessage(err.Error())
+			condition := ofevent.CreateCondition(ofevent.Error, metav1.ConditionFalse, ofevent.ErrorGenerateComponent).SetMessage(err.Error())
 			eventSource.AddCondition(*condition)
 			log.Error(err, "Failed to generate eventBus component of Nats Streaming.", "namespace", eventSource.Namespace, "name", eventSource.Name)
 			return err
 		}
 		// Add the component spec to function.
-		if function := addDaprComponent(r.FunctionConfig, component, "output"); function != nil {
-			r.FunctionConfig = function
-		}
+		d := r.Function.Spec.Serving.OpenFuncAsync.Dapr
+		d.Components[componentName] = &component.Spec
+		r.Function.Spec.Serving.OpenFuncAsync.Dapr = d
 		return nil
 	}
 	err := errors.New("no specification found for eventBus")
-	condition := openfunctionevent.CreateCondition(openfunctionevent.Error, metav1.ConditionFalse, openfunctionevent.ErrorConfiguration).SetMessage(err.Error())
+	condition := ofevent.CreateCondition(ofevent.Error, metav1.ConditionFalse, ofevent.ErrorConfiguration).SetMessage(err.Error())
 	eventSource.AddCondition(*condition)
 	log.Error(err, "Failed to handle eventBus.", "namespace", eventSource.Namespace, "name", eventSource.Name)
 	return err
 }
 
-func (r *EventSourceReconciler) handleSink(ctx context.Context, log logr.Logger, eventSource *openfunctionevent.EventSource) error {
-	componentName := fmt.Sprintf(EventSourceSinkComponentNameTmpl, eventSource.Name)
-
-	// Set EventSourceConfig.SinkComponent.
-	r.EventSourceConfig.SinkComponent = componentName
-
-	// Generate a dapr component spec based on the specification of Sink.
-	component := &componentsv1alpha1.Component{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      componentName,
-			Namespace: eventSource.Namespace,
-		},
-	}
-	spec, err := newSinkComponentSpec(r.Client, r.Log, eventSource.Spec.Sink.Ref)
+func (r *EventSourceReconciler) handleSink(ctx context.Context, log logr.Logger, eventSource *ofevent.EventSource) error {
+	sink := eventSource.Spec.Sink
+	component, err := createSinkComponent(ctx, r.Client, log, eventSource, sink)
 	if err != nil {
-		condition := openfunctionevent.CreateCondition(openfunctionevent.Error, metav1.ConditionFalse, openfunctionevent.ErrorGenerateComponent).SetMessage(err.Error())
+		condition := ofevent.CreateCondition(ofevent.Error, metav1.ConditionFalse, ofevent.ErrorGenerateComponent).SetMessage(err.Error())
 		eventSource.AddCondition(*condition)
 		log.Error(err, "Failed to generate eventSource component of sink.", "namespace", eventSource.Namespace, "name", eventSource.Name)
 		return err
 	}
-	component.Spec = *spec
+
+	// Set EventSourceConfig.SinkOutputName.
+	r.EventSourceConfig.SinkOutputName = fmt.Sprintf(SinkOutputNameTmpl, sink.Ref.Namespace, sink.Ref.Name)
 
 	// Add the component spec to function.
-	if function := addSinkComponent(r.FunctionConfig, component); function != nil {
-		r.FunctionConfig = function
+	if function := addSinkForFunction(eventSource.Name, r.Function, component); function != nil {
+		r.Function = function
 	}
 	return nil
 }
 
-func (r *EventSourceReconciler) handleEventSource(ctx context.Context, log logr.Logger, eventSource *openfunctionevent.EventSource) error {
-	var functions []*openfunctioncore.Function
+func (r *EventSourceReconciler) handleEventSource(ctx context.Context, log logr.Logger, eventSource *ofevent.EventSource) error {
+	var functions []*ofcore.Function
 	// Generate dapr components based on the specification of EventSource.
 	if eventSource.Spec.Kafka != nil {
 		for eventName, spec := range eventSource.Spec.Kafka {
@@ -261,22 +253,27 @@ func (r *EventSourceReconciler) handleEventSource(ctx context.Context, log logr.
 
 			component, err := spec.GenComponent(eventSource.Namespace, componentName, metadataMap)
 			if err != nil {
-				condition := openfunctionevent.CreateCondition(openfunctionevent.Error, metav1.ConditionFalse, openfunctionevent.ErrorGenerateComponent).SetMessage(err.Error())
+				condition := ofevent.CreateCondition(
+					ofevent.Error, metav1.ConditionFalse, ofevent.ErrorGenerateComponent,
+				).SetMessage(err.Error())
 				eventSource.AddCondition(*condition)
-				log.Error(err, "Failed to generate EventSource component of Kafka.", "namespace", eventSource.Namespace, "name", eventSource.Name)
+				log.Error(err, "Failed to generate EventSource component for Kafka.",
+					"namespace", eventSource.Namespace,
+					"name", eventSource.Name,
+				)
 				return err
 			}
 			// Generate keda scaledObject for Kafka EventSource.
 			scaledObject, err := spec.GenScaledObject()
 			if err != nil {
-				condition := openfunctionevent.CreateCondition(openfunctionevent.Error, metav1.ConditionFalse, openfunctionevent.ErrorGenerateScaledObject).SetMessage(err.Error())
+				condition := ofevent.CreateCondition(ofevent.Error, metav1.ConditionFalse, ofevent.ErrorGenerateScaledObject).SetMessage(err.Error())
 				eventSource.AddCondition(*condition)
-				log.Error(err, "Failed to generate EventSource scaledObject of Kafka.", "namespace", eventSource.Namespace, "name", eventSource.Name)
+				log.Error(err, "Failed to generate EventSource scaledObject for Kafka.", "namespace", eventSource.Namespace, "name", eventSource.Name)
 			}
 			if scaledObject != nil {
 				scaledObject.Triggers[0].Metadata["consumerGroup"] = fmt.Sprintf("%s-%s", eventSource.Namespace, componentName)
 			}
-			function := r.addEventSourceForFunction(eventSource.Namespace, eventSource.Name, SourceKindKafka, eventName, component, scaledObject)
+			function := r.addEventSourceForFunction(eventSource, SourceKindKafka, eventName, component, scaledObject)
 			function.SetLabels(map[string]string{EventBusTopicName: fmt.Sprintf(EventBusTopicNameTmpl, eventSource.Namespace, eventSource.Name, eventName)})
 			functions = append(functions, function)
 		}
@@ -289,12 +286,12 @@ func (r *EventSourceReconciler) handleEventSource(ctx context.Context, log logr.
 			metadataMap := spec.ConvertToMetadataMap()
 			component, err := spec.GenComponent(eventSource.Namespace, componentName, metadataMap)
 			if err != nil {
-				condition := openfunctionevent.CreateCondition(openfunctionevent.Error, metav1.ConditionFalse, openfunctionevent.ErrorGenerateComponent).SetMessage(err.Error())
+				condition := ofevent.CreateCondition(ofevent.Error, metav1.ConditionFalse, ofevent.ErrorGenerateComponent).SetMessage(err.Error())
 				eventSource.AddCondition(*condition)
 				log.Error(err, "Failed to generate EventSource component of Cron.", "namespace", eventSource.Namespace, "name", eventSource.Name)
 				return err
 			}
-			function := r.addEventSourceForFunction(eventSource.Namespace, eventSource.Name, SourceKindCron, eventName, component, nil)
+			function := r.addEventSourceForFunction(eventSource, SourceKindCron, eventName, component, nil)
 			function.SetLabels(map[string]string{EventBusTopicName: fmt.Sprintf(EventBusTopicNameTmpl, eventSource.Namespace, eventSource.Name, eventName)})
 			functions = append(functions, function)
 		}
@@ -302,34 +299,33 @@ func (r *EventSourceReconciler) handleEventSource(ctx context.Context, log logr.
 
 	for _, f := range functions {
 		l := f.GetLabels()
-		r.EventSourceConfig.EventSourceComponent = f.Spec.Serving.OpenFuncAsync.Dapr.Inputs[0].Name
 		r.EventSourceConfig.EventBusTopic = l[EventBusTopicName]
 
 		// Create the workload for EventSource.
-		if _, err := r.createOrUpdateEventSourceWorkload(ctx, log, eventSource, f); err != nil {
+		if err := r.createOrUpdateEventSourceWorkload(ctx, log, eventSource, f); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (r *EventSourceReconciler) createOrUpdateEventSourceWorkload(ctx context.Context, log logr.Logger, eventSource *openfunctionevent.EventSource, function *openfunctioncore.Function) (*openfunctioncore.Function, error) {
+func (r *EventSourceReconciler) createOrUpdateEventSourceWorkload(ctx context.Context, log logr.Logger, eventSource *ofevent.EventSource, function *ofcore.Function) error {
 	log = r.Log.WithName("createOrUpdateEventSourceWorkload")
 
 	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, function, r.mutateHandler(function, eventSource))
 	if err != nil {
-		condition := openfunctionevent.CreateCondition(openfunctionevent.Error, metav1.ConditionFalse, openfunctionevent.ErrorCreatingEventSourceWorkload).SetMessage(err.Error())
+		condition := ofevent.CreateCondition(ofevent.Error, metav1.ConditionFalse, ofevent.ErrorCreatingEventSourceWorkload).SetMessage(err.Error())
 		eventSource.AddCondition(*condition)
 		log.Error(err, "Failed to create or update EventSource handler", "namespace", eventSource.Namespace, "name", eventSource.Name)
-		return nil, err
+		return err
 	}
-	condition := openfunctionevent.CreateCondition(openfunctionevent.Created, metav1.ConditionTrue, openfunctionevent.EventSourceWorkloadCreated).SetMessage("EventSource workload is created")
+	condition := ofevent.CreateCondition(ofevent.Created, metav1.ConditionTrue, ofevent.EventSourceWorkloadCreated).SetMessage("EventSource workload is created")
 	eventSource.AddCondition(*condition)
 	log.Info("Create or update EventSource handler", "namespace", eventSource.Namespace, "name", eventSource.Name)
-	return function, nil
+	return nil
 }
 
-func (r *EventSourceReconciler) mutateHandler(function *openfunctioncore.Function, eventSource *openfunctionevent.EventSource) controllerutil.MutateFn {
+func (r *EventSourceReconciler) mutateHandler(function *ofcore.Function, eventSource *ofevent.EventSource) controllerutil.MutateFn {
 	return func() error {
 		l := map[string]string{
 			"openfunction.io/managed":  "true",
@@ -350,7 +346,7 @@ func (r *EventSourceReconciler) mutateHandler(function *openfunctioncore.Functio
 	}
 }
 
-func (r *EventSourceReconciler) mutateEventSource(eventSource *openfunctionevent.EventSource) controllerutil.MutateFn {
+func (r *EventSourceReconciler) mutateEventSource(eventSource *ofevent.EventSource) controllerutil.MutateFn {
 	return func() error {
 		if eventSource.GetLabels() == nil {
 			eventSource.SetLabels(make(map[string]string))
@@ -362,49 +358,26 @@ func (r *EventSourceReconciler) mutateEventSource(eventSource *openfunctionevent
 	}
 }
 
-func (r *EventSourceReconciler) initFunction() {
-	r.FunctionConfig = &openfunctioncore.Function{
-		Spec: openfunctioncore.FunctionSpec{
-			Image:   "zephyrfish/eventsource-handler:v2",
-			Serving: &openfunctioncore.ServingImpl{},
-		},
+func (r *EventSourceReconciler) addEventSourceForFunction(eventSource *ofevent.EventSource, sourceKind string, eventName string, component *componentsv1alpha1.Component, scaledObject *ofcore.KedaScaledObject) *ofcore.Function {
+	function := r.Function
+	function.Name = fmt.Sprintf(EventSourceWorkloadsNameTmpl, eventSource.Name, sourceKind, eventName)
+	function.Namespace = eventSource.Namespace
+	d := function.Spec.Serving.OpenFuncAsync.Dapr
+	di := &ofcore.DaprIO{
+		Name:      fmt.Sprintf(EventSourceInputNameTmpl, eventName),
+		Component: component.Name,
 	}
-
-	servingRuntime := openfunctioncore.OpenFuncAsync
-	version := "v1.0.0"
-	r.FunctionConfig.Spec.Version = &version
-	r.FunctionConfig.Spec.Serving.Runtime = &servingRuntime
-	r.FunctionConfig.Spec.Serving.OpenFuncAsync = &openfunctioncore.OpenFuncAsyncRuntime{
-		Dapr: &openfunctioncore.Dapr{
-			Annotations:   map[string]string{},
-			Components:    []openfunctioncore.DaprComponent{},
-			Subscriptions: []openfunctioncore.DaprSubscription{},
-			Inputs:        []*openfunctioncore.DaprIO{},
-			Outputs:       []*openfunctioncore.DaprIO{},
-		},
-		Keda: &openfunctioncore.Keda{},
+	d.Inputs = append(d.Inputs, di)
+	if r.EventSourceConfig.EventBusComponent != "" {
+		do := &ofcore.DaprIO{
+			Name:      fmt.Sprintf(EventBusOutputNameTmpl, eventSource.Name),
+			Component: r.EventSourceConfig.EventBusComponent,
+			Topic:     fmt.Sprintf(EventBusTopicNameTmpl, eventSource.Namespace, eventSource.Name, eventName),
+		}
+		d.Outputs = append(d.Outputs, do)
 	}
-
-	// If need to build the function image when creating EventSource, uncomment the following
-	//r.FunctionConfig.Spec.Build = &openfunctioncore.BuildImpl{}
-	//builder := "openfunctiondev/go115-builder:v0.2.0"
-	//revision := "main"
-	//subPath := "eventsource/function"
-	//r.FunctionConfig.Spec.Build.Builder = &builder
-	//r.FunctionConfig.Spec.Build.Env = map[string]string{"FUNC_NAME": "EventSourceHandler"}
-	//repo := &openfunctioncore.GitRepo{
-	//	Url:           "https://github.com/openfunction/events-handlers.git",
-	//	Revision:      &revision,
-	//	SourceSubPath: &subPath,
-	//}
-	//r.FunctionConfig.Spec.Build.SrcRepo = repo
-}
-
-func (r *EventSourceReconciler) addEventSourceForFunction(namespace string, eventsourceName string, sourceKind string, eventName string, component *componentsv1alpha1.Component, scaledObject *openfunctioncore.KedaScaledObject) *openfunctioncore.Function {
-	function := r.FunctionConfig
-	function.Name = fmt.Sprintf(EventSourceWorkloadsNameTmpl, eventsourceName, sourceKind, eventName)
-	function.Namespace = namespace
-	function = addDaprComponent(function, component, "input")
+	d.Components[component.Name] = &component.Spec
+	function.Spec.Serving.OpenFuncAsync.Dapr = d
 	function.Spec.Serving.OpenFuncAsync.Keda.ScaledObject = scaledObject
 	return function
 }
@@ -412,10 +385,9 @@ func (r *EventSourceReconciler) addEventSourceForFunction(namespace string, even
 // SetupWithManager sets up the controller with the Manager.
 func (r *EventSourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&openfunctionevent.EventSource{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Owns(&openfunctioncore.Function{}).
-		Watches(&source.Kind{Type: &openfunctionevent.EventBus{}}, handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
-			eventSourceList := &openfunctionevent.EventSourceList{}
+		For(&ofevent.EventSource{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		Watches(&source.Kind{Type: &ofevent.EventBus{}}, handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
+			eventSourceList := &ofevent.EventSourceList{}
 			c := mgr.GetClient()
 
 			err := c.List(context.TODO(), eventSourceList, &client.ListOptions{Namespace: object.GetNamespace()})
@@ -439,8 +411,8 @@ func (r *EventSourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			}
 			return reconcileRequests
 		})).
-		Watches(&source.Kind{Type: &openfunctionevent.ClusterEventBus{}}, handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
-			eventSourceList := &openfunctionevent.EventSourceList{}
+		Watches(&source.Kind{Type: &ofevent.ClusterEventBus{}}, handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
+			eventSourceList := &ofevent.EventSourceList{}
 			c := mgr.GetClient()
 
 			selector := labels.SelectorFromSet(labels.Set(map[string]string{EventBusNameLabel: object.GetName()}))
@@ -452,7 +424,7 @@ func (r *EventSourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			reconcileRequests := make([]reconcile.Request, len(eventSourceList.Items))
 			for _, eventSource := range eventSourceList.Items {
 				if &eventSource != nil {
-					var eventBus openfunctionevent.EventBus
+					var eventBus ofevent.EventBus
 					if err := c.Get(context.TODO(), client.ObjectKey{Namespace: eventSource.Namespace, Name: eventSource.Spec.EventBus}, &eventBus); err == nil {
 						continue
 					}
