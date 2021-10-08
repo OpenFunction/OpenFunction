@@ -24,19 +24,21 @@ const (
 	EventBusNameLabel          = "eventbus-name"
 	EventBusTopicName          = "eventbus-topic-name"
 
+	DefaultLogLevel = "info"
+
 	// Component Name Template
 
-	// EventSourceComponentNameTmpl => eventsource-{eventSourceName}-{sourceKind}-{eventName}
-	EventSourceComponentNameTmpl = "es-%s-%s-%s"
+	// EventSourceComponentNameTmpl => esc(EventSource Component)-{eventSourceName}-{sourceKind}-{eventName}
+	EventSourceComponentNameTmpl = "esc-%s-%s-%s"
 	// EventSourceBusComponentNameTmpl => ebfes(EventBus for EventSource)-{eventSourceName}
 	EventSourceBusComponentNameTmpl = "ebfes-%s"
-	// TriggerBusComponentNameTmpl => ebt(EventBus for Trigger)-{triggerName}
+	// TriggerBusComponentNameTmpl => ebft(EventBus for Trigger)-{triggerName}
 	TriggerBusComponentNameTmpl = "ebft-%s"
-	// SinkComponentNameTmpl => sink-{resourceName}-{sinkNamespace}-{sinkName}
+	// SinkComponentNameTmpl => ts-{resourceName}-{sinkNamespace}-{sinkName}
 	SinkComponentNameTmpl = "ts-%s-%s-%s"
 
-	// EventSourceWorkloadsNameTmpl => es(EventSource)-{eventSourceName}-{sourceKind}-{eventName}
-	EventSourceWorkloadsNameTmpl = "es-%s-%s-%s"
+	// EventSourceWorkloadsNameTmpl => esw(EventSource Workloads)-{eventSourceName}-{sourceKind}-{eventName}
+	EventSourceWorkloadsNameTmpl = "esw-%s-%s-%s"
 	// TriggerWorkloadsNameTmpl => t(Trigger)-{triggerName}
 	TriggerWorkloadsNameTmpl = "t-%s"
 	// EventBusTopicNameTmpl => {namespace}-{eventSourceName}-{eventName}
@@ -46,8 +48,6 @@ const (
 
 	// EventBusOutputNameTmpl => ebo(EventBus output)-{topicName}
 	EventBusOutputNameTmpl = "ebo-%s"
-	// EventBusInputNameTmpl => ebo(EventBus output)-{resourceName}
-	EventBusInputNameTmpl = "ebi-%s"
 	// SinkOutputNameTmpl => so(Sink output)-{sinkNamespace}-{sinkName}
 	SinkOutputNameTmpl = "so-%s-%s"
 	// EventSourceInputNameTmpl => esi(EventSource input)-{eventName}
@@ -66,12 +66,14 @@ type EventSourceConfig struct {
 	EventBusOutputName string `json:"eventBusOutputName,omitempty"`
 	EventBusTopic      string `json:"eventBusTopic,omitempty"`
 	SinkOutputName     string `json:"sinkOutputName,omitempty"`
+	LogLevel           string `json:"logLevel,omitempty"`
 }
 
 type TriggerConfig struct {
 	EventBusComponent string                 `json:"eventBusComponent,omitempty"`
 	Inputs            []*Input               `json:"inputs,omitempty"`
 	Subscribers       map[string]*Subscriber `json:"subscribers,omitempty"`
+	LogLevel          string                 `json:"logLevel,omitempty"`
 }
 
 type Input struct {
@@ -174,6 +176,8 @@ func createSinkComponent(ctx context.Context, c client.Client, log logr.Logger, 
 			Namespace: resource.GetNamespace(),
 		},
 	}
+
+	// We use Knative serving for handling the Sink by default.
 	var ksvc kservingv1.Service
 	if err := c.Get(ctx, types.NamespacedName{Namespace: sink.Ref.Namespace, Name: sink.Ref.Name}, &ksvc); err != nil {
 		log.Error(err, "Failed to find Knative Service", "namespace", sink.Ref.Namespace, "name", sink.Ref.Name)

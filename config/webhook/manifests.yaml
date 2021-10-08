@@ -12,7 +12,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-core-openfunction-io-v1alpha2-function
+      path: /convert
   failurePolicy: Fail
   name: mfunctions.of.io
   rules:

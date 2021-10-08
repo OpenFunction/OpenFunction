@@ -16,12 +16,12 @@ const (
 	ErrorToFindExistEventBus         ConditionReason = "ErrorToFindExistEventBus"
 	ErrorGenerateComponent           ConditionReason = "ErrorGenerateComponent"
 	ErrorGenerateScaledObject        ConditionReason = "ErrorGenerateScaledObject"
-	ErrorCreatingEventSourceWorkload ConditionReason = "ErrorCreatingEventSourceWorkload"
-	ErrorCreatingTriggerWorkload     ConditionReason = "ErrorCreatingTriggerWorkload"
+	ErrorCreatingEventSourceFunction ConditionReason = "ErrorCreatingEventSourceFunction"
+	ErrorCreatingTriggerFunction     ConditionReason = "ErrorCreatingTriggerFunction"
 	ErrorCreatingEventSource         ConditionReason = "ErrorCreatingEventSource"
 	ErrorCreatingTrigger             ConditionReason = "ErrorCreatingTrigger"
-	EventSourceWorkloadCreated       ConditionReason = "EventSourceWorkloadCreated"
-	TriggerWorkloadCreated           ConditionReason = "TriggerWorkloadCreated"
+	EventSourceFunctionCreated       ConditionReason = "EventSourceFunctionCreated"
+	TriggerFunctionCreated           ConditionReason = "TriggerFunctionCreated"
 	PendingCreation                  ConditionReason = "PendingCreation"
 	EventSourceIsReady               ConditionReason = "EventSourceIsReady"
 	TriggerIsReady                   ConditionReason = "TriggerIsReady"
@@ -51,7 +51,7 @@ const (
 type CreationStatus string
 
 // ConditionReason describes the reason why the condition transitioned
-// +kubebuilder:validation:Enum=EventSourceIsReady;ErrorConfiguration;ErrorToFindExistEventBus;ErrorGenerateComponent;ErrorGenerateScaledObject;PendingCreation;ErrorToFindTriggerSubscribers;ErrorCreatingTrigger;TriggerIsReady;ErrorCreatingTriggerWorkload;TriggerWorkloadCreated
+// +kubebuilder:validation:Enum=EventSourceFunctionCreated;ErrorCreatingEventSource;ErrorCreatingEventSourceFunction;EventSourceIsReady;ErrorConfiguration;ErrorToFindExistEventBus;ErrorGenerateComponent;ErrorGenerateScaledObject;PendingCreation;ErrorToFindTriggerSubscribers;ErrorCreatingTrigger;TriggerIsReady;ErrorCreatingTriggerFunction;TriggerFunctionCreated
 type ConditionReason string
 
 type Condition struct {

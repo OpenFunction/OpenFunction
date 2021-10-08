@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	openfunctioncontext "github.com/OpenFunction/functions-framework-go/openfunction-context"
-
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,9 +44,7 @@ import (
 )
 
 const (
-	triggerContainerName  = "trigger"
-	triggerHandlerImage   = "openfunctiondev/trigger-handler:v1"
-	triggerHandlerImageV2 = "zephyrfish/trigger-handler:v2.1"
+	triggerHandlerImage = "openfunctiondev/trigger-handler:v2"
 )
 
 // TriggerReconciler reconciles a Trigger object
@@ -98,18 +95,19 @@ func (r *TriggerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	trigger := &ofevent.Trigger{}
 	r.TriggerConfig = &TriggerConfig{}
 	r.TriggerConfig.Subscribers = map[string]*Subscriber{}
+	r.TriggerConfig.LogLevel = DefaultLogLevel
 
 	if err := r.Get(ctx, req.NamespacedName, trigger); err != nil {
 		log.V(1).Info("Trigger deleted", "error", err)
 		return ctrl.Result{}, util.IgnoreNotFound(err)
 	}
 
-	r.Function = InitFunction(triggerHandlerImageV2)
+	// Generate the trigger function instance with image triggerHandlerImage.
+	r.Function = InitFunction(triggerHandlerImage)
 
 	if err := r.createOrUpdateTrigger(ctx, log, trigger); err != nil {
 		log.Error(err, "Failed to create or update trigger",
-			"namespace", trigger.Namespace, "name", trigger.Name,
-		)
+			"namespace", trigger.Namespace, "name", trigger.Name)
 		return ctrl.Result{}, err
 	}
 
@@ -124,7 +122,7 @@ func (r *TriggerReconciler) createOrUpdateTrigger(ctx context.Context, log logr.
 		ofevent.Pending, metav1.ConditionUnknown, ofevent.PendingCreation,
 	).SetMessage("Identified Trigger creation signal"))
 
-	// Handle EventBus reconcile.
+	// Handle EventBus(ClusterEventBus) reconcile.
 	if trigger.Spec.EventBus != "" {
 		if err := r.handleEventBus(ctx, log, trigger); err != nil {
 			return err
@@ -136,8 +134,7 @@ func (r *TriggerReconciler) createOrUpdateTrigger(ctx context.Context, log logr.
 		).SetMessage(err.Error())
 		trigger.AddCondition(*condition)
 		log.Error(err, "Failed to find event bus configuration.",
-			"namespace", trigger.Namespace, "name", trigger.Name,
-		)
+			"namespace", trigger.Namespace, "name", trigger.Name)
 		return err
 	}
 
@@ -146,8 +143,8 @@ func (r *TriggerReconciler) createOrUpdateTrigger(ctx context.Context, log logr.
 		return err
 	}
 
-	// Handle Trigger workload reconcile
-	if err := r.createOrUpdateTriggerWorkload(ctx, log, trigger); err != nil {
+	// Handle Trigger function reconcile
+	if err := r.createOrUpdateTriggerFunction(ctx, log, trigger); err != nil {
 		return err
 	}
 
@@ -158,9 +155,7 @@ func (r *TriggerReconciler) createOrUpdateTrigger(ctx context.Context, log logr.
 		).SetMessage(err.Error())
 		trigger.AddCondition(*condition)
 		log.Error(err, "Failed to create or update Trigger",
-			"namespace", trigger.Namespace,
-			"name", trigger.Name,
-		)
+			"namespace", trigger.Namespace, "name", trigger.Name)
 		return err
 	}
 	condition := ofevent.CreateCondition(
@@ -168,19 +163,16 @@ func (r *TriggerReconciler) createOrUpdateTrigger(ctx context.Context, log logr.
 	).SetMessage("Trigger is ready.")
 	trigger.AddCondition(*condition)
 	trigger.SaveStatus(ctx, log, r.Client)
-	log.Info("Trigger reconcile success.",
-		"namespace", trigger.Namespace,
-		"name", trigger.Name,
-	)
+	log.Info("Trigger reconcile success.", "namespace", trigger.Namespace, "name", trigger.Name)
 	return nil
 }
 
 func (r *TriggerReconciler) handleEventBus(ctx context.Context, log logr.Logger, trigger *ofevent.Trigger) error {
-
-	// Retrieve the specification of EventBus associated with the Trigger
 	var eventBusSpec ofevent.EventBusSpec
+	// Retrieve the specification of EventBus associated with the Trigger.
 	eventBus := retrieveEventBus(ctx, r.Client, trigger.Namespace, trigger.Spec.EventBus)
 	if eventBus == nil {
+		// Retrieve the specification of ClusterEventBus associated with the Trigger.
 		clusterEventBus := retrieveClusterEventBus(ctx, r.Client, trigger.Spec.EventBus)
 		if clusterEventBus == nil {
 			err := errors.New("cannot retrieve eventBus or clusterEventBus")
@@ -188,11 +180,8 @@ func (r *TriggerReconciler) handleEventBus(ctx context.Context, log logr.Logger,
 				ofevent.Error, metav1.ConditionFalse, ofevent.ErrorToFindExistEventBus,
 			).SetMessage(err.Error())
 			trigger.AddCondition(*condition)
-			log.Error(err,
-				"Neither eventBus nor clusterEventBus exists.",
-				"namespace", trigger.Namespace,
-				"name", trigger.Name,
-			)
+			log.Error(err, "Neither eventBus nor clusterEventBus exists.",
+				"namespace", trigger.Namespace, "name", trigger.Name)
 			return err
 		} else {
 			eventBusSpec = clusterEventBus.Spec
@@ -205,7 +194,7 @@ func (r *TriggerReconciler) handleEventBus(ctx context.Context, log logr.Logger,
 	consumerID := fmt.Sprintf("%s-%s", trigger.Namespace, componentName)
 	var subjects []string
 
-	// Set TriggerConfig.EventBusComponentName and TriggerConfig.EventBusTopics.
+	// Set TriggerConfig.
 	r.TriggerConfig.EventBusComponent = componentName
 	for inputName, input := range trigger.Spec.Inputs {
 		in := input
@@ -221,9 +210,9 @@ func (r *TriggerReconciler) handleEventBus(ctx context.Context, log logr.Logger,
 		subjects = append(subjects, fmt.Sprintf(EventBusTopicNameTmpl, in.Namespace, in.EventSource, in.Event))
 	}
 
-	// Generate a dapr component based on the specification of EventBus.
+	// Generate a dapr component based on the specification of EventBus(ClusterEventBus).
 	if eventBusSpec.NatsStreaming != nil {
-		// Create the dapr component for Trigger to retrieve event from EventBus.
+		// Create the dapr component for Trigger to retrieve event from EventBus(ClusterEventBus).
 		// We need to assign a separate consumerID name to each nats streaming component
 		metadataMap := eventBusSpec.NatsStreaming.ConvertToMetadataMap()
 		metadataMap = append(metadataMap, map[string]interface{}{
@@ -236,24 +225,20 @@ func (r *TriggerReconciler) handleEventBus(ctx context.Context, log logr.Logger,
 				ofevent.Error, metav1.ConditionFalse, ofevent.ErrorGenerateComponent,
 			).SetMessage(err.Error())
 			trigger.AddCondition(*condition)
-			log.Error(err, "Failed to generate EventBus component for Nats Streaming.",
-				"namespace", trigger.Namespace,
-				"name", trigger.Name,
-			)
+			log.Error(err, "Failed to generate eventBus component for Nats Streaming.",
+				"name", trigger.Name)
 			return err
 		}
 
-		// Generate keda scaledObject for Nats Streaming EventBus.
+		// Generate Keda scaledObject for Nats Streaming EventBus.
 		scaledObject, err := eventBusSpec.NatsStreaming.GenEventBusScaledObject(subjects, consumerID)
 		if err != nil {
 			condition := ofevent.CreateCondition(
 				ofevent.Error, metav1.ConditionFalse, ofevent.ErrorGenerateScaledObject,
 			).SetMessage(err.Error())
 			trigger.AddCondition(*condition)
-			log.Error(err, "Failed to generate EventBus scaledObject for Nats Streaming.",
-				"namespace", trigger.Namespace,
-				"name", trigger.Name,
-			)
+			log.Error(err, "Failed to generate eventBus scaledObject for Nats Streaming.",
+				"namespace", trigger.Namespace, "name", trigger.Name)
 		}
 		r.Function = r.addEventBusForFunction(trigger, component, subjects, scaledObject)
 	}
@@ -292,9 +277,7 @@ func (r *TriggerReconciler) handleSubscriber(ctx context.Context, log logr.Logge
 						).SetMessage(err.Error())
 						trigger.AddCondition(*condition)
 						log.Error(err, "Failed to generate Trigger component for subscriber.",
-							"namespace", trigger.Namespace,
-							"name", trigger.Name,
-						)
+							"namespace", trigger.Namespace, "name", trigger.Name)
 						return err
 					}
 					if function := addSinkForFunction(s.SinkOutputName, r.Function, component); function != nil {
@@ -314,10 +297,8 @@ func (r *TriggerReconciler) handleSubscriber(ctx context.Context, log logr.Logge
 							ofevent.Error, metav1.ConditionFalse, ofevent.ErrorGenerateComponent,
 						).SetMessage(err.Error())
 						trigger.AddCondition(*condition)
-						log.Error(err, "Failed to generate Trigger component for subscriber.",
-							"namespace", trigger.Namespace,
-							"name", trigger.Name,
-						)
+						log.Error(err, "Failed to generate trigger component for subscriber.",
+							"namespace", trigger.Namespace, "name", trigger.Name, "sinkName", sub.Sink.Ref.Name)
 						return err
 					}
 					if function := addSinkForFunction(s.SinkOutputName, r.Function, component); function != nil {
@@ -368,39 +349,33 @@ func (r *TriggerReconciler) handleSubscriber(ctx context.Context, log logr.Logge
 		).SetMessage(err.Error())
 		trigger.AddCondition(*condition)
 		log.Error(err, "Failed to find subscribers for Trigger.",
-			"namespace", trigger.Namespace,
-			"name", trigger.Name,
-		)
+			"namespace", trigger.Namespace, "name", trigger.Name)
 		return err
 	}
 	return nil
 }
 
-func (r *TriggerReconciler) createOrUpdateTriggerWorkload(ctx context.Context, log logr.Logger, trigger *ofevent.Trigger) error {
-	log = r.Log.WithName("createOrUpdateTriggerWorkload")
+func (r *TriggerReconciler) createOrUpdateTriggerFunction(ctx context.Context, log logr.Logger, trigger *ofevent.Trigger) error {
+	log = r.Log.WithName("createOrUpdateTriggerFunction")
 
 	function := r.Function
 
 	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, function, r.mutateHandler(function, trigger))
 	if err != nil {
 		condition := ofevent.CreateCondition(
-			ofevent.Error, metav1.ConditionFalse, ofevent.ErrorCreatingTriggerWorkload,
+			ofevent.Error, metav1.ConditionFalse, ofevent.ErrorCreatingTriggerFunction,
 		).SetMessage(err.Error())
 		trigger.AddCondition(*condition)
-		log.Error(err, "Failed to create or update Trigger workload",
-			"namespace", trigger.Namespace,
-			"name", trigger.Name,
-		)
+		log.Error(err, "Failed to create or update Trigger function",
+			"namespace", trigger.Namespace, "name", trigger.Name)
 		return err
 	}
 	condition := ofevent.CreateCondition(
-		ofevent.Created, metav1.ConditionTrue, ofevent.TriggerWorkloadCreated,
-	).SetMessage("Trigger workload is created")
+		ofevent.Created, metav1.ConditionTrue, ofevent.TriggerFunctionCreated,
+	).SetMessage("Trigger function is created")
 	trigger.AddCondition(*condition)
-	log.Info("Create or update Trigger workload",
-		"namespace", trigger.Namespace,
-		"name", trigger.Name,
-	)
+	log.Info("Create or update Trigger function",
+		"namespace", trigger.Namespace, "name", trigger.Name)
 	return nil
 }
 

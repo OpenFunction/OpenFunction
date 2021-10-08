@@ -6644,7 +6644,8 @@ spec:
                               description: The name of DaprIO.
                               type: string
                             operation:
-                              description: Operation for output
+                              description: Operation field tells the Dapr component
+                                which operation it should perform.
                               type: string
                             params:
                               additionalProperties:
@@ -6679,7 +6680,8 @@ spec:
                               description: The name of DaprIO.
                               type: string
                             operation:
-                              description: Operation for output
+                              description: Operation field tells the Dapr component
+                                which operation it should perform.
                               type: string
                             params:
                               additionalProperties:

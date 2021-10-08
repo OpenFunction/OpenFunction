@@ -48,6 +48,96 @@ spec:
           spec:
             description: EventSourceSpec defines the desired state of EventSource
             properties:
+              build:
+                description: Information needed to build a function. The build step
+                  will be skipped if Build is nil.
+                properties:
+                  builder:
+                    description: Builder refers to the image containing the build
+                      tools to build the source code.
+                    type: string
+                  builderCredentials:
+                    description: BuilderCredentials references a Secret that contains
+                      credentials to access the builder image repository.
+                    properties:
+                      name:
+                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                        type: string
+                    type: object
+                  dockerfile:
+                    description: Dockerfile is the path to the Dockerfile used by
+                      build strategies that rely on the Dockerfile to build an image.
+                    type: string
+                  env:
+                    additionalProperties:
+                      type: string
+                    description: Environment variables to pass to the builder.
+                    type: object
+                  params:
+                    additionalProperties:
+                      type: string
+                    description: 'Params is a list of key/value that could be used
+                      to set strategy parameters. When using _params_, users should
+                      avoid: Defining a parameter name that doesn''t match one of
+                      the `spec.parameters` defined in the `BuildStrategy`. Defining
+                      a parameter name that collides with the Shipwright reserved
+                      parameters including BUILDER_IMAGE,DOCKERFILE,CONTEXT_DIR and
+                      any name starting with shp-.'
+                    type: object
+                  shipwright:
+                    description: The configuration for the `Shipwright` build engine.
+                    properties:
+                      strategy:
+                        description: Strategy references the BuildStrategy to use
+                          to build the image.
+                        properties:
+                          kind:
+                            description: BuildStrategyKind indicates the kind of the
+                              build strategy BuildStrategy or ClusterBuildStrategy,
+                              default to BuildStrategy.
+                            type: string
+                          name:
+                            description: 'Name of the referent; More info: http://kubernetes.io/docs/user-guide/identifiers#names'
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      timeout:
+                        description: Timeout defines the maximum amount of time the
+                          Build should take to execute.
+                        format: duration
+                        type: string
+                    type: object
+                  srcRepo:
+                    description: Function Source code repository
+                    properties:
+                      credentials:
+                        description: Credentials references a Secret that contains
+                          credentials to access the repository.
+                        properties:
+                          name:
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            type: string
+                        type: object
+                      revision:
+                        description: Git revision to check out (branch, tag, sha,
+                          ref…) (default:"")
+                        type: string
+                      sourceSubPath:
+                        description: A subpath within the `source` input where the
+                          source to build is located.
+                        type: string
+                      url:
+                        description: Git url to clone
+                        type: string
+                    required:
+                    - url
+                    type: object
+                required:
+                - srcRepo
+                type: object
               cron:
                 additionalProperties:
                   properties:
@@ -239,9 +329,13 @@ spec:
                           required:
                           - name
                           type: object
+                        consumerGroup:
+                          type: string
                         cooldownPeriod:
                           format: int32
                           type: integer
+                        lagThreshold:
+                          type: string
                         maxReplicaCount:
                           format: int32
                           type: integer
@@ -255,8 +349,10 @@ spec:
                         pollingInterval:
                           format: int32
                           type: integer
-                        workloadType:
+                        topic:
                           type: string
+                      required:
+                      - lagThreshold
                       type: object
                     topic:
                       type: string
@@ -363,15 +459,20 @@ spec:
                     reason:
                       description: The reason for the condition's last transition.
                       enum:
+                      - EventSourceFunctionCreated
+                      - ErrorCreatingEventSource
+                      - ErrorCreatingEventSourceFunction
+                      - EventSourceIsReady
                       - ErrorConfiguration
                       - ErrorToFindExistEventBus
                       - ErrorGenerateComponent
                       - ErrorGenerateScaledObject
-                      - ErrorCreatingEventSourceWorkload
-                      - ErrorCreatingEventSource
-                      - EventSourceWorkloadCreated
                       - PendingCreation
-                      - EventSourceIsReady
+                      - ErrorToFindTriggerSubscribers
+                      - ErrorCreatingTrigger
+                      - TriggerIsReady
+                      - ErrorCreatingTriggerFunction
+                      - TriggerFunctionCreated
                       type: string
                     status:
                       description: Status of the condition, one of True, False, Unknown.

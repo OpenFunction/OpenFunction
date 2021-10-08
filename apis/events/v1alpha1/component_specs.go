@@ -22,7 +22,6 @@ const (
 )
 
 type GenericScaleOption struct {
-	WorkloadType    string                            `json:"workloadType,omitempty"`
 	PollingInterval *int32                            `json:"pollingInterval,omitempty"`
 	CooldownPeriod  *int32                            `json:"cooldownPeriod,omitempty"`
 	MinReplicaCount *int32                            `json:"minReplicaCount,omitempty"`
@@ -54,7 +53,7 @@ type NatsStreamingScaleOption struct {
 	*GenericScaleOption          `json:",inline"`
 	NatsServerMonitoringEndpoint string `json:"natsServerMonitoringEndpoint"`
 	QueueGroup                   string `json:"queueGroup,omitempty"`
-	DurableName                  string `json:"durableName"`
+	DurableName                  string `json:"durableName,omitempty"`
 	Subject                      string `json:"subject,omitempty"`
 	LagThreshold                 string `json:"lagThreshold"`
 }
@@ -163,13 +162,20 @@ func (spec *NatsStreamingSpec) GenEventBusScaledObject(subjects []string, consum
 }
 
 type KafkaSpec struct {
-	Brokers         string              `json:"brokers"`
-	AuthRequired    bool                `json:"authRequired"`
-	Topic           string              `json:"topic,omitempty"`
-	SaslUsername    *string             `json:"saslUsername,omitempty"`
-	SaslPassword    *string             `json:"saslPassword,omitempty"`
-	MaxMessageBytes *int64              `json:"maxMessageBytes,omitempty"`
-	ScaleOption     *GenericScaleOption `json:"scaleOption,omitempty"`
+	Brokers         string            `json:"brokers"`
+	AuthRequired    bool              `json:"authRequired"`
+	Topic           string            `json:"topic,omitempty"`
+	SaslUsername    *string           `json:"saslUsername,omitempty"`
+	SaslPassword    *string           `json:"saslPassword,omitempty"`
+	MaxMessageBytes *int64            `json:"maxMessageBytes,omitempty"`
+	ScaleOption     *KafkaScaleOption `json:"scaleOption,omitempty"`
+}
+
+type KafkaScaleOption struct {
+	*GenericScaleOption `json:",inline"`
+	ConsumerGroup       string `json:"consumerGroup,omitempty"`
+	Topic               string `json:"topic,omitempty"`
+	LagThreshold        string `json:"lagThreshold"`
 }
 
 func (spec *KafkaSpec) ConvertToMetadataMap() []map[string]interface{} {
@@ -233,12 +239,13 @@ func (spec *KafkaSpec) GenScaledObject() (*ofcore.KedaScaledObject, error) {
 
 	if spec.ScaleOption.Metadata != nil {
 		trigger.Metadata = spec.ScaleOption.Metadata
-		trigger.Metadata["bootstrapServers"] = spec.Brokers
-		trigger.Metadata["topic"] = spec.Topic
-		scaledObject.Triggers = []kedav1alpha1.ScaleTriggers{*trigger}
-		return scaledObject, nil
+	} else {
+		trigger.Metadata = map[string]string{}
 	}
-	return nil, errors.New("scaleOption metadata is empty")
+	trigger.Metadata["bootstrapServers"] = spec.Brokers
+	trigger.Metadata["topic"] = spec.Topic
+	scaledObject.Triggers = []kedav1alpha1.ScaleTriggers{*trigger}
+	return scaledObject, nil
 }
 
 type RedisSpec struct {

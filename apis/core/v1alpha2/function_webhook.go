@@ -32,8 +32,7 @@ func (r *Function) SetupWebhookWithManager(mgr ctrl.Manager) error {
 }
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// +kubebuilder:webhook:path=/convert,mutating=true,failurePolicy=fail,groups=core.openfunction.io,resources=functions,verbs=create;update,versions=v1alpha2,name=mfunctions.of.io,sideEffects=None,admissionReviewVersions=v1alpha2
-
+// +kubebuilder:webhook:path=/mutate-core-openfunction-io-v1alpha2-function,mutating=true,failurePolicy=fail,groups=core.openfunction.io,resources=functions,verbs=create;update,versions=v1alpha2,name=mfunctions.of.io,sideEffects=None,admissionReviewVersions=v1
 var _ webhook.Defaulter = &Function{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
