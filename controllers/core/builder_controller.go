@@ -25,7 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	openfunction "github.com/openfunction/apis/core/v1alpha1"
+	openfunction "github.com/openfunction/apis/core/v1alpha2"
 	"github.com/openfunction/pkg/core"
 	"github.com/openfunction/pkg/core/builder/shipwright"
 	"github.com/openfunction/pkg/util"

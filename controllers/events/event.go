@@ -8,75 +8,72 @@ import (
 
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	"github.com/go-logr/logr"
-	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
 	kservingv1 "knative.dev/serving/pkg/apis/serving/v1"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	openfunction "github.com/openfunction/apis/events/v1alpha1"
-	openfunctionevent "github.com/openfunction/apis/events/v1alpha1"
+	ofcore "github.com/openfunction/apis/core/v1alpha2"
+	ofevent "github.com/openfunction/apis/events/v1alpha1"
 )
 
 const (
 	EventSourceControlledLabel = "controlled-by-eventsource"
 	TriggerControlledLabel     = "controlled-by-trigger"
 	EventBusNameLabel          = "eventbus-name"
+	EventBusTopicName          = "eventbus-topic-name"
 
-	// EventSourceComponentNameTmpl => eventsource-{eventSourceName}-{sourceKind}-{eventName}
-	EventSourceComponentNameTmpl = "eventsource-%s-%s-%s"
-	// EventSourceSinkComponentNameTmpl => eventsource-sink-{eventSourceName}
-	EventSourceSinkComponentNameTmpl = "eventsource-sink-%s"
-	// EventSourceBusComponentNameTmpl => eventbus-eventsource-{eventSourceName}
-	EventSourceBusComponentNameTmpl = "eventbus-eventsource-%s"
-	// TriggerBusComponentNameTmpl => eventbus-trigger-{triggerName}
-	TriggerBusComponentNameTmpl = "eventbus-trigger-%s"
-	// TriggerSinkComponentNameTmpl => trigger-sink-{triggerName}-{sinkNamespace}-{sinkName}
-	TriggerSinkComponentNameTmpl = "trigger-sink-%s-%s-%s"
-	// EventSourceWorkloadsNameTmpl => eventsource-{eventSourceName}-{sourceKind}-{eventName}
-	EventSourceWorkloadsNameTmpl = "eventsource-%s-%s-%s"
-	// TriggerWorkloadsNameTmpl => trigger-{triggerName}
-	TriggerWorkloadsNameTmpl = "trigger-%s"
+	DefaultLogLevel = "info"
+
+	// Component Name Template
+
+	// EventSourceComponentNameTmpl => esc(EventSource Component)-{eventSourceName}-{sourceKind}-{eventName}
+	EventSourceComponentNameTmpl = "esc-%s-%s-%s"
+	// EventSourceBusComponentNameTmpl => ebfes(EventBus for EventSource)-{eventSourceName}
+	EventSourceBusComponentNameTmpl = "ebfes-%s"
+	// TriggerBusComponentNameTmpl => ebft(EventBus for Trigger)-{triggerName}
+	TriggerBusComponentNameTmpl = "ebft-%s"
+	// SinkComponentNameTmpl => ts-{resourceName}-{sinkNamespace}-{sinkName}
+	SinkComponentNameTmpl = "ts-%s-%s-%s"
+
+	// EventSourceWorkloadsNameTmpl => esw(EventSource Workloads)-{eventSourceName}-{sourceKind}-{eventName}
+	EventSourceWorkloadsNameTmpl = "esw-%s-%s-%s"
+	// TriggerWorkloadsNameTmpl => t(Trigger)-{triggerName}
+	TriggerWorkloadsNameTmpl = "t-%s"
 	// EventBusTopicNameTmpl => {namespace}-{eventSourceName}-{eventName}
 	EventBusTopicNameTmpl = "%s-%s-%s"
+
+	// DaprIO Name Template
+
+	// EventBusOutputNameTmpl => ebo(EventBus output)-{topicName}
+	EventBusOutputNameTmpl = "ebo-%s"
+	// SinkOutputNameTmpl => so(Sink output)-{sinkNamespace}-{sinkName}
+	SinkOutputNameTmpl = "so-%s-%s"
+	// EventSourceInputNameTmpl => esi(EventSource input)-{eventName}
+	EventSourceInputNameTmpl = "esi-%s"
+	// TriggerInputNameTmpl => ti(Trigger input)-{topicName}
+	TriggerInputNameTmpl = "ti-%s"
 
 	// SourceKindKafka indicates kafka event source
 	SourceKindKafka = "kafka"
 	// SourceKindCron indicates cron (scheduler) event source
 	SourceKindCron = "cron"
-	// SourceKindRedis indicates redis event source
-	SourceKindRedis = "redis"
-
-	Pending = "Pending"
-	Running = "Running"
-	Error   = "Error"
-
-	ResourceTypeComponent = "Component"
-	ResourceTypeWorkload  = "Workload"
 )
 
 type EventSourceConfig struct {
-	EventSourceComponent  string `json:"eventSourceComponent"`
-	EventSourceTopic      string `json:"eventSourceTopic,omitempty"`
-	EventBusComponent     string `json:"eventBusComponent,omitempty"`
-	EventBusTopic         string `json:"eventBusTopic,omitempty"`
-	SinkComponent         string `json:"sinkComponent,omitempty"`
-	EventSourceSpecEncode string `json:"eventSourceSpecEncode,omitempty"`
-	EventBusSpecEncode    string `json:"eventBusSpecEncode,omitempty"`
-	SinkSpecEncode        string `json:"sinkSpecEncode,omitempty"`
+	EventBusComponent  string `json:"eventBusComponent,omitempty"`
+	EventBusOutputName string `json:"eventBusOutputName,omitempty"`
+	EventBusTopic      string `json:"eventBusTopic,omitempty"`
+	SinkOutputName     string `json:"sinkOutputName,omitempty"`
+	LogLevel           string `json:"logLevel,omitempty"`
 }
 
 type TriggerConfig struct {
-	EventBusComponent  string                 `json:"eventBusComponent"`
-	Inputs             []*Input               `json:"inputs,omitempty"`
-	Subscribers        map[string]*Subscriber `json:"subscribers,omitempty"`
-	EventBusSpecEncode string                 `json:"eventBusSpecEncode,omitempty"`
-	SinkSpecEncode     string                 `json:"sinkSpecEncode,omitempty"`
+	EventBusComponent string                 `json:"eventBusComponent,omitempty"`
+	Inputs            []*Input               `json:"inputs,omitempty"`
+	Subscribers       map[string]*Subscriber `json:"subscribers,omitempty"`
+	LogLevel          string                 `json:"logLevel,omitempty"`
 }
 
 type Input struct {
@@ -87,28 +84,10 @@ type Input struct {
 }
 
 type Subscriber struct {
-	SinkComponent   string `json:"sinkComponent,omitempty"`
-	DLSinkComponent string `json:"deadLetterSinkComponent,omitempty"`
-	Topic           string `json:"topic,omitempty"`
-	DLTopic         string `json:"deadLetterTopic,omitempty"`
-}
-
-type ControlledResources struct {
-	Components map[string]*ControlledComponent `json:"components,omitempty"`
-	Workloads  map[string]*ControlledWorkload  `json:"workloads,omitempty"`
-}
-
-type ControlledComponent struct {
-	IsDeprecated bool                          `json:"isDeprecated"`
-	Object       *componentsv1alpha1.Component `json:"object"`
-	Status       string                        `json:"status,omitempty"`
-}
-
-type ControlledWorkload struct {
-	Name         string             `json:"name"`
-	IsDeprecated bool               `json:"isDeprecated"`
-	Object       *appsv1.Deployment `json:"object"`
-	Status       string             `json:"status,omitempty"`
+	SinkOutputName       string `json:"sinkOutputName,omitempty"`
+	DLSinkOutputName     string `json:"dlSinkOutputName,omitempty"`
+	EventBusOutputName   string `json:"eventBusOutputName,omitempty"`
+	DLEventBusOutputName string `json:"dlEventBusOutputName,omitempty"`
 }
 
 func (e *EventSourceConfig) EncodeConfig() (string, error) {
@@ -163,95 +142,7 @@ func decodeConfig(encodedConfig string) ([]byte, error) {
 	return nil, errors.New("string length is zero")
 }
 
-func (r *ControlledResources) SetResourceStatusToActive(name string, resourceType string) {
-	switch resourceType {
-	case ResourceTypeComponent:
-		if component, ok := r.Components[name]; ok {
-			component.IsDeprecated = false
-		}
-	case ResourceTypeWorkload:
-		if workload, ok := r.Workloads[name]; ok {
-			workload.IsDeprecated = false
-		}
-	}
-}
-
-func (r *ControlledResources) SetResourceStatus(name string, resourceType string, status string) {
-	switch resourceType {
-	case ResourceTypeComponent:
-		if component, ok := r.Components[name]; ok {
-			component.Status = status
-		}
-	case ResourceTypeWorkload:
-		if workload, ok := r.Workloads[name]; ok {
-			workload.Status = status
-		}
-	}
-}
-
-func (r *ControlledResources) GenResourceStatistics(resourceType string) string {
-	total := 0
-	running := 0
-	switch resourceType {
-	case ResourceTypeComponent:
-		for _, component := range r.Components {
-			if !component.IsDeprecated {
-				total += 1
-				if component.Status == Running {
-					running += 1
-				}
-			}
-		}
-	case ResourceTypeWorkload:
-		for _, workload := range r.Workloads {
-			if !workload.IsDeprecated {
-				total += 1
-				if workload.Status == Running {
-					running += 1
-				}
-			}
-		}
-	}
-	return fmt.Sprintf("%d/%d", running, total)
-}
-
-func (r *ControlledResources) GenResourceStatus(resourceType string) []*openfunctionevent.OwnedResourceStatus {
-	var statuses []*openfunctionevent.OwnedResourceStatus
-
-	switch resourceType {
-	case ResourceTypeComponent:
-		for name, component := range r.Components {
-			if !component.IsDeprecated {
-				statuses = append(statuses, &openfunctionevent.OwnedResourceStatus{State: component.Status, Name: name})
-			}
-		}
-	case ResourceTypeWorkload:
-		for name, workload := range r.Workloads {
-			if !workload.IsDeprecated {
-				statuses = append(statuses, &openfunctionevent.OwnedResourceStatus{State: workload.Status, Name: name})
-			}
-		}
-	}
-	return statuses
-}
-
-func mutateDaprComponent(scheme *runtime.Scheme, component *componentsv1alpha1.Component, spec *componentsv1alpha1.ComponentSpec, object v1.Object) controllerutil.MutateFn {
-	return func() error {
-		var controlledByLabel string
-		switch object.(type) {
-		case *openfunctionevent.EventSource:
-			controlledByLabel = EventSourceControlledLabel
-		case *openfunctionevent.Trigger:
-			controlledByLabel = TriggerControlledLabel
-		}
-		component.Spec = *spec
-		component.SetLabels(map[string]string{controlledByLabel: object.GetName()})
-		component.SetOwnerReferences(nil)
-		return ctrl.SetControllerReference(object, component, scheme)
-	}
-}
-
-func newSinkComponentSpec(c client.Client, log logr.Logger, ref *openfunction.Reference) (*componentsv1alpha1.ComponentSpec, error) {
+func newSinkComponentSpec(c client.Client, log logr.Logger, ref *ofevent.Reference) (*componentsv1alpha1.ComponentSpec, error) {
 	ctx := context.Background()
 	sinkNamespace := ref.Namespace
 	sinkName := ref.Name
@@ -278,59 +169,90 @@ func newSinkComponentSpec(c client.Client, log logr.Logger, ref *openfunction.Re
 	return &spec, nil
 }
 
-func retrieveEventBus(ctx context.Context, c client.Client, eventBusNamespace string, eventBusName string) *openfunctionevent.EventBus {
-	var eventBus openfunctionevent.EventBus
+func createSinkComponent(ctx context.Context, c client.Client, log logr.Logger, resource client.Object, sink *ofevent.SinkSpec) (*componentsv1alpha1.Component, error) {
+	component := &componentsv1alpha1.Component{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf(SinkComponentNameTmpl, resource.GetName(), sink.Ref.Namespace, sink.Ref.Name),
+			Namespace: resource.GetNamespace(),
+		},
+	}
+
+	// We use Knative serving for handling the Sink by default.
+	var ksvc kservingv1.Service
+	if err := c.Get(ctx, types.NamespacedName{Namespace: sink.Ref.Namespace, Name: sink.Ref.Name}, &ksvc); err != nil {
+		log.Error(err, "Failed to find Knative Service", "namespace", sink.Ref.Namespace, "name", sink.Ref.Name)
+		return nil, err
+	}
+	var spec componentsv1alpha1.ComponentSpec
+	specMap := map[string]interface{}{
+		"version": "v1",
+		"type":    "bindings.http",
+		"metadata": []map[string]string{
+			{"name": "url", "value": ksvc.Status.URL.String()},
+		},
+	}
+	specBytes, err := json.Marshal(specMap)
+	if err != nil {
+		return nil, err
+	}
+	if err = json.Unmarshal(specBytes, &spec); err != nil {
+		return nil, err
+	}
+	component.Spec = spec
+	return component, nil
+}
+
+func retrieveEventBus(ctx context.Context, c client.Client, eventBusNamespace string, eventBusName string) *ofevent.EventBus {
+	var eventBus ofevent.EventBus
 	if err := c.Get(ctx, types.NamespacedName{Namespace: eventBusNamespace, Name: eventBusName}, &eventBus); err != nil {
 		return nil
 	}
 	return &eventBus
 }
 
-func retrieveClusterEventBus(ctx context.Context, c client.Client, eventBusName string) *openfunctionevent.ClusterEventBus {
-	var clusterEventBus openfunctionevent.ClusterEventBus
+func retrieveClusterEventBus(ctx context.Context, c client.Client, eventBusName string) *ofevent.ClusterEventBus {
+	var clusterEventBus ofevent.ClusterEventBus
 	if err := c.Get(ctx, types.NamespacedName{Name: eventBusName}, &clusterEventBus); err != nil {
 		return nil
 	}
 	return &clusterEventBus
 }
 
-func retrieveControlledResources(ctx context.Context, c client.Client, selector labels.Selector, cr *ControlledResources) error {
-	var components componentsv1alpha1.ComponentList
-	var workloads appsv1.DeploymentList
+func addSinkForFunction(name string, function *ofcore.Function, component *componentsv1alpha1.Component) *ofcore.Function {
+	spec := function.Spec.Serving.OpenFuncAsync.Dapr
 
-	cr.Components = map[string]*ControlledComponent{}
-	cr.Workloads = map[string]*ControlledWorkload{}
+	obj := &ofcore.DaprIO{
+		Name:      name,
+		Component: component.Name,
+		Operation: "post",
+	}
+	spec.Outputs = append(spec.Outputs, obj)
 
-	// handle controlled components
-	if err := c.List(ctx, &components, &client.ListOptions{LabelSelector: selector}); err != nil {
-		return err
-	}
-	if &components != nil {
-		for _, component := range components.Items {
-			r := component
-			resource := &ControlledComponent{
-				Status:       Pending,
-				Object:       &r,
-				IsDeprecated: true,
-			}
-			cr.Components[r.Name] = resource
-		}
+	spec.Components[component.Name] = &component.Spec
+	function.Spec.Serving.OpenFuncAsync.Dapr = spec
+	return function
+}
+
+func InitFunction(image string) *ofcore.Function {
+	function := &ofcore.Function{
+		Spec: ofcore.FunctionSpec{
+			Image:   image,
+			Serving: &ofcore.ServingImpl{},
+		},
 	}
 
-	// handle controlled workloads
-	if err := c.List(ctx, &workloads, &client.ListOptions{LabelSelector: selector}); err != nil {
-		return err
+	servingRuntime := ofcore.OpenFuncAsync
+	version := "v1.0.0"
+	function.Spec.Version = &version
+	function.Spec.Serving.Runtime = &servingRuntime
+	function.Spec.Serving.OpenFuncAsync = &ofcore.OpenFuncAsyncRuntime{
+		Dapr: &ofcore.Dapr{
+			Annotations: map[string]string{},
+			Components:  make(map[string]*componentsv1alpha1.ComponentSpec),
+			Inputs:      []*ofcore.DaprIO{},
+			Outputs:     []*ofcore.DaprIO{},
+		},
+		Keda: &ofcore.Keda{},
 	}
-	if &workloads != nil {
-		for _, workload := range workloads.Items {
-			r := workload
-			resource := &ControlledWorkload{
-				Status:       Pending,
-				Object:       &r,
-				IsDeprecated: true,
-			}
-			cr.Workloads[r.Name] = resource
-		}
-	}
-	return nil
+	return function
 }

@@ -78,6 +78,12 @@ rules:
 - apiGroups:
   - core.openfunction.io
   resources:
+  - functions/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - core.openfunction.io
+  resources:
   - functions/status
   verbs:
   - get

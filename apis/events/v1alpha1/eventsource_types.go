@@ -17,8 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
-	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	openfunction "github.com/openfunction/apis/core/v1alpha1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -44,12 +45,8 @@ type EventSourceSpec struct {
 	// Sink is a callable address, such as Knative Service
 	// +optional
 	Sink *SinkSpec `json:"sink,omitempty"`
-}
-
-type SourceSpec struct {
-	// SourceTopic is used to specify the topic name of the event source in Pub/Sub mode scenario
-	SourceTopic                       string `json:"srcTopic,omitempty"`
-	*componentsv1alpha1.ComponentSpec `json:",inline"`
+	// Information needed to build a function. The build step will be skipped if Build is nil.
+	Build *openfunction.BuildImpl `json:"build,omitempty"`
 }
 
 // SinkSpec describes an event source for the Kafka.
@@ -73,18 +70,7 @@ type Reference struct {
 type EventSourceStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-
-	State               string                 `json:"state,omitempty"`
-	Message             string                 `json:"message,omitempty"`
-	ComponentStatus     []*OwnedResourceStatus `json:"componentStatus,omitempty"`
-	ComponentStatistics string                 `json:"componentStatistics,omitempty"`
-	WorkloadStatus      []*OwnedResourceStatus `json:"workloadStatus,omitempty"`
-	WorkloadStatistics  string                 `json:"workloadStatistics,omitempty"`
-}
-
-type OwnedResourceStatus struct {
-	Name  string `json:"name"`
-	State string `json:"state"`
+	Conditions []Condition `json:"conditions,omitempty" description:"List of auditable conditions of EventSource"`
 }
 
 //+kubebuilder:object:root=true
@@ -94,10 +80,7 @@ type OwnedResourceStatus struct {
 // EventSource is the Schema for the eventsources API
 //+kubebuilder:printcolumn:name="EventBus",type=string,JSONPath=`.spec.eventBus`
 //+kubebuilder:printcolumn:name="Sink",type=string,JSONPath=`.spec.sink.ref.name`
-//+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.state`
-//+kubebuilder:printcolumn:name="Components",type=string,JSONPath=`.status.componentStatistics`
-//+kubebuilder:printcolumn:name="Workloads",type=string,JSONPath=`.status.workloadStatistics`
-//+kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.message`,priority=10
+//+kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[-1].type"
 type EventSource struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

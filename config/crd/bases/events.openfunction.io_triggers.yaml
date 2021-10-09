@@ -20,18 +20,8 @@ spec:
     - jsonPath: .spec.eventBus
       name: EventBus
       type: string
-    - jsonPath: .status.state
+    - jsonPath: .status.conditions[-1].type
       name: Status
-      type: string
-    - jsonPath: .status.componentStatistics
-      name: Components
-      type: string
-    - jsonPath: .status.workloadStatistics
-      name: Workloads
-      type: string
-    - jsonPath: .status.message
-      name: Message
-      priority: 10
       type: string
     name: v1alpha1
     schema:
@@ -150,36 +140,51 @@ spec:
           status:
             description: TriggerStatus defines the observed state of Trigger
             properties:
-              componentStatistics:
-                type: string
-              componentStatus:
+              conditions:
                 items:
                   properties:
-                    name:
+                    message:
+                      description: A human readable message indicating details about
+                        the transition.
                       type: string
-                    state:
+                    reason:
+                      description: The reason for the condition's last transition.
+                      enum:
+                      - EventSourceFunctionCreated
+                      - ErrorCreatingEventSource
+                      - ErrorCreatingEventSourceFunction
+                      - EventSourceIsReady
+                      - ErrorConfiguration
+                      - ErrorToFindExistEventBus
+                      - ErrorGenerateComponent
+                      - ErrorGenerateScaledObject
+                      - PendingCreation
+                      - ErrorToFindTriggerSubscribers
+                      - ErrorCreatingTrigger
+                      - TriggerIsReady
+                      - ErrorCreatingTriggerFunction
+                      - TriggerFunctionCreated
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    timestamp:
+                      description: Timestamp of the condition
+                      type: string
+                    type:
+                      description: Type of condition
+                      enum:
+                      - Created
+                      - Error
+                      - Pending
+                      - Unknown
+                      - Terminating
+                      - Terminated
+                      - Ready
                       type: string
                   required:
-                  - name
-                  - state
-                  type: object
-                type: array
-              message:
-                type: string
-              state:
-                type: string
-              workloadStatistics:
-                type: string
-              workloadStatus:
-                items:
-                  properties:
-                    name:
-                      type: string
-                    state:
-                      type: string
-                  required:
-                  - name
-                  - state
+                  - status
+                  - type
                   type: object
                 type: array
             type: object

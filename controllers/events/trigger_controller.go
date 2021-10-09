@@ -18,55 +18,51 @@ package events
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"strings"
 
+	openfunctioncontext "github.com/OpenFunction/functions-framework-go/openfunction-context"
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	"github.com/go-logr/logr"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/json"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	openfunction "github.com/openfunction/apis/events/v1alpha1"
-	openfunctionevent "github.com/openfunction/apis/events/v1alpha1"
+	ofcore "github.com/openfunction/apis/core/v1alpha2"
+	ofevent "github.com/openfunction/apis/events/v1alpha1"
 	"github.com/openfunction/pkg/util"
 )
 
 const (
-	triggerContainerName = "trigger"
-	triggerHandlerImage  = "openfunctiondev/trigger-handler:v1"
+	triggerHandlerImage = "openfunctiondev/trigger-handler:v2"
 )
 
 // TriggerReconciler reconciles a Trigger object
 type TriggerReconciler struct {
 	client.Client
-	Log                 logr.Logger
-	Scheme              *runtime.Scheme
-	ctx                 context.Context
-	envs                *TriggerConfig
-	controlledResources *ControlledResources
+	Log           logr.Logger
+	Scheme        *runtime.Scheme
+	TriggerConfig *TriggerConfig
+	Function      *ofcore.Function
 }
 
 type Subscribers struct {
-	Sinks            []*openfunctionevent.SinkSpec `json:"sinks,omitempty"`
-	DeadLetterSinks  []*openfunctionevent.SinkSpec `json:"deadLetterSinks,omitempty"`
-	TotalSinks       []*openfunctionevent.SinkSpec `json:"totalSinks,omitempty"`
-	Topics           []string                      `json:"topics,omitempty"`
-	DeadLetterTopics []string                      `json:"deadLetterTopics,omitempty"`
-	TotalTopics      []string                      `json:"totalTopics,omitempty"`
+	Sinks            []*ofevent.SinkSpec `json:"sinks,omitempty"`
+	DeadLetterSinks  []*ofevent.SinkSpec `json:"deadLetterSinks,omitempty"`
+	TotalSinks       []*ofevent.SinkSpec `json:"totalSinks,omitempty"`
+	Topics           []string            `json:"topics,omitempty"`
+	DeadLetterTopics []string            `json:"deadLetterTopics,omitempty"`
+	TotalTopics      []string            `json:"totalTopics,omitempty"`
 }
 
 //+kubebuilder:rbac:groups=events.openfunction.io,resources=triggers,verbs=get;list;watch;create;update;patch;delete
@@ -78,6 +74,9 @@ type Subscribers struct {
 //+kubebuilder:rbac:groups=events.openfunction.io,resources=clustereventbus,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=events.openfunction.io,resources=clustereventbus/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=events.openfunction.io,resources=clustereventbus/finalizers,verbs=update
+//+kubebuilder:rbac:groups=core.openfunction.io,resources=functions,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core.openfunction.io,resources=functions/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=core.openfunction.io,resources=functions/finalizers,verbs=update
 //+kubebuilder:rbac:groups=dapr.io,resources=components;subscriptions,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -90,93 +89,100 @@ type Subscribers struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *TriggerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.ctx = ctx
 	log := r.Log.WithValues("Trigger", req.NamespacedName)
 	log.Info("trigger reconcile starting...")
 
-	var trigger openfunctionevent.Trigger
-	r.envs = &TriggerConfig{}
-	r.envs.Subscribers = map[string]*Subscriber{}
-	r.controlledResources = &ControlledResources{}
+	trigger := &ofevent.Trigger{}
+	r.TriggerConfig = &TriggerConfig{}
+	r.TriggerConfig.Subscribers = map[string]*Subscriber{}
+	r.TriggerConfig.LogLevel = DefaultLogLevel
 
-	if err := r.Get(ctx, req.NamespacedName, &trigger); err != nil {
+	if err := r.Get(ctx, req.NamespacedName, trigger); err != nil {
 		log.V(1).Info("Trigger deleted", "error", err)
 		return ctrl.Result{}, util.IgnoreNotFound(err)
 	}
 
-	// Get all exist components and workloads owned by the Trigger and mark them with status of pending deletion (set to true)
-	// In the later reconcile, the resources that still need to be kept are set to non-pending deletion status (set to false) based on the latest list of resources to be created
-	controlledLabelSelector := labels.SelectorFromSet(labels.Set(map[string]string{TriggerControlledLabel: trigger.Name}))
-	err := retrieveControlledResources(r.ctx, r.Client, controlledLabelSelector, r.controlledResources)
-	if err != nil {
-		log.Error(err, "Failed to retrieve exist controlled resources", "namespace", trigger.Namespace, "name", trigger.Name)
+	// Generate the trigger function instance with image triggerHandlerImage.
+	r.Function = InitFunction(triggerHandlerImage)
+
+	if err := r.createOrUpdateTrigger(ctx, log, trigger); err != nil {
+		log.Error(err, "Failed to create or update trigger",
+			"namespace", trigger.Namespace, "name", trigger.Name)
 		return ctrl.Result{}, err
 	}
 
-	if _, err := r.createOrUpdateTrigger(&trigger); err != nil {
-		log.Error(err, "Failed to create or update trigger", "namespace", trigger.Namespace, "name", trigger.Name)
-		if err := r.updateStatus(&trigger, &openfunctionevent.TriggerStatus{State: Error, Message: fmt.Sprintln(err)}); err != nil {
-			log.Error(err, "Failed to update trigger status", "namespace", trigger.Namespace, "name", trigger.Name)
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{}, err
-	}
-
-	if err := r.updateStatus(&trigger, &openfunctionevent.TriggerStatus{State: Running, Message: ""}); err != nil {
-		log.Error(err, "Failed to update trigger status", "namespace", trigger.Namespace, "name", trigger.Name)
-		return ctrl.Result{}, err
-	}
 	return ctrl.Result{}, nil
 }
 
-// createOrUpdateTrigger will do:
-// 1. Generate a dapr component specification for the EventBus associated with the Trigger
-//    and create the dapr component (will check if it needs to be updated)
-//    and set the TriggerConfig.EventBusComponent, TriggerConfig.EventBusSpecEncode.
-// 2. Generate dapr component specifications for the subscribers
-//    and create the dapr components (will check if they need to be updated)
-//    and set the TriggerConfig.Subscribers, TriggerConfig.SinkSpecEncode.
-// 3. Create a workload for Trigger (will check if they need to be updated)
-//    and pass in the TriggerConfig as an environment variable.
-func (r *TriggerReconciler) createOrUpdateTrigger(trigger *openfunctionevent.Trigger) (ctrl.Result, error) {
-	log := r.Log.WithName("createOrUpdate")
+func (r *TriggerReconciler) createOrUpdateTrigger(ctx context.Context, log logr.Logger, trigger *ofevent.Trigger) error {
+	defer trigger.SaveStatus(ctx, log, r.Client)
+	log = r.Log.WithName("createOrUpdateTrigger")
 
-	// Handle EventBus reconcile.
+	trigger.AddCondition(*ofevent.CreateCondition(
+		ofevent.Pending, metav1.ConditionUnknown, ofevent.PendingCreation,
+	).SetMessage("Identified Trigger creation signal"))
+
+	// Handle EventBus(ClusterEventBus) reconcile.
 	if trigger.Spec.EventBus != "" {
-		if err := r.handleEventBus(trigger); err != nil {
-			return ctrl.Result{}, err
+		if err := r.handleEventBus(ctx, log, trigger); err != nil {
+			return err
 		}
 	} else {
-		return ctrl.Result{}, errors.New("spec.evenBus must be set")
+		err := errors.New("must set spec.eventBus")
+		condition := ofevent.CreateCondition(
+			ofevent.Error, metav1.ConditionFalse, ofevent.ErrorConfiguration,
+		).SetMessage(err.Error())
+		trigger.AddCondition(*condition)
+		log.Error(err, "Failed to find event bus configuration.",
+			"namespace", trigger.Namespace, "name", trigger.Name)
+		return err
 	}
 
 	// Handle Subscriber reconcile.
-	if err := r.handleSubscriber(trigger); err != nil {
-		return ctrl.Result{}, err
+	if err := r.handleSubscriber(ctx, log, trigger); err != nil {
+		return err
 	}
 
-	// Clean up resources to be deprecated
-	if err := r.handleDeprecatedResources(trigger); err != nil {
-		log.Error(err, "Failed to handle deprecated resources", "namespace", trigger.Namespace, "name", trigger.Name)
-		return ctrl.Result{}, err
+	// Handle Trigger function reconcile
+	if err := r.createOrUpdateTriggerFunction(ctx, log, trigger); err != nil {
+		return err
 	}
 
-	if _, err := ctrl.CreateOrUpdate(r.ctx, r.Client, trigger, r.mutateTrigger(trigger)); err != nil {
-		log.Error(err, "Failed to update trigger", "namespace", trigger.Namespace, "name", trigger.Name)
-		return ctrl.Result{}, err
+	// Create or update Trigger
+	if _, err := ctrl.CreateOrUpdate(ctx, r.Client, trigger, r.mutateTrigger(trigger)); err != nil {
+		condition := ofevent.CreateCondition(
+			ofevent.Error, metav1.ConditionFalse, ofevent.ErrorCreatingTrigger,
+		).SetMessage(err.Error())
+		trigger.AddCondition(*condition)
+		log.Error(err, "Failed to create or update Trigger",
+			"namespace", trigger.Namespace, "name", trigger.Name)
+		return err
 	}
-	return ctrl.Result{}, nil
+	condition := ofevent.CreateCondition(
+		ofevent.Ready, metav1.ConditionTrue, ofevent.TriggerIsReady,
+	).SetMessage("Trigger is ready.")
+	trigger.AddCondition(*condition)
+	trigger.SaveStatus(ctx, log, r.Client)
+	log.Info("Trigger reconcile success.", "namespace", trigger.Namespace, "name", trigger.Name)
+	return nil
 }
 
-func (r *TriggerReconciler) handleEventBus(trigger *openfunctionevent.Trigger) error {
-
-	// Retrieve the specification of EventBus associated with the Trigger
-	var eventBusSpec openfunctionevent.EventBusSpec
-	eventBus := retrieveEventBus(r.ctx, r.Client, trigger.Namespace, trigger.Spec.EventBus)
+func (r *TriggerReconciler) handleEventBus(ctx context.Context, log logr.Logger, trigger *ofevent.Trigger) error {
+	var eventBusSpec ofevent.EventBusSpec
+	// Retrieve the specification of EventBus associated with the Trigger.
+	eventBus := retrieveEventBus(ctx, r.Client, trigger.Namespace, trigger.Spec.EventBus)
 	if eventBus == nil {
-		clusterEventBus := retrieveClusterEventBus(r.ctx, r.Client, trigger.Spec.EventBus)
+		// Retrieve the specification of ClusterEventBus associated with the Trigger.
+		clusterEventBus := retrieveClusterEventBus(ctx, r.Client, trigger.Spec.EventBus)
 		if clusterEventBus == nil {
-			return errors.New("cannot retrieve eventBus or clusterEventBus")
+			err := errors.New("cannot retrieve eventBus or clusterEventBus")
+			condition := ofevent.CreateCondition(
+				ofevent.Error, metav1.ConditionFalse, ofevent.ErrorToFindExistEventBus,
+			).SetMessage(err.Error())
+			trigger.AddCondition(*condition)
+			log.Error(err, "Neither eventBus nor clusterEventBus exists.",
+				"namespace", trigger.Namespace, "name", trigger.Name)
+			return err
 		} else {
 			eventBusSpec = clusterEventBus.Spec
 		}
@@ -185,65 +191,70 @@ func (r *TriggerReconciler) handleEventBus(trigger *openfunctionevent.Trigger) e
 	}
 
 	componentName := fmt.Sprintf(TriggerBusComponentNameTmpl, trigger.Name)
-	r.controlledResources.SetResourceStatusToActive(componentName, ResourceTypeComponent)
+	consumerID := fmt.Sprintf("%s-%s", trigger.Namespace, componentName)
+	var subjects []string
 
-	// Set TriggerConfig.EventBusComponentName and TriggerConfig.EventBusTopics.
-	r.envs.EventBusComponent = componentName
+	// Set TriggerConfig.
+	r.TriggerConfig.EventBusComponent = componentName
 	for inputName, input := range trigger.Spec.Inputs {
 		in := input
 		if in.Namespace == "" {
 			in.Namespace = trigger.Namespace
 		}
-		r.envs.Inputs = append(r.envs.Inputs, &Input{Name: inputName, Namespace: in.Namespace, EventSource: in.EventSource, Event: in.Event})
+		r.TriggerConfig.Inputs = append(r.TriggerConfig.Inputs, &Input{
+			Name:        inputName,
+			Namespace:   in.Namespace,
+			EventSource: in.EventSource,
+			Event:       in.Event,
+		})
+		subjects = append(subjects, fmt.Sprintf(EventBusTopicNameTmpl, in.Namespace, in.EventSource, in.Event))
 	}
 
-	// Generate a dapr component based on the specification of EventBus.
+	// Generate a dapr component based on the specification of EventBus(ClusterEventBus).
 	if eventBusSpec.NatsStreaming != nil {
-		specBytes, err := json.Marshal(eventBusSpec.NatsStreaming)
-		if err != nil {
-			return err
-		}
-
-		// Set the TriggerConfig.EventBusSpecEncode which will reflect the specification content changes of dapr component back to the Trigger workload,
-		// informing it that it needs to rebuild.
-		r.envs.EventBusSpecEncode = base64.StdEncoding.EncodeToString(specBytes)
-
-		// Create the dapr component for Trigger to retrieve event from EventBus.
+		// Create the dapr component for Trigger to retrieve event from EventBus(ClusterEventBus).
 		// We need to assign a separate consumerID name to each nats streaming component
 		metadataMap := eventBusSpec.NatsStreaming.ConvertToMetadataMap()
 		metadataMap = append(metadataMap, map[string]interface{}{
 			"name":  "consumerID",
-			"value": fmt.Sprintf("%s-%s", trigger.Namespace, componentName),
+			"value": consumerID,
 		})
 		component, err := eventBusSpec.NatsStreaming.GenComponent(trigger.Namespace, componentName, metadataMap)
 		if err != nil {
+			condition := ofevent.CreateCondition(
+				ofevent.Error, metav1.ConditionFalse, ofevent.ErrorGenerateComponent,
+			).SetMessage(err.Error())
+			trigger.AddCondition(*condition)
+			log.Error(err, "Failed to generate eventBus component for Nats Streaming.",
+				"name", trigger.Name)
 			return err
 		}
-		spec := component.Spec
-		if _, err := ctrl.CreateOrUpdate(r.ctx, r.Client, component, mutateDaprComponent(r.Scheme, component, &spec, trigger)); err != nil {
-			return err
+
+		// Generate Keda scaledObject for Nats Streaming EventBus.
+		scaledObject, err := eventBusSpec.NatsStreaming.GenEventBusScaledObject(subjects, consumerID)
+		if err != nil {
+			condition := ofevent.CreateCondition(
+				ofevent.Error, metav1.ConditionFalse, ofevent.ErrorGenerateScaledObject,
+			).SetMessage(err.Error())
+			trigger.AddCondition(*condition)
+			log.Error(err, "Failed to generate eventBus scaledObject for Nats Streaming.",
+				"namespace", trigger.Namespace, "name", trigger.Name)
 		}
-		r.controlledResources.SetResourceStatus(componentName, ResourceTypeComponent, Running)
-	} else {
-		return nil
+		r.Function = r.addEventBusForFunction(trigger, component, subjects, scaledObject)
 	}
 	return nil
 }
 
-func (r *TriggerReconciler) handleSubscriber(trigger *openfunctionevent.Trigger) error {
-	var components []*componentsv1alpha1.Component
-
-	sinks := map[*openfunction.SinkSpec]bool{}
-	deadLetterSinks := map[*openfunction.SinkSpec]bool{}
-	totalSinks := map[*openfunction.SinkSpec]bool{}
+func (r *TriggerReconciler) handleSubscriber(ctx context.Context, log logr.Logger, trigger *ofevent.Trigger) error {
+	sinks := map[*ofevent.SinkSpec]bool{}
+	deadLetterSinks := map[*ofevent.SinkSpec]bool{}
+	totalSinks := map[*ofevent.SinkSpec]bool{}
 
 	topics := map[string]bool{}
 	deadLetterTopics := map[string]bool{}
 	totalTopics := map[string]bool{}
 
 	if trigger.Spec.Subscribers != nil {
-		var sinkSpecList []*componentsv1alpha1.ComponentSpec
-
 		// For each subscriber, check its Sink and DeadLetterSink (for synchronous calls) and Topic and DeadLetterTopic (for asynchronous calls).
 		// For Sink and DeadLetterSink, the specifications of corresponding dapr component will be generated
 		// and then three slices will be created to store:
@@ -256,249 +267,140 @@ func (r *TriggerReconciler) handleSubscriber(trigger *openfunctionevent.Trigger)
 
 			if sub.Sink != nil && !sinks[sub.Sink] {
 				sinks[sub.Sink] = true
-				componentName := fmt.Sprintf(TriggerSinkComponentNameTmpl, trigger.Name, sub.Sink.Ref.Namespace, sub.Sink.Ref.Name)
-				s.SinkComponent = componentName
+				s.SinkOutputName = fmt.Sprintf(SinkOutputNameTmpl, sub.Sink.Ref.Namespace, sub.Sink.Ref.Name)
 				if !totalSinks[sub.Sink] {
 					totalSinks[sub.Sink] = true
-					component := &componentsv1alpha1.Component{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      componentName,
-							Namespace: trigger.Namespace,
-						},
-					}
-					spec, err := newSinkComponentSpec(r.Client, r.Log, sub.Sink.Ref)
+					component, err := createSinkComponent(ctx, r.Client, log, trigger, sub.Sink)
 					if err != nil {
+						condition := ofevent.CreateCondition(
+							ofevent.Error, metav1.ConditionFalse, ofevent.ErrorGenerateComponent,
+						).SetMessage(err.Error())
+						trigger.AddCondition(*condition)
+						log.Error(err, "Failed to generate Trigger component for subscriber.",
+							"namespace", trigger.Namespace, "name", trigger.Name)
 						return err
 					}
-					sinkSpecList = append(sinkSpecList, spec)
-					component.Spec = *spec
-					components = append(components, component)
+					if function := addSinkForFunction(s.SinkOutputName, r.Function, component); function != nil {
+						r.Function = function
+					}
 				}
 			}
 
 			if sub.DeadLetterSink != nil && !deadLetterSinks[sub.DeadLetterSink] {
 				deadLetterSinks[sub.DeadLetterSink] = true
-				componentName := fmt.Sprintf(TriggerSinkComponentNameTmpl, trigger.Name, sub.DeadLetterSink.Ref.Namespace, sub.DeadLetterSink.Ref.Name)
-				s.DLSinkComponent = componentName
+				s.DLSinkOutputName = fmt.Sprintf(SinkOutputNameTmpl, sub.Sink.Ref.Namespace, sub.Sink.Ref.Name)
 				if !totalSinks[sub.DeadLetterSink] {
 					totalSinks[sub.DeadLetterSink] = true
-					component := &componentsv1alpha1.Component{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      componentName,
-							Namespace: trigger.Namespace,
-						},
-					}
-					spec, err := newSinkComponentSpec(r.Client, r.Log, sub.DeadLetterSink.Ref)
+					component, err := createSinkComponent(ctx, r.Client, log, trigger, sub.Sink)
 					if err != nil {
+						condition := ofevent.CreateCondition(
+							ofevent.Error, metav1.ConditionFalse, ofevent.ErrorGenerateComponent,
+						).SetMessage(err.Error())
+						trigger.AddCondition(*condition)
+						log.Error(err, "Failed to generate trigger component for subscriber.",
+							"namespace", trigger.Namespace, "name", trigger.Name, "sinkName", sub.Sink.Ref.Name)
 						return err
 					}
-					sinkSpecList = append(sinkSpecList, spec)
-					component.Spec = *spec
-					components = append(components, component)
+					if function := addSinkForFunction(s.SinkOutputName, r.Function, component); function != nil {
+						r.Function = function
+					}
 				}
 			}
 
 			if sub.Topic != "" && !topics[sub.Topic] {
 				topics[sub.Topic] = true
-				s.Topic = sub.Topic
+				s.EventBusOutputName = fmt.Sprintf(EventBusOutputNameTmpl, sub.Topic)
 				if !totalTopics[sub.Topic] {
 					totalTopics[sub.Topic] = true
+					d := r.Function.Spec.Serving.OpenFuncAsync.Dapr
+					dio := &ofcore.DaprIO{
+						Name:      s.EventBusOutputName,
+						Component: r.TriggerConfig.EventBusComponent,
+						Topic:     sub.Topic,
+						Type:      string(openfunctioncontext.OpenFuncTopic),
+					}
+					d.Outputs = append(d.Outputs, dio)
+					r.Function.Spec.Serving.OpenFuncAsync.Dapr = d
 				}
 			}
 
 			if sub.DeadLetterTopic != "" && !deadLetterTopics[sub.DeadLetterTopic] {
 				deadLetterTopics[sub.DeadLetterTopic] = true
-				s.DLTopic = sub.DeadLetterTopic
+				s.DLEventBusOutputName = fmt.Sprintf(EventBusOutputNameTmpl, sub.DeadLetterTopic)
 				if !totalTopics[sub.DeadLetterTopic] {
 					totalTopics[sub.DeadLetterTopic] = true
+					d := r.Function.Spec.Serving.OpenFuncAsync.Dapr
+					dio := &ofcore.DaprIO{
+						Name:      s.DLEventBusOutputName,
+						Component: r.TriggerConfig.EventBusComponent,
+						Topic:     sub.DeadLetterTopic,
+						Type:      string(openfunctioncontext.OpenFuncTopic),
+					}
+					d.Outputs = append(d.Outputs, dio)
+					r.Function.Spec.Serving.OpenFuncAsync.Dapr = d
 				}
 			}
-			r.envs.Subscribers[sub.Condition] = s
+			r.TriggerConfig.Subscribers[sub.Condition] = s
 		}
-		specListBytes, err := json.Marshal(sinkSpecList)
-		if err != nil {
-			return err
-		}
-
-		// Set the TriggerConfig.SinkSpecEncode which will reflect the specification content changes of dapr component back to the Trigger workload,
-		// informing it that it needs to rebuild.
-		r.envs.SinkSpecEncode = base64.StdEncoding.EncodeToString(specListBytes)
-
 	} else {
-		return errors.New("no subscriber found")
-	}
-
-	for _, component := range components {
-		c := component
-		spec := c.Spec
-		r.controlledResources.SetResourceStatusToActive(c.Name, ResourceTypeComponent)
-		if _, err := ctrl.CreateOrUpdate(r.ctx, r.Client, c, mutateDaprComponent(r.Scheme, c, &spec, trigger)); err != nil {
-			return err
-		}
-		r.controlledResources.SetResourceStatus(c.Name, ResourceTypeComponent, Running)
-		// Create the workload for Trigger.
-		if _, err := r.createOrUpdateTriggerWorkload(trigger); err != nil {
-			return err
-		}
+		err := errors.New("no subscriber found")
+		condition := ofevent.CreateCondition(
+			ofevent.Error, metav1.ConditionFalse, ofevent.ErrorToFindTriggerSubscribers,
+		).SetMessage(err.Error())
+		trigger.AddCondition(*condition)
+		log.Error(err, "Failed to find subscribers for Trigger.",
+			"namespace", trigger.Namespace, "name", trigger.Name)
+		return err
 	}
 	return nil
 }
 
-func (r *TriggerReconciler) handleDeprecatedComponents(trigger *openfunctionevent.Trigger, cpd map[string]bool) error {
-	log := r.Log.WithName("handleDeprecatedComponents")
-	var component componentsv1alpha1.Component
-	for componentName, isDeprecated := range cpd {
-		if isDeprecated {
-			err := r.Get(r.ctx, types.NamespacedName{Namespace: trigger.Namespace, Name: componentName}, &component)
-			if err != nil {
-				if util.IsNotFound(err) {
-					continue
+func (r *TriggerReconciler) createOrUpdateTriggerFunction(ctx context.Context, log logr.Logger, trigger *ofevent.Trigger) error {
+	log = r.Log.WithName("createOrUpdateTriggerFunction")
 
-				} else {
-					log.Error(err, "Failed to get deprecated component", "namespace", trigger.Namespace, "name", componentName)
-					return err
-				}
-			}
-			if err := r.Delete(r.ctx, &component); err != nil {
-				log.Error(err, "Failed to delete deprecated component", "namespace", trigger.Namespace, "name", componentName)
-				return err
-			}
-		}
-	}
-	return nil
-}
+	function := r.Function
 
-func (r *TriggerReconciler) handleDeprecatedWorkloads(trigger *openfunctionevent.Trigger, wpd map[string]bool) error {
-	log := r.Log.WithName("handleDeprecatedWorkloads")
-	var workload appsv1.Deployment
-	for workloadName, isDeprecated := range wpd {
-		if isDeprecated {
-			err := r.Get(r.ctx, types.NamespacedName{Namespace: trigger.Namespace, Name: workloadName}, &workload)
-			if err != nil {
-				if util.IsNotFound(err) {
-					continue
-
-				} else {
-					log.Error(err, "Failed to get deprecated workload", "namespace", trigger.Namespace, "name", workloadName)
-					return err
-				}
-			}
-			if err := r.Delete(r.ctx, &workload); err != nil {
-				log.Error(err, "Failed to delete deprecated workload", "namespace", trigger.Namespace, "name", workloadName)
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func (r *TriggerReconciler) handleDeprecatedResources(trigger *openfunctionevent.Trigger) error {
-	log := r.Log.WithName("handleDeprecatedResources")
-
-	// handle deprecated workloads
-	for workloadName, workloadStatus := range r.controlledResources.Workloads {
-		if workloadStatus.IsDeprecated {
-			if err := r.Delete(r.ctx, workloadStatus.Object); util.IgnoreNotFound(err) != nil {
-				log.Error(err, "Failed to delete deprecated workload", "namespace", trigger.Namespace, "name", workloadName)
-				return err
-			}
-		}
-	}
-
-	// handle deprecated components
-	for componentName, componentStatus := range r.controlledResources.Components {
-		if componentStatus.IsDeprecated {
-			if err := r.Delete(r.ctx, componentStatus.Object); util.IgnoreNotFound(err) != nil {
-				log.Error(err, "Failed to delete deprecated component", "namespace", trigger.Namespace, "name", componentName)
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func (r *TriggerReconciler) createOrUpdateTriggerWorkload(trigger *openfunctionevent.Trigger) (runtime.Object, error) {
-	log := r.Log.WithName("createOrUpdateTriggerWorkload")
-
-	obj := &appsv1.Deployment{}
-
-	workloadName := fmt.Sprintf(TriggerWorkloadsNameTmpl, trigger.Name)
-	accessor, _ := meta.Accessor(obj)
-	accessor.SetName(workloadName)
-	accessor.SetNamespace(trigger.Namespace)
-	r.controlledResources.SetResourceStatusToActive(workloadName, ResourceTypeWorkload)
-
-	_, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, obj, r.mutateHandler(obj, trigger))
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, function, r.mutateHandler(function, trigger))
 	if err != nil {
-		log.Error(err, "Failed to create or update trigger handler", "namespace", trigger.Namespace, "name", trigger.Name)
+		condition := ofevent.CreateCondition(
+			ofevent.Error, metav1.ConditionFalse, ofevent.ErrorCreatingTriggerFunction,
+		).SetMessage(err.Error())
+		trigger.AddCondition(*condition)
+		log.Error(err, "Failed to create or update Trigger function",
+			"namespace", trigger.Namespace, "name", trigger.Name)
+		return err
 	}
-	r.controlledResources.SetResourceStatus(workloadName, ResourceTypeWorkload, Running)
-	log.V(1).Info("Create trigger handler", "namespace", trigger.Namespace, "name", trigger.Name)
-	return obj, nil
+	condition := ofevent.CreateCondition(
+		ofevent.Created, metav1.ConditionTrue, ofevent.TriggerFunctionCreated,
+	).SetMessage("Trigger function is created")
+	trigger.AddCondition(*condition)
+	log.Info("Create or update Trigger function",
+		"namespace", trigger.Namespace, "name", trigger.Name)
+	return nil
 }
 
-func (r *TriggerReconciler) mutateHandler(obj runtime.Object, trigger *openfunctionevent.Trigger) controllerutil.MutateFn {
+func (r *TriggerReconciler) mutateHandler(function *ofcore.Function, trigger *ofevent.Trigger) controllerutil.MutateFn {
 	return func() error {
-		accessor, _ := meta.Accessor(obj)
-		workloadLabels := map[string]string{
+		l := map[string]string{
 			"openfunction.io/managed": "true",
 			TriggerControlledLabel:    trigger.Name,
 		}
-		accessor.SetLabels(workloadLabels)
+		function.SetLabels(l)
 
-		selector := &metav1.LabelSelector{
-			MatchLabels: workloadLabels,
-		}
-
-		var replicas int32 = 1
-
-		var port int32 = 5050
-
-		annotations := make(map[string]string)
-		annotations["dapr.io/enabled"] = "true"
-		annotations["dapr.io/app-id"] = fmt.Sprintf("%s-%s-handler", strings.TrimSuffix(trigger.Name, "-trigger"), trigger.Namespace)
-		annotations["dapr.io/log-as-json"] = "true"
-		annotations["dapr.io/app-protocol"] = "grpc"
-		annotations["dapr.io/app-port"] = fmt.Sprintf("%d", port)
-
-		spec := &corev1.PodSpec{}
-
-		envEncode, err := r.envs.EncodeConfig()
+		envEncode, err := r.TriggerConfig.EncodeConfig()
 		if err != nil {
 			return err
 		}
-		container := &corev1.Container{
-			Name:            triggerContainerName,
-			Image:           triggerHandlerImage,
-			ImagePullPolicy: corev1.PullIfNotPresent,
-			Env: []corev1.EnvVar{
-				{Name: "CONFIG", Value: envEncode},
-			},
+		function.Spec.Serving.Params = map[string]string{
+			"CONFIG": envEncode,
 		}
 
-		spec.Containers = []corev1.Container{*container}
-
-		template := corev1.PodTemplateSpec{
-			ObjectMeta: metav1.ObjectMeta{
-				Annotations: annotations,
-				Labels:      workloadLabels,
-			},
-			Spec: *spec,
-		}
-
-		switch obj.(type) {
-		case *appsv1.Deployment:
-			deploy := obj.(*appsv1.Deployment)
-			deploy.Spec.Selector = selector
-			deploy.Spec.Replicas = &replicas
-			deploy.Spec.Template = template
-		}
-
-		return controllerutil.SetControllerReference(trigger, accessor, r.Scheme)
+		function.SetOwnerReferences(nil)
+		return controllerutil.SetControllerReference(trigger, function, r.Scheme)
 	}
 }
 
-func (r *TriggerReconciler) mutateTrigger(trigger *openfunctionevent.Trigger) controllerutil.MutateFn {
+func (r *TriggerReconciler) mutateTrigger(trigger *ofevent.Trigger) controllerutil.MutateFn {
 	return func() error {
 		if trigger.GetLabels() == nil {
 			trigger.SetLabels(make(map[string]string))
@@ -508,26 +410,38 @@ func (r *TriggerReconciler) mutateTrigger(trigger *openfunctionevent.Trigger) co
 	}
 }
 
-func (r *TriggerReconciler) updateStatus(trigger *openfunctionevent.Trigger, status *openfunctionevent.TriggerStatus) error {
-	status.ComponentStatistics = r.controlledResources.GenResourceStatistics(ResourceTypeComponent)
-	status.WorkloadStatistics = r.controlledResources.GenResourceStatistics(ResourceTypeWorkload)
-	status.ComponentStatus = r.controlledResources.GenResourceStatus(ResourceTypeComponent)
-	status.WorkloadStatus = r.controlledResources.GenResourceStatus(ResourceTypeWorkload)
-	status.DeepCopyInto(&trigger.Status)
-	if err := r.Status().Update(r.ctx, trigger); err != nil {
-		return err
+func (r *TriggerReconciler) addEventBusForFunction(
+	trigger *ofevent.Trigger,
+	component *componentsv1alpha1.Component,
+	subjects []string,
+	scaledObject *ofcore.KedaScaledObject,
+) *ofcore.Function {
+	function := r.Function
+	function.Name = fmt.Sprintf(TriggerWorkloadsNameTmpl, trigger.Name)
+	function.Namespace = trigger.Namespace
+	d := function.Spec.Serving.OpenFuncAsync.Dapr
+
+	for _, subject := range subjects {
+		dio := &ofcore.DaprIO{
+			Name:      fmt.Sprintf(TriggerInputNameTmpl, subject),
+			Component: component.Name,
+			Topic:     subject,
+			Type:      strings.Split(component.Spec.Type, ".")[0],
+		}
+		d.Inputs = append(d.Inputs, dio)
 	}
-	return nil
+	d.Components[component.Name] = &component.Spec
+	function.Spec.Serving.OpenFuncAsync.Dapr = d
+	function.Spec.Serving.OpenFuncAsync.Keda.ScaledObject = scaledObject
+	return function
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *TriggerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&openfunctionevent.Trigger{}).
-		Owns(&componentsv1alpha1.Component{}).
-		Owns(&appsv1.Deployment{}).
-		Watches(&source.Kind{Type: &openfunctionevent.EventBus{}}, handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
-			triggerList := &openfunctionevent.TriggerList{}
+		For(&ofevent.Trigger{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		Watches(&source.Kind{Type: &ofevent.EventBus{}}, handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
+			triggerList := &ofevent.TriggerList{}
 			c := mgr.GetClient()
 
 			err := c.List(context.TODO(), triggerList, &client.ListOptions{Namespace: object.GetNamespace()})
@@ -550,8 +464,8 @@ func (r *TriggerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			}
 			return reconcileRequests
 		})).
-		Watches(&source.Kind{Type: &openfunctionevent.ClusterEventBus{}}, handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
-			triggerList := &openfunctionevent.TriggerList{}
+		Watches(&source.Kind{Type: &ofevent.ClusterEventBus{}}, handler.EnqueueRequestsFromMapFunc(func(object client.Object) []reconcile.Request {
+			triggerList := &ofevent.TriggerList{}
 			c := mgr.GetClient()
 
 			selector := labels.SelectorFromSet(labels.Set(map[string]string{EventBusNameLabel: object.GetName()}))
@@ -563,7 +477,7 @@ func (r *TriggerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			reconcileRequests := make([]reconcile.Request, len(triggerList.Items))
 			for _, trigger := range triggerList.Items {
 				if &trigger != nil {
-					var eventBus openfunctionevent.EventBus
+					var eventBus ofevent.EventBus
 					if err := c.Get(context.TODO(), client.ObjectKey{Namespace: trigger.Namespace, Name: trigger.Spec.EventBus}, &eventBus); err == nil {
 						continue
 					}

@@ -1,0 +1,48 @@
+
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  creationTimestamp: null
+  name: mutating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1alpha2
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /convert
+  failurePolicy: Fail
+  name: mfunctions.of.io
+  rules:
+  - apiGroups:
+    - core.openfunction.io
+    apiVersions:
+    - v1alpha2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - functions
+  sideEffects: None
+- admissionReviewVersions:
+  - v1alpha2
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /convert
+  failurePolicy: Fail
+  name: mservings.of.io
+  rules:
+  - apiGroups:
+    - core.openfunction.io
+    apiVersions:
+    - v1alpha2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - servings
+  sideEffects: None

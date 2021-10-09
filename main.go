@@ -28,7 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 
-	openfunction "github.com/openfunction/apis/core/v1alpha1"
+	corev1alpha1 "github.com/openfunction/apis/core/v1alpha1"
+	corev1alpha2 "github.com/openfunction/apis/core/v1alpha2"
 	openfunctionevent "github.com/openfunction/apis/events/v1alpha1"
 	"github.com/openfunction/controllers/core"
 	eventcontrollers "github.com/openfunction/controllers/events"
@@ -53,7 +54,8 @@ func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = knserving.AddToScheme(scheme)
 	_ = kneventing.AddToScheme(scheme)
-	_ = openfunction.AddToScheme(scheme)
+	_ = corev1alpha1.AddToScheme(scheme)
+	_ = corev1alpha2.AddToScheme(scheme)
 	_ = componentsv1alpha1.AddToScheme(scheme)
 	_ = subscriptionsv1alpha1.AddToScheme(scheme)
 	_ = kedav1alpha1.AddToScheme(scheme)
@@ -131,6 +133,16 @@ func main() {
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Trigger")
 		os.Exit(1)
+	}
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err = (&corev1alpha2.Serving{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Serving")
+			os.Exit(1)
+		}
+		if err = (&corev1alpha2.Function{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Function")
+			os.Exit(1)
+		}
 	}
 	//+kubebuilder:scaffold:builder
 

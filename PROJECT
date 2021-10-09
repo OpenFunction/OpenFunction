@@ -14,6 +14,9 @@ resources:
   kind: Function
   path: github.com/openfunction/apis/core/v1alpha1
   version: v1alpha1
+  webhooks:
+    conversion: true
+    webhookVersion: v1
 - api:
     crdVersion: v1
     namespaced: true
@@ -23,6 +26,9 @@ resources:
   kind: Serving
   path: github.com/openfunction/apis/core/v1alpha1
   version: v1alpha1
+  webhooks:
+    conversion: true
+    webhookVersion: v1
 - api:
     crdVersion: v1
     namespaced: true
@@ -67,4 +73,35 @@ resources:
   kind: ClusterEventBus
   path: github.com/openfunction/apis/events/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: openfunction.io
+  group: core
+  kind: Function
+  path: github.com/openfunction/apis/core/v1alpha2
+  version: v1alpha2
+  webhooks:
+    conversion: true
+    webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: openfunction.io
+  group: core
+  kind: Serving
+  path: github.com/openfunction/apis/core/v1alpha2
+  version: v1alpha2
+  webhooks:
+    conversion: true
+    webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: openfunction.io
+  group: core
+  kind: Builder
+  path: github.com/openfunction/apis/core/v1alpha2
+  version: v1alpha2
 version: "3"

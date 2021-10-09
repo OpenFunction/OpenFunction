@@ -1,33 +1,61 @@
 package v1alpha1
 
 import (
+	"errors"
+
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
+	kedav1alpha1 "github.com/kedacore/keda/v2/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/json"
+
+	ofcore "github.com/openfunction/apis/core/v1alpha2"
 )
 
 const (
 	ComponentVersion    = "v1"
 	BindingsKafka       = "bindings.kafka"
+	ScaleKafka          = "kafka"
+	ScaleNatsStreaming  = "stan"
 	BindingsRedis       = "bindings.redis"
 	BindingsCron        = "bindings.cron"
 	PubsubNatsStreaming = "pubsub.natsstreaming"
 )
 
+type GenericScaleOption struct {
+	PollingInterval *int32                            `json:"pollingInterval,omitempty"`
+	CooldownPeriod  *int32                            `json:"cooldownPeriod,omitempty"`
+	MinReplicaCount *int32                            `json:"minReplicaCount,omitempty"`
+	MaxReplicaCount *int32                            `json:"maxReplicaCount,omitempty"`
+	Advanced        *kedav1alpha1.AdvancedConfig      `json:"advanced,omitempty"`
+	Metadata        map[string]string                 `json:"metadata,omitempty"`
+	AuthRef         *kedav1alpha1.ScaledObjectAuthRef `json:"authRef,omitempty"`
+}
+
 type NatsStreamingSpec struct {
-	NatsURL                 string  `json:"natsURL"`
-	NatsStreamingClusterID  string  `json:"natsStreamingClusterID"`
-	SubscriptionType        string  `json:"subscriptionType"`
-	AckWaitTime             *string `json:"ackWaitTime,omitempty"`
-	MaxInFlight             *int64  `json:"maxInFlight,omitempty"`
-	DurableSubscriptionName *string `json:"durableSubscriptionName,omitempty"`
-	DeliverNew              *bool   `json:"deliverNew,omitempty"`
-	StartAtSequence         *int64  `json:"startAtSequence,omitempty"`
-	StartWithLastReceived   *bool   `json:"startWithLastReceived,omitempty"`
-	DeliverAll              *bool   `json:"deliverAll,omitempty"`
-	StartAtTimeDelta        *string `json:"startAtTimeDelta,omitempty"`
-	StartAtTime             *string `json:"startAtTime,omitempty"`
-	StartAtTimeFormat       *string `json:"startAtTimeFormat,omitempty"`
+	NatsURL                 string                    `json:"natsURL"`
+	NatsStreamingClusterID  string                    `json:"natsStreamingClusterID"`
+	SubscriptionType        string                    `json:"subscriptionType"`
+	AckWaitTime             *string                   `json:"ackWaitTime,omitempty"`
+	MaxInFlight             *int64                    `json:"maxInFlight,omitempty"`
+	DurableSubscriptionName *string                   `json:"durableSubscriptionName,omitempty"`
+	DeliverNew              *bool                     `json:"deliverNew,omitempty"`
+	StartAtSequence         *int64                    `json:"startAtSequence,omitempty"`
+	StartWithLastReceived   *bool                     `json:"startWithLastReceived,omitempty"`
+	DeliverAll              *bool                     `json:"deliverAll,omitempty"`
+	StartAtTimeDelta        *string                   `json:"startAtTimeDelta,omitempty"`
+	StartAtTime             *string                   `json:"startAtTime,omitempty"`
+	StartAtTimeFormat       *string                   `json:"startAtTimeFormat,omitempty"`
+	ConsumerID              *string                   `json:"consumerID,omitempty"`
+	ScaleOption             *NatsStreamingScaleOption `json:"scaleOption,omitempty"`
+}
+
+type NatsStreamingScaleOption struct {
+	*GenericScaleOption          `json:",inline"`
+	NatsServerMonitoringEndpoint string `json:"natsServerMonitoringEndpoint"`
+	QueueGroup                   string `json:"queueGroup,omitempty"`
+	DurableName                  string `json:"durableName,omitempty"`
+	Subject                      string `json:"subject,omitempty"`
+	LagThreshold                 string `json:"lagThreshold"`
 }
 
 func (spec *NatsStreamingSpec) ConvertToMetadataMap() []map[string]interface{} {
@@ -96,13 +124,58 @@ func (spec *NatsStreamingSpec) GenComponent(namespace string, name string, metad
 	return component, nil
 }
 
+func (spec *NatsStreamingSpec) GenEventBusScaledObject(subjects []string, consumerID string) (*ofcore.KedaScaledObject, error) {
+	if spec.ScaleOption == nil {
+		return nil, nil
+	}
+	scaledObject := &ofcore.KedaScaledObject{}
+	scaledObject.Triggers = []kedav1alpha1.ScaleTriggers{}
+
+	scaledObject.MinReplicaCount = spec.ScaleOption.MinReplicaCount
+	scaledObject.MaxReplicaCount = spec.ScaleOption.MaxReplicaCount
+	scaledObject.CooldownPeriod = spec.ScaleOption.CooldownPeriod
+	scaledObject.PollingInterval = spec.ScaleOption.PollingInterval
+
+	for _, subject := range subjects {
+		trigger := &kedav1alpha1.ScaleTriggers{}
+		trigger.Type = ScaleNatsStreaming
+		trigger.Metadata = map[string]string{}
+		trigger.Metadata["natsServerMonitoringEndpoint"] = spec.ScaleOption.NatsServerMonitoringEndpoint
+		trigger.Metadata["lagThreshold"] = spec.ScaleOption.LagThreshold
+		trigger.Metadata["subject"] = subject
+		if spec.ConsumerID != nil {
+			trigger.Metadata["queueGroup"] = *spec.ConsumerID
+		} else {
+			trigger.Metadata["queueGroup"] = consumerID
+		}
+		if spec.DurableSubscriptionName != nil {
+			trigger.Metadata["durableName"] = *spec.DurableSubscriptionName
+		} else {
+			return nil, errors.New("durableSubscriptionName must be set in order to use the scale feature")
+		}
+		scaledObject.Triggers = append(scaledObject.Triggers, *trigger)
+	}
+	if scaledObject.Triggers != nil {
+		return scaledObject, nil
+	}
+	return nil, errors.New("scaleOption has no trigger")
+}
+
 type KafkaSpec struct {
-	Brokers         string  `json:"brokers"`
-	AuthRequired    bool    `json:"authRequired"`
-	Topic           string  `json:"topic,omitempty"`
-	SaslUsername    *string `json:"saslUsername,omitempty"`
-	SaslPassword    *string `json:"saslPassword,omitempty"`
-	MaxMessageBytes *int64  `json:"maxMessageBytes,omitempty"`
+	Brokers         string            `json:"brokers"`
+	AuthRequired    bool              `json:"authRequired"`
+	Topic           string            `json:"topic,omitempty"`
+	SaslUsername    *string           `json:"saslUsername,omitempty"`
+	SaslPassword    *string           `json:"saslPassword,omitempty"`
+	MaxMessageBytes *int64            `json:"maxMessageBytes,omitempty"`
+	ScaleOption     *KafkaScaleOption `json:"scaleOption,omitempty"`
+}
+
+type KafkaScaleOption struct {
+	*GenericScaleOption `json:",inline"`
+	ConsumerGroup       string `json:"consumerGroup,omitempty"`
+	Topic               string `json:"topic,omitempty"`
+	LagThreshold        string `json:"lagThreshold"`
 }
 
 func (spec *KafkaSpec) ConvertToMetadataMap() []map[string]interface{} {
@@ -149,6 +222,30 @@ func (spec *KafkaSpec) GenComponent(namespace string, name string, metadataMap [
 	component.Spec.Metadata = metadataItems
 
 	return component, nil
+}
+
+func (spec *KafkaSpec) GenScaledObject() (*ofcore.KedaScaledObject, error) {
+	if spec.ScaleOption == nil {
+		return nil, nil
+	}
+	scaledObject := &ofcore.KedaScaledObject{}
+	trigger := &kedav1alpha1.ScaleTriggers{}
+
+	scaledObject.MinReplicaCount = spec.ScaleOption.MinReplicaCount
+	scaledObject.MaxReplicaCount = spec.ScaleOption.MaxReplicaCount
+	scaledObject.CooldownPeriod = spec.ScaleOption.CooldownPeriod
+	scaledObject.PollingInterval = spec.ScaleOption.PollingInterval
+	trigger.Type = ScaleKafka
+
+	if spec.ScaleOption.Metadata != nil {
+		trigger.Metadata = spec.ScaleOption.Metadata
+	} else {
+		trigger.Metadata = map[string]string{}
+	}
+	trigger.Metadata["bootstrapServers"] = spec.Brokers
+	trigger.Metadata["topic"] = spec.Topic
+	scaledObject.Triggers = []kedav1alpha1.ScaleTriggers{*trigger}
+	return scaledObject, nil
 }
 
 type RedisSpec struct {
