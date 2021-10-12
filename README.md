@@ -106,13 +106,13 @@ You can install the OpenFunction platform by the following command:
 - Install the latest stable version
 
 ```shell
-kubectl apply -f https://github.com/OpenFunction/OpenFunction/releases/download/v0.3.1/bundle.yaml
+kubectl create -f https://github.com/OpenFunction/OpenFunction/releases/download/v0.3.1/bundle.yaml
 ```
 
 - Install the development version
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/OpenFunction/OpenFunction/main/config/bundle.yaml
+kubectl create -f https://raw.githubusercontent.com/OpenFunction/OpenFunction/main/config/bundle.yaml
 ```
 
 > Note: When using non-default namespaces, make sure that the ClusterRoleBinding in the namespace is adapted.

@@ -240,7 +240,6 @@ spec:
                       subject:
                         type: string
                     required:
-                    - durableName
                     - lagThreshold
                     - natsServerMonitoringEndpoint
                     type: object

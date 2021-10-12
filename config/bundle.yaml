@@ -560,7 +560,6 @@ spec:
                       subject:
                         type: string
                     required:
-                    - durableName
                     - lagThreshold
                     - natsServerMonitoringEndpoint
                     type: object
@@ -837,7 +836,6 @@ spec:
                       subject:
                         type: string
                     required:
-                    - durableName
                     - lagThreshold
                     - natsServerMonitoringEndpoint
                     type: object
@@ -1397,7 +1395,7 @@ spec:
       clientConfig:
         service:
           name: openfunction-webhook-service
-          namespace: system
+          namespace: openfunction
           path: /convert
       conversionReviewVersions:
       - v1
@@ -15143,8 +15141,10 @@ spec:
     strategy: Webhook
     webhook:
       clientConfig:
-        caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUREVENDQWZXZ0F3SUJBZ0lVV3JETW0rVjBDa3BEZXluQTlUUytVOUpIUXdrd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0ZqRVVNQklHQTFVRUF3d0xNVGt5TGpFMk9DNHdMakl3SGhjTk1qRXdPVEkwTURnME5qRTVXaGNOTkRrdwpNakE1TURnME5qRTVXakFXTVJRd0VnWURWUVFEREFzeE9USXVNVFk0TGpBdU1qQ0NBU0l3RFFZSktvWklodmNOCkFRRUJCUUFEZ2dFUEFEQ0NBUW9DZ2dFQkFKOXhsQ1NHRHZWZktpSnVreGUyT1Myc0ZZVjFyYUY2UXFsVXI2amQKeER2M3ZJZC9pVFlpYmt1SEtCNTFrYVFGMTk5bDJQUkZvSFlUSlBqYzV0emhqTmVXN3hsSTBFNytVMERVMkhuOQpXUWRHbUZ2d2tZY2tJRkJhazRXUzVqMFVYT1ppVDJQUlBVaUFWV0VFRlRlSnIzbXNHUFE0a3U5Q0RIY2VNQ3dYCnJyUjdVa2FkWUVGUEVZakNpamRDZE1mY3JpWnNRNmFPMU1td3lScnMyT2hVN2dWcHJCS2dRckNwMkdmZ3lOd3EKbzlLMXF0aGYzOERpUCs3VFB6anBNYzhhZUMyNUI1MUp6ak5GL0RZcEN5MlYzTE5CYUhZZkhneFRTQlZmdjV3YwpqRXVsNWxhVmxxWVdPL0xYZEVzU0dGdEh1WG8zUGgyWE95WTBLdUlhblVhdG9aVUNBd0VBQWFOVE1GRXdIUVlEClZSME9CQllFRkpJTk9MNFZpRE9HWEdYdXJESjRjMUc0K2UwK01COEdBMVVkSXdRWU1CYUFGSklOT0w0VmlET0cKWEdYdXJESjRjMUc0K2UwK01BOEdBMVVkRXdFQi93UUZNQU1CQWY4d0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dFQgpBQ0wyTTkzT29JQjZ0ZDRiQVVIaWhGOTViTWNQK0NMSDk2a2FDc0RHY2NxTFJPOWNrdzUxZ1FWMmVKRERUWm1iCkNNMnZUMnRtNnIvazY2UmsxUWlsb1JYbFMvbG5QVmZ2eERKcEJGZVExUVRISE1JL1l0S2R5Ry90M3BoYlZQR2YKeGdTK1R5djJORHZTcWpMb1hIS3owMTBZSUVsK0V2UENhSEdGRmMya1c1YTQ3SGdwNUNzeEZZZUhYZzM2QlR4YgpkSnlGbGpMd3pja2Ewb0VMNkplN1hxLzlvbjZURmxWdmZONlFlQ3lTZkNVYWlVc0hBRm96YlIra3ZOUDVpRUYzCng3YVFRVzhRL1ZRNGFLdVR5SU41TXRVaWxwQXlKYTdxUHNiRkhMUndkd08rT2M0MHo4Tjc0c1VmeGZ6MGh0bmcKTmNzTmxBNDJucVNUQldZVldRTFY2SEk9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
-        url: https://192.168.0.2:9443/convert
+        service:
+          name: openfunction-webhook-service
+          namespace: openfunction
+          path: /convert
       conversionReviewVersions:
       - v1
   group: core.openfunction.io
@@ -28367,12 +28367,12 @@ metadata:
   namespace: openfunction
 webhooks:
 - admissionReviewVersions:
-  - v1alpha2
+  - v1
   clientConfig:
     service:
       name: openfunction-webhook-service
       namespace: openfunction
-      path: /convert
+      path: /mutate-core-openfunction-io-v1alpha2-function
   failurePolicy: Fail
   name: mfunctions.of.io
   rules:
@@ -28387,12 +28387,12 @@ webhooks:
     - functions
   sideEffects: None
 - admissionReviewVersions:
-  - v1alpha2
+  - v1
   clientConfig:
     service:
       name: openfunction-webhook-service
       namespace: openfunction
-      path: /convert
+      path: /mutate-core-openfunction-io-v1alpha2-serving
   failurePolicy: Fail
   name: mservings.of.io
   rules:
@@ -28853,15 +28853,6 @@ spec:
         control-plane: controller-manager
     spec:
       containers:
-      - name: manager
-        ports:
-        - containerPort: 9443
-          name: webhook-server
-          protocol: TCP
-        volumeMounts:
-        - mountPath: /tmp/k8s-webhook-server/serving-certs
-          name: cert
-          readOnly: true
       - args:
         - --secure-listen-address=0.0.0.0:8443
         - --upstream=http://127.0.0.1:8080/
@@ -28886,6 +28877,10 @@ spec:
           initialDelaySeconds: 15
           periodSeconds: 20
         name: openfunction
+        ports:
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
         readinessProbe:
           httpGet:
             path: /readyz
@@ -28901,6 +28896,10 @@ spec:
             memory: 20Mi
         securityContext:
           allowPrivilegeEscalation: false
+        volumeMounts:
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: cert
+          readOnly: true
       securityContext:
         runAsNonRoot: true
       serviceAccountName: openfunction-controller-manager
