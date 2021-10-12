@@ -26,6 +26,8 @@ const (
 	servingLabel = "openfunction.io/serving"
 
 	knativeService = "serving.knative.dev/service"
+
+	defaultVersion = "latest"
 )
 
 type servingRun struct {
@@ -146,9 +148,11 @@ func (r *servingRun) createService(s *openfunction.Serving) *kservingv1.Service 
 	rand.Seed(time.Now().UnixNano())
 	serviceName := fmt.Sprintf("%s-ksvc-%s", s.Name, rand.String(5))
 	workloadName := serviceName
+	version := defaultVersion
 	if s.Spec.Version != nil {
-		workloadName = fmt.Sprintf("%s-%s", workloadName, strings.ReplaceAll(*s.Spec.Version, ".", ""))
+		version = strings.ReplaceAll(*s.Spec.Version, ".", "")
 	}
+	workloadName = fmt.Sprintf("%s-%s", workloadName, version)
 
 	service := kservingv1.Service{
 		TypeMeta: metav1.TypeMeta{

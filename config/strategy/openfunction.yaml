@@ -22,7 +22,7 @@ spec:
           echo "--> Creating 'env' directory: $ENV_DIR"
           mkdir -p "$ENV_DIR"
 
-          envs=(`echo $(params.ENV_VARS) | tr ',' ' '`)
+          envs=(`echo $(params.ENV_VARS) | tr '#' ' '`)
 
           for env in "${envs[@]}"; do
               IFS='=' read -r key value string <<< "$env"

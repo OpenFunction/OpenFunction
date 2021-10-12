@@ -1,4 +1,4 @@
-apiVersion: core.openfunction.io/v1alpha1
+apiVersion: core.openfunction.io/v1alpha2
 kind: Function
 metadata:
   name: function-sample
@@ -16,7 +16,7 @@ spec:
       #FUNC_SRC: "main.py"
     srcRepo:
       url: "https://github.com/OpenFunction/samples.git"
-      sourceSubPath: "functions/Knative/hello-world-go"
+      sourceSubPath: "latest/functions/Knative/hello-world-go"
   serving:
     runtime: Knative
     template:

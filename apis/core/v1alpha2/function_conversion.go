@@ -104,45 +104,47 @@ func (src *Function) convertServingTo(dst *v1alpha1.Function) error {
 
 	dst.Spec.Serving.OpenFuncAsync = &v1alpha1.OpenFuncAsyncRuntime{}
 	if src.Spec.Serving.OpenFuncAsync != nil {
-		dst.Spec.Serving.OpenFuncAsync.Dapr = &v1alpha1.Dapr{}
-		dst.Spec.Serving.OpenFuncAsync.Dapr.Annotations = src.Spec.Serving.OpenFuncAsync.Dapr.Annotations
+		if src.Spec.Serving.OpenFuncAsync.Dapr != nil {
+			dst.Spec.Serving.OpenFuncAsync.Dapr = &v1alpha1.Dapr{}
+			dst.Spec.Serving.OpenFuncAsync.Dapr.Annotations = src.Spec.Serving.OpenFuncAsync.Dapr.Annotations
 
-		if src.Spec.Serving.OpenFuncAsync.Dapr.Components != nil {
-			dst.Spec.Serving.OpenFuncAsync.Dapr.Components = []v1alpha1.DaprComponent{}
-			for name, component := range src.Spec.Serving.OpenFuncAsync.Dapr.Components {
-				dc := v1alpha1.DaprComponent{
-					Name:          name,
-					ComponentSpec: *component,
+			if src.Spec.Serving.OpenFuncAsync.Dapr.Components != nil {
+				dst.Spec.Serving.OpenFuncAsync.Dapr.Components = []v1alpha1.DaprComponent{}
+				for name, component := range src.Spec.Serving.OpenFuncAsync.Dapr.Components {
+					dc := v1alpha1.DaprComponent{
+						Name:          name,
+						ComponentSpec: *component,
+					}
+					dst.Spec.Serving.OpenFuncAsync.Dapr.Components = append(dst.Spec.Serving.OpenFuncAsync.Dapr.Components, dc)
 				}
-				dst.Spec.Serving.OpenFuncAsync.Dapr.Components = append(dst.Spec.Serving.OpenFuncAsync.Dapr.Components, dc)
 			}
-		}
 
-		if src.Spec.Serving.OpenFuncAsync.Dapr.Inputs != nil {
-			dst.Spec.Serving.OpenFuncAsync.Dapr.Inputs = []*v1alpha1.DaprIO{}
-			for _, input := range src.Spec.Serving.OpenFuncAsync.Dapr.Inputs {
-				in := v1alpha1.DaprIO{
-					Name:   input.Component,
-					Topic:  input.Topic,
-					Type:   input.Type,
-					Params: input.Params,
+			if src.Spec.Serving.OpenFuncAsync.Dapr.Inputs != nil {
+				dst.Spec.Serving.OpenFuncAsync.Dapr.Inputs = []*v1alpha1.DaprIO{}
+				for _, input := range src.Spec.Serving.OpenFuncAsync.Dapr.Inputs {
+					in := v1alpha1.DaprIO{
+						Name:   input.Component,
+						Topic:  input.Topic,
+						Type:   input.Type,
+						Params: input.Params,
+					}
+					dst.Spec.Serving.OpenFuncAsync.Dapr.Inputs = append(dst.Spec.Serving.OpenFuncAsync.Dapr.Inputs, &in)
 				}
-				dst.Spec.Serving.OpenFuncAsync.Dapr.Inputs = append(dst.Spec.Serving.OpenFuncAsync.Dapr.Inputs, &in)
 			}
-		}
 
-		if src.Spec.Serving.OpenFuncAsync.Dapr.Outputs != nil {
-			dst.Spec.Serving.OpenFuncAsync.Dapr.Outputs = []*v1alpha1.DaprIO{}
-			for _, output := range src.Spec.Serving.OpenFuncAsync.Dapr.Outputs {
-				output.Params = map[string]string{}
-				output.Params["operation"] = output.Operation
-				out := v1alpha1.DaprIO{
-					Name:   output.Component,
-					Topic:  output.Topic,
-					Type:   output.Type,
-					Params: output.Params,
+			if src.Spec.Serving.OpenFuncAsync.Dapr.Outputs != nil {
+				dst.Spec.Serving.OpenFuncAsync.Dapr.Outputs = []*v1alpha1.DaprIO{}
+				for _, output := range src.Spec.Serving.OpenFuncAsync.Dapr.Outputs {
+					output.Params = map[string]string{}
+					output.Params["operation"] = output.Operation
+					out := v1alpha1.DaprIO{
+						Name:   output.Component,
+						Topic:  output.Topic,
+						Type:   output.Type,
+						Params: output.Params,
+					}
+					dst.Spec.Serving.OpenFuncAsync.Dapr.Outputs = append(dst.Spec.Serving.OpenFuncAsync.Dapr.Outputs, &out)
 				}
-				dst.Spec.Serving.OpenFuncAsync.Dapr.Outputs = append(dst.Spec.Serving.OpenFuncAsync.Dapr.Outputs, &out)
 			}
 		}
 
