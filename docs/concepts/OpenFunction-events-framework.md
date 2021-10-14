@@ -1,16 +1,20 @@
 - [Overview](#overview)
-  * [Features](#features)
+  - [Features](#features)
 - [Concepts](#concepts)
-  * [Architecture](#architecture)
-  * [EventSource](#eventsource)
-  * [EventBus(ClusterEventBus)](#eventbusclustereventbus)
-  * [Trigger](#trigger)
+  - [Architecture](#architecture)
+  - [EventSource](#eventsource)
+    - [Available](#available)
+  - [EventBus(ClusterEventBus)](#eventbusclustereventbus)
+    - [Supported EventBus brokers](#supported-eventbus-brokers)
+  - [Trigger](#trigger)
 - [Getting Started](#getting-started)
-  * [Sample 1: Event source trigger synchronization function](#sample-1-event-source-trigger-synchronization-function)
-  * [Sample 2: Use of event bus and triggers](#sample-2-use-of-event-bus-and-triggers)
-  * [Sample 3: Multi sources in one EventSource](#sample-3-multi-sources-in-one-eventsource)
-  * [Sample 4: EventBus and ClusterEventBus](#sample-4-eventbus-and-clustereventbus)
-  * [Sample 5: Use Trigger conditions](#sample-5-use-trigger-conditions)
+  - [Sample 1: Event source trigger synchronization function](#sample-1-event-source-trigger-synchronization-function)
+    - [Prerequisites](#prerequisites)
+  - [Sample 2: Use of event bus and triggers](#sample-2-use-of-event-bus-and-triggers)
+    - [Prerequisites](#prerequisites-1)
+  - [Sample 3: Multi sources in one EventSource](#sample-3-multi-sources-in-one-eventsource)
+  - [Sample 4: EventBus and ClusterEventBus](#sample-4-eventbus-and-clustereventbus)
+  - [Sample 5: Use Trigger conditions](#sample-5-use-trigger-conditions)
 
 # Overview
 
@@ -106,7 +110,7 @@ spec:
 Apply it :
 
 ```shell
-kubectl apply -f eventsource-sink.yaml
+$ kubectl apply -f eventsource-sink.yaml
 ```
 
 You will observe the following changes:
@@ -119,16 +123,16 @@ You will observe the following changes:
 > 4. Create a Deployments called "eventsource-my-eventsource-kafka-sample-one" for processing events
 
 ```shell
-~# kubectl get eventsources.events.openfunction.io
+$ kubectl get eventsources.events.openfunction.io
 NAME             EVENTBUS   SINK
 my-eventsource              function-sample-serving-ksvc
 
-~# kubectl get components
+$ kubectl get components
 NAME                                          AGE
 eventsource-my-eventsource-kafka-sample-one   3m45s
 eventsource-sink-my-eventsource               3m45s
 
-~# kubectl get deployments.apps
+$ kubectl get deployments.apps
 NAME                                           READY   UP-TO-DATE   AVAILABLE   AGE
 eventsource-my-eventsource-kafka-sample-one    1/1     1            1           4m14s
 ```
@@ -174,13 +178,13 @@ spec:
 Apply it :
 
 ```shell
-kubectl apply -f events-producer.yaml
+$ kubectl apply -f events-producer.yaml
 ```
 
 We can observe the change in Pod resources :
 
 ```shell
-~# kubectl get po --watch
+$ kubectl get po --watch
 NAME                                                           READY   STATUS              RESTARTS   AGE
 events-producer-86b49654-8stj6                                 0/2     ContainerCreating   0          1s
 eventsource-my-eventsource-kafka-sample-one-789b767c79-45bdf   2/2     Running             0          23m
@@ -287,7 +291,7 @@ function-sample-serving-qrdx8-ksvc-fwml8-v100-deployment-8cpxsj   2/2     Runnin
   Apply it:
 
   ```shell
-  kubectl apply -f openfuncasync-function.yaml
+  $ kubectl apply -f openfuncasync-function.yaml
   ```
 
 Create an EventBus configuration `eventbus-default.yaml` ：
@@ -325,8 +329,8 @@ spec:
 Apply them :
 
 ```shell
-kubectl apply -f eventbus-default.yaml
-kubectl apply -f eventsource-eventbus.yaml
+$ kubectl apply -f eventbus-default.yaml
+$ kubectl apply -f eventsource-eventbus.yaml
 ```
 
 You will observe the following changes:
@@ -342,20 +346,20 @@ You will observe the following changes:
 > 5. Create a Deployments called "eventsource-my-eventsource-kafka-sample-two" for processing events
 
 ```shell
-~# kubectl get eventsources.events.openfunction.io
+$ kubectl get eventsources.events.openfunction.io
 NAME             EVENTBUS   SINK
 my-eventsource   default
 
-~# kubectl get eventbus.events.openfunction.io
+$ kubectl get eventbus.events.openfunction.io
 NAME      AGE
 default   10m
 
-~# kubectl get components
+$ kubectl get components
 NAME                                          AGE
 eventsource-eventbus-my-eventsource           28s
 eventsource-my-eventsource-kafka-sample-two   28s
 
-~# kubectl get deployments.apps
+$ kubectl get deployments.apps
 NAME                                           READY   UP-TO-DATE   AVAILABLE   AGE
 eventsource-my-eventsource-kafka-sample-two    1/1     1            1           4m53s
 ```
@@ -395,7 +399,7 @@ spec:
 Apply it :
 
 ```yaml
-kubectl apply -f trigger.yaml
+$ kubectl apply -f trigger.yaml
 ```
 
 You will observe the following changes :
@@ -411,22 +415,22 @@ You will observe the following changes :
 > 5. Create a Deployments called "trigger-my-trigger" for processing trigger tasks
 
 ```shell
-~# kubectl get triggers.events.openfunction.io
+$ kubectl get triggers.events.openfunction.io
 NAME         AGE
 my-trigger   34m
 
-~# kubectl get eventbus.events.openfunction.io
+$ kubectl get eventbus.events.openfunction.io
 NAME      AGE
 default   62m
 
-~# kubectl get components
+$ kubectl get components
 autoscaling-pubsub                                                         90m
 eventbus-eventsource-my-eventsource                                        161m
 eventbus-trigger-my-trigger                                                161m
 eventsource-my-eventsource-kafka-sample-two                                161m
 trigger-sink-my-trigger-default-function-sample-serving-qrdx8-ksvc-fwml8   161m
 
-~# kubectl get deployments.apps
+$ kubectl get deployments.apps
 NAME                    READY   UP-TO-DATE   AVAILABLE   AGE
 trigger-my-trigger      1/1     1            1           2m52s
 ```
@@ -472,13 +476,13 @@ spec:
 Apply it :
 
 ```shell
-kubectl apply -f events-producer.yaml
+$ kubectl apply -f events-producer.yaml
 ```
 
 We can observe the change in Pod resources :
 
 ```shell
-~# kubectl get po --watch
+$ kubectl get po --watch
 NAME                                                           READY   STATUS              RESTARTS   AGE
 events-producer-86679d99fb-4tlbt                               0/2     ContainerCreating   0          2s
 eventsource-my-eventsource-kafka-sample-two-7695c6cfdd-j2g5b   2/2     Running             0          58m
@@ -537,23 +541,23 @@ spec:
 Apply it :
 
 ```shell
-kubectl apply -f eventsource-multi.yaml
+$ kubectl apply -f eventsource-multi.yaml
 ```
 
 You will observe the following changes:
 
 ```shell
-~# kubectl get eventsources.events.openfunction.io
+$ kubectl get eventsources.events.openfunction.io
 NAME             EVENTBUS   SINK
 my-eventsource              function-sample-serving-ksvc
 
-~# kubectl get components
+$ kubectl get components
 NAME                                            AGE
 eventsource-my-eventsource-cron-sample-three    96s
 eventsource-my-eventsource-kafka-sample-three   96s
 eventsource-sink-my-eventsource                 96s
 
-~# kubectl get deployments.apps
+$ kubectl get deployments.apps
 NAME                                            READY   UP-TO-DATE   AVAILABLE   AGE
 eventsource-my-eventsource-cron-sample-three    1/1     1            1           109s
 eventsource-my-eventsource-kafka-sample-three   1/1     1            1           109s
@@ -582,22 +586,22 @@ spec:
 Delete EventBus:
 
 ```shell
-kubectl delete eventbus.events.openfunction.io default
+$ kubectl delete eventbus.events.openfunction.io default
 ```
 
 And apply ClusterEventBus:
 
 ```shell
-kubectl apply -f clustereventbus-default.yaml
+$ kubectl apply -f clustereventbus-default.yaml
 ```
 
 You will observe the following changes:
 
 ```shell
-~# kubectl get eventbus.events.openfunction.io
+$ kubectl get eventbus.events.openfunction.io
 No resources found in default namespace.
 
-~# kubectl get clustereventbus.events.openfunction.io
+$ kubectl get clustereventbus.events.openfunction.io
 NAME      AGE
 default   21s
 ```
@@ -677,24 +681,24 @@ spec:
 Apply them:
 
 ```shell
-kubectl apply -f eventsource-a.yaml
-kubectl apply -f eventsource-b.yaml
-kubectl apply -f condition-trigger.yaml
+$ kubectl apply -f eventsource-a.yaml
+$ kubectl apply -f eventsource-b.yaml
+$ kubectl apply -f condition-trigger.yaml
 ```
 
 You will observe the following changes:
 
 ```shell
-~# kubectl get eventsources.events.openfunction.io
+$ kubectl get eventsources.events.openfunction.io
 NAME            EVENTBUS   SINK   STATUS    COMPONENTS   WORKLOADS
 eventsource-a   default           Running   2/2          1/1
 eventsource-b   default           Running   2/2          1/1
 
-~# kubectl get triggers.events.openfunction.io
+$ kubectl get triggers.events.openfunction.io
 NAME                EVENTBUS   STATUS    COMPONENTS   WORKLOADS
 condition-trigger   default    Running   2/2          1/1
 
-~# kubectl get eventbus.events.openfunction.io
+$ kubectl get eventbus.events.openfunction.io
 NAME      AGE
 default   12s
 ```
@@ -702,7 +706,7 @@ default   12s
 Since the event source **eventsource-b** is a cron task, the **condition: eventB** in the Trigger has been matched and the Knative Service has been triggered.
 
 ```shell
-~# kubectl get po
+$ kubectl get po
 NAME                                                              READY   STATUS    RESTARTS   AGE
 function-sample-serving-qrdx8-ksvc-fwml8-v100-deployment-7n4kpd   2/2     Running   0          11m
 ```
@@ -712,13 +716,13 @@ We then create an event producer.
 > Modity the **TARGET_NAME** to "eventsource-eventsource-a-kafka-sample-five"
 
 ```shell
-kubectl apply -f events-producer.yaml
+$ kubectl apply -f events-producer.yaml
 ```
 
 At this point the **condition: eventA && eventB** in the Trigger has been matched and the event is sent to the "metrics" topic of the event bus at the same time. The OpenFuncAsync function will be triggered:
 
 ```shell
-~# kubectl get po
+$ kubectl get po
 NAME                                                              READY   STATUS    RESTARTS   AGE
 autoscaling-subscriber-serving-5qzlq-v100-xp9dw-77bc8cc88dts99v   2/2     Running   0          6s
 ```
