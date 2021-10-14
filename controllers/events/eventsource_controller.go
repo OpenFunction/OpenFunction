@@ -250,11 +250,12 @@ func (r *EventSourceReconciler) handleSink(ctx context.Context, log logr.Logger,
 		return err
 	}
 
+	sinkOutputName := fmt.Sprintf(SinkOutputNameTmpl, sink.Ref.Namespace, sink.Ref.Name)
 	// Set EventSourceConfig.SinkOutputName.
-	r.EventSourceConfig.SinkOutputName = fmt.Sprintf(SinkOutputNameTmpl, sink.Ref.Namespace, sink.Ref.Name)
+	r.EventSourceConfig.SinkOutputName = sinkOutputName
 
 	// Add the component spec to function.
-	if function := addSinkForFunction(eventSource.Name, r.Function, component); function != nil {
+	if function := addSinkForFunction(sinkOutputName, r.Function, component); function != nil {
 		r.Function = function
 	}
 	return nil
