@@ -1,4 +1,4 @@
-apiVersion: core.openfunction.io/v1alpha1
+apiVersion: core.openfunction.io/v1alpha2
 kind: Function
 metadata:
   name: autoscaling-subscriber
@@ -8,26 +8,36 @@ spec:
   imageCredentials:
     name: push-secret
   build:
-    builder: openfunctiondev/go115-builder:v0.2.0
+    builder: openfunctiondev/go115-builder:v0.3.0
     env:
       FUNC_NAME: "Subscriber"
     srcRepo:
       url: "https://github.com/OpenFunction/samples.git"
-      sourceSubPath: "functions/OpenFuncAsync/pubsub/subscriber"
+      sourceSubPath: "latest/functions/OpenFuncAsync/pubsub/subscriber"
   serving:
     runtime: "OpenFuncAsync"
     openFuncAsync:
       dapr:
         inputs:
-          - name: autoscaling-pubsub
+          - name: subscriber
+            component: autoscaling-subscriber
             type: pubsub
             topic: metric
         annotations:
-          # dapr.io/enabled: "true"
-          # dapr.io/app-id: "autoscaling-subscriber"
-          # dapr.io/app-port: "8080"
           dapr.io/log-level: "debug"
-          # dapr.io/log-as-json: "true"
+        components:
+          autoscaling-subscriber:
+            type: pubsub.kafka
+            version: v1
+            metadata:
+              - name: brokers
+                value: "kafka-pubsub-server-kafka-brokers:9092"
+              - name: authRequired
+                value: "false"
+              - name: allowedTopics
+                value: "metric"
+              - name: consumerID
+                value: "autoscaling-subscriber"
       keda:
         scaledObject:
           pollingInterval: 15
@@ -38,7 +48,6 @@ spec:
             - type: kafka
               metadata:
                 topic: metric
-                bootstrapServers: kafka-cp-kafka.kafka.svc.cluster.local:9092
+                bootstrapServers: kafka-pubsub-server-kafka-brokers.default.svc.cluster.local:9092
                 consumerGroup: autoscaling-subscriber
                 lagThreshold: "10"
-

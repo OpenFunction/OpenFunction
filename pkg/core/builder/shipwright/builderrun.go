@@ -205,9 +205,14 @@ func (r *builderRun) createShipwrightBuild(builder *openfunction.Builder) *shipw
 		})
 	}
 
+	shipwrightBuild.Spec.ParamValues = append(shipwrightBuild.Spec.ParamValues, shipwrightv1alpha1.ParamValue{
+		Name:  appImage,
+		Value: builder.Spec.Image,
+	})
+
 	env := ""
 	for k, v := range builder.Spec.Env {
-		env = fmt.Sprintf("%s%s=%s,", env, k, v)
+		env = fmt.Sprintf("%s%s=%s#", env, k, v)
 	}
 	if builder.Spec.Port != nil {
 		env = fmt.Sprintf("%sPORT=%d", env, *builder.Spec.Port)
@@ -216,10 +221,6 @@ func (r *builderRun) createShipwrightBuild(builder *openfunction.Builder) *shipw
 	shipwrightBuild.Spec.ParamValues = append(shipwrightBuild.Spec.ParamValues, shipwrightv1alpha1.ParamValue{
 		Name:  envVars,
 		Value: env,
-	})
-	shipwrightBuild.Spec.ParamValues = append(shipwrightBuild.Spec.ParamValues, shipwrightv1alpha1.ParamValue{
-		Name:  appImage,
-		Value: builder.Spec.Image,
 	})
 
 	if builder.Spec.Shipwright == nil || builder.Spec.Shipwright.Strategy == nil {

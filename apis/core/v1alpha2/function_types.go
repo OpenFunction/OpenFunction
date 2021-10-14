@@ -46,19 +46,17 @@ type Language string
 type Runtime string
 
 const (
-	Go            Language = "go"
-	Node          Language = "node"
-	BuildPhase             = "Build"
-	ServingPhase           = "Serving"
-	Created                = "Created"
-	Building               = "Building"
-	Running                = "Running"
-	Succeeded              = "Succeeded"
-	Failed                 = "Failed"
-	Skipped                = "Skipped"
-	Knative       Runtime  = "Knative"
-	OpenFuncAsync Runtime  = "OpenFuncAsync"
-	Shipwright             = "Shipwright"
+	BuildPhase            = "Build"
+	ServingPhase          = "Serving"
+	Created               = "Created"
+	Building              = "Building"
+	Running               = "Running"
+	Succeeded             = "Succeeded"
+	Failed                = "Failed"
+	Skipped               = "Skipped"
+	Knative       Runtime = "Knative"
+	OpenFuncAsync Runtime = "OpenFuncAsync"
+	Shipwright            = "Shipwright"
 )
 
 type Strategy struct {
