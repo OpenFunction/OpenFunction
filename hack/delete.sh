@@ -85,6 +85,7 @@ if [ "$with_openFuncAsync" = "true" ]; then
     wget -q https://raw.githubusercontent.com/dapr/cli/master/install/install.sh -O - | /bin/bash -s 1.4.0
     # Init dapr
     dapr uninstall -k --all
+    kubectl delete ns dapr-system
     # Installs the latest release version
     kubectl delete -f https://github.com/kedacore/keda/releases/download/v2.4.0/keda-2.4.0.yaml
    else

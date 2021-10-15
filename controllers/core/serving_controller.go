@@ -60,7 +60,7 @@ type ServingReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *ServingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.ctx = ctx
-	log := r.Log.WithValues("serving", req.NamespacedName)
+	log := r.Log.WithValues("Serving", req.NamespacedName)
 
 	var s openfunction.Serving
 
@@ -83,18 +83,18 @@ func (r *ServingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	if err := servingRun.Run(&s); err != nil {
-		log.Error(err, "Failed to run serving", "name", s.Name, "namespace", s.Namespace)
+		log.Error(err, "Failed to run serving")
 		return ctrl.Result{}, err
 	}
 
 	s.Status.Phase = openfunction.ServingPhase
 	s.Status.State = openfunction.Running
 	if err := r.Status().Update(r.ctx, &s); err != nil {
-		log.Error(err, "Failed to update serving status", "name", s.Name, "namespace", s.Namespace)
+		log.Error(err, "Failed to update serving status")
 		return ctrl.Result{}, err
 	}
 
-	log.V(1).Info("Serving is running", "name", s.Name, "namespace", s.Namespace)
+	log.V(1).Info("Serving is running")
 
 	return ctrl.Result{}, nil
 }
