@@ -18,6 +18,7 @@ package core
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -93,23 +94,23 @@ func (r *BuilderReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// Reset builder status.
 	builder.Status = openfunction.BuilderStatus{}
 	if err := r.Status().Update(r.ctx, builder); err != nil {
-		log.Error(err, "Failed to reset builder status", "name", builder.Name, "namespace", builder.Namespace)
+		log.Error(err, "Failed to reset builder status")
 		return ctrl.Result{}, err
 	}
 
 	if err := builderRun.Start(builder); err != nil {
-		log.Error(err, "Failed to start builder", "name", builder.Name, "namespace", builder.Namespace)
+		log.Error(err, "Failed to start builder")
 		return ctrl.Result{}, err
 	}
 
 	builder.Status.Phase = openfunction.BuildPhase
 	builder.Status.State = openfunction.Building
 	if err := r.Status().Update(r.ctx, builder); err != nil {
-		log.Error(err, "Failed to update builder status", "name", builder.Name, "namespace", builder.Namespace)
+		log.Error(err, "Failed to update builder status")
 		return ctrl.Result{}, err
 	}
 
-	log.V(1).Info("Builder is running", "namespace", builder.Namespace, "name", builder.Name)
+	log.V(1).Info("Builder is running")
 
 	return ctrl.Result{}, nil
 }
@@ -121,11 +122,12 @@ func (r *BuilderReconciler) createBuilderRun() core.BuilderRun {
 
 // Update the status of the builder according to the result of the build.
 func (r *BuilderReconciler) getBuilderResult(builder *openfunction.Builder, builderRun core.BuilderRun) error {
-	log := r.Log.WithName("GetBuilderResult")
+	log := r.Log.WithName("GetBuilderResult").
+		WithValues("Builder", fmt.Sprintf("%s/%s", builder.Namespace, builder.Name))
 
 	res, err := builderRun.Result(builder)
 	if err != nil {
-		log.Error(err, "Get build result error", "name", builder.Name, "namespace", builder.Namespace)
+		log.Error(err, "Get build result error")
 		return err
 	}
 
@@ -140,7 +142,7 @@ func (r *BuilderReconciler) getBuilderResult(builder *openfunction.Builder, buil
 			return err
 		}
 
-		log.V(1).Info("Update builder status", "namespace", builder.Namespace, "name", builder.Name, "state", res)
+		log.V(1).Info("Update builder status", "state", res)
 	}
 
 	return nil

@@ -52,39 +52,40 @@ func Registry() []client.Object {
 
 func (r *builderRun) Start(builder *openfunction.Builder) error {
 
-	log := r.log.WithName("Start")
+	log := r.log.WithName("Start").
+		WithValues("Builder", fmt.Sprintf("%s/%s", builder.Namespace, builder.Name))
 
 	// Clean up redundant builds and buildruns caused by the `Start` function failed.
 	if err := r.clean(builder); err != nil {
-		log.Error(err, "Clean failed", "name", builder.Name, "namespace", builder.Namespace)
+		log.Error(err, "Clean failed")
 		return err
 	}
 
 	shipwrightBuild := r.createShipwrightBuild(builder)
 	if err := ctrl.SetControllerReference(builder, shipwrightBuild, r.scheme); err != nil {
-		log.Error(err, "Failed to SetControllerReference", "name", builder.Name, "namespace", builder.Namespace)
+		log.Error(err, "Failed to SetControllerReference for Build", "Build", shipwrightBuild.Name)
 		return err
 	}
 
 	if err := r.Create(r.ctx, shipwrightBuild); err != nil {
-		log.Error(err, "Failed to create shipwright Build", "name", shipwrightBuild.Name, "namespace", shipwrightBuild.Namespace)
+		log.Error(err, "Failed to create Build", "Build", shipwrightBuild.Name)
 		return err
 	}
 
-	log.V(1).Info("Shipwright Build created", "namespace", shipwrightBuild.Namespace, "name", shipwrightBuild.Name)
+	log.V(1).Info("Build created", "Build", shipwrightBuild.Name)
 
 	shipwrightBuildRun := r.createShipwrightBuildRun(builder, shipwrightBuild.Name)
 	if err := ctrl.SetControllerReference(builder, shipwrightBuildRun, r.scheme); err != nil {
-		log.Error(err, "Failed to SetControllerReference", "name", builder.Name, "namespace", builder.Namespace)
+		log.Error(err, "Failed to SetControllerReference for BuildRun", "BuildRun", shipwrightBuildRun.Name)
 		return err
 	}
 
 	if err := r.Create(r.ctx, shipwrightBuildRun); err != nil {
-		log.Error(err, "Failed to create shipwright BuildRun", "name", shipwrightBuildRun.Name, "namespace", shipwrightBuildRun.Namespace)
+		log.Error(err, "Failed to create BuildRun", "BuildRun", shipwrightBuildRun.Name)
 		return err
 	}
 
-	log.V(1).Info("Shipwright BuildRun created", "namespace", shipwrightBuildRun.Namespace, "name", shipwrightBuildRun.Name)
+	log.V(1).Info("BuildRun created", "BuildRun", shipwrightBuildRun.Name)
 
 	builder.Status.ResourceRef = map[string]string{
 		shipwrightBuildName:    shipwrightBuild.Name,
@@ -95,7 +96,8 @@ func (r *builderRun) Start(builder *openfunction.Builder) error {
 }
 
 func (r *builderRun) Result(builder *openfunction.Builder) (string, error) {
-	log := r.log.WithName("Result")
+	log := r.log.WithName("Result").
+		WithValues("Builder", fmt.Sprintf("%s/%s", builder.Namespace, builder.Name))
 
 	shipwrightBuild := &shipwrightv1alpha1.Build{
 		ObjectMeta: metav1.ObjectMeta{
@@ -104,7 +106,7 @@ func (r *builderRun) Result(builder *openfunction.Builder) (string, error) {
 		},
 	}
 	if err := r.Get(r.ctx, client.ObjectKeyFromObject(shipwrightBuild), shipwrightBuild); util.IgnoreNotFound(err) != nil {
-		log.Error(err, "Failed to get build", "name", shipwrightBuild.Name, "namespace", shipwrightBuild.Namespace)
+		log.Error(err, "Failed to get Build", "Build", shipwrightBuild.Name)
 		return "", util.IgnoreNotFound(err)
 	}
 
@@ -119,7 +121,7 @@ func (r *builderRun) Result(builder *openfunction.Builder) (string, error) {
 		},
 	}
 	if err := r.Get(r.ctx, client.ObjectKeyFromObject(shipwrightBuildRun), shipwrightBuildRun); util.IgnoreNotFound(err) != nil {
-		log.Error(err, "Failed to get buildRun", "name", shipwrightBuildRun.Name, "namespace", shipwrightBuildRun.Namespace)
+		log.Error(err, "Failed to get BuildRun", "BuildRun", shipwrightBuildRun.Name)
 		return "", util.IgnoreNotFound(err)
 	}
 
@@ -136,7 +138,8 @@ func (r *builderRun) Result(builder *openfunction.Builder) (string, error) {
 
 // Clean up redundant builds and buildruns caused by the `Start` function failed.
 func (r *builderRun) clean(builder *openfunction.Builder) error {
-	log := r.log.WithName("Clean")
+	log := r.log.WithName("Clean").
+		WithValues("Builder", fmt.Sprintf("%s/%s", builder.Namespace, builder.Name))
 
 	builds := &shipwrightv1alpha1.BuildList{}
 	if err := r.List(r.ctx, builds, client.InNamespace(builder.Namespace), client.MatchingLabels{builderLabel: builder.Name}); err != nil {
@@ -148,7 +151,7 @@ func (r *builderRun) clean(builder *openfunction.Builder) error {
 			if err := r.Delete(context.Background(), &item); util.IgnoreNotFound(err) != nil {
 				return err
 			}
-			log.V(1).Info("Delete shipwright Build", "namespace", item.Namespace, "name", item.Name)
+			log.V(1).Info("Delete Build", "Build", item.Name)
 		}
 	}
 
@@ -162,7 +165,7 @@ func (r *builderRun) clean(builder *openfunction.Builder) error {
 			if err := r.Delete(context.Background(), &item); util.IgnoreNotFound(err) != nil {
 				return err
 			}
-			log.V(1).Info("Delete shipwright BuildRun", "namespace", item.Namespace, "name", item.Name)
+			log.V(1).Info("Delete BuildRun", "BuildRun", item.Name)
 		}
 	}
 

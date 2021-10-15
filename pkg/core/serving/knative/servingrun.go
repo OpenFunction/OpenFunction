@@ -47,26 +47,27 @@ func NewServingRun(ctx context.Context, c client.Client, scheme *runtime.Scheme,
 }
 
 func (r *servingRun) Run(s *openfunction.Serving) error {
-	log := r.log.WithName("Run")
+	log := r.log.WithName("Run").
+		WithValues("Serving", fmt.Sprintf("%s/%s", s.Namespace, s.Name))
 
 	if err := r.clean(s); err != nil {
-		log.Error(err, "Clean failed", "name", s.Name, "namespace", s.Namespace)
+		log.Error(err, "Clean failed")
 		return err
 	}
 
 	service := r.createService(s)
 	service.SetOwnerReferences(nil)
 	if err := ctrl.SetControllerReference(s, service, r.scheme); err != nil {
-		log.Error(err, "Failed to SetControllerReference", "name", s.Name, "namespace", s.Namespace)
+		log.Error(err, "Failed to SetControllerReference for Service", "Service", service.Name)
 		return err
 	}
 
 	if err := r.Create(r.ctx, service); err != nil {
-		log.Error(err, "Failed to Create knative service", "name", s.Name, "namespace", s.Namespace)
+		log.Error(err, "Failed to Create Service", "Service", service.Name)
 		return err
 	}
 
-	log.V(1).Info("Knative service created", "namespace", service.Namespace, "name", service.Name)
+	log.V(1).Info("Service created", "Service", service.Name)
 
 	if s.Status.ResourceRef == nil {
 		s.Status.ResourceRef = make(map[string]string)
@@ -78,7 +79,8 @@ func (r *servingRun) Run(s *openfunction.Serving) error {
 }
 
 func (r *servingRun) clean(s *openfunction.Serving) error {
-	log := r.log.WithName("Clean")
+	log := r.log.WithName("Clean").
+		WithValues("Serving", fmt.Sprintf("%s/%s", s.Namespace, s.Name))
 
 	services := &kservingv1.ServiceList{}
 	if err := r.List(r.ctx, services, client.InNamespace(s.Namespace), client.MatchingLabels{servingLabel: s.Name}); err != nil {
@@ -90,7 +92,7 @@ func (r *servingRun) clean(s *openfunction.Serving) error {
 			if err := r.Delete(context.Background(), &item); util.IgnoreNotFound(err) != nil {
 				return err
 			}
-			log.V(1).Info("Delete knative service", "namespace", item.Namespace, "name", item.Name)
+			log.V(1).Info("Delete Service", "Service", item.Name)
 		}
 	}
 

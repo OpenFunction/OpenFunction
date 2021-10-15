@@ -19,7 +19,6 @@ package core
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,12 +26,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/openfunction/pkg/constants"
+
 	openfunction "github.com/openfunction/apis/core/v1alpha2"
 	"github.com/openfunction/pkg/util"
-)
-
-const (
-	functionLabel = "openfunction.io/function"
 )
 
 // FunctionReconciler reconciles a Function object
@@ -57,7 +54,7 @@ type FunctionReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *FunctionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.ctx = ctx
-	log := r.Log.WithValues("function", req.NamespacedName)
+	log := r.Log.WithValues("Function", req.NamespacedName)
 
 	var fn openfunction.Function
 
@@ -82,14 +79,15 @@ func (r *FunctionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 }
 
 func (r *FunctionReconciler) createBuilder(fn *openfunction.Function) error {
-	log := r.Log.WithName("CreateBuilder")
+	log := r.Log.WithName("CreateBuilder").
+		WithValues("Function", fmt.Sprintf("%s/%s", fn.Namespace, fn.Name))
 
 	if !r.needToCreateBuilder(fn) {
 		if err := r.updateFuncWithBuilderStatus(fn); err != nil {
 			return err
 		}
 
-		log.V(1).Info("No need to create builder", "namespace", fn.Namespace, "name", fn.Name)
+		log.V(1).Info("No need to create Builder")
 		return nil
 	}
 
@@ -100,12 +98,12 @@ func (r *FunctionReconciler) createBuilder(fn *openfunction.Function) error {
 	fn.Status.Build.State = ""
 	fn.Status.Build.ResourceRef = ""
 	if err := r.Status().Update(r.ctx, fn); err != nil {
-		log.Error(err, "Failed to reset function build status", "namespace", fn.Namespace, "name", fn.Name)
+		log.Error(err, "Failed to reset function build status")
 		return err
 	}
 
 	if err := r.deleteOldBuilder(fn); err != nil {
-		log.Error(err, "Failed to clean builder", "name", fn.Name, "namespace", fn.Namespace)
+		log.Error(err, "Failed to clean builder")
 		return err
 	}
 
@@ -117,32 +115,32 @@ func (r *FunctionReconciler) createBuilder(fn *openfunction.Function) error {
 		}
 		fn.Status.Serving = &openfunction.Condition{}
 		if err := r.Status().Update(r.ctx, fn); err != nil {
-			log.Error(err, "Failed to update function build status", "namespace", fn.Namespace, "name", fn.Name)
+			log.Error(err, "Failed to update function build status")
 			return err
 		}
 
-		log.V(1).Info("Skip build", "namespace", fn.Namespace, "name", fn.Name)
+		log.V(1).Info("Skip build")
 		return nil
 	}
 
 	builder := &openfunction.Builder{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-builder-", fn.Name),
+			GenerateName: "builder-",
 			Namespace:    fn.Namespace,
 			Labels: map[string]string{
-				functionLabel: fn.Name,
+				constants.FunctionLabel: fn.Name,
 			},
 		},
 		Spec: r.createBuilderSpec(fn),
 	}
 	builder.SetOwnerReferences(nil)
 	if err := ctrl.SetControllerReference(fn, builder, r.Scheme); err != nil {
-		log.Error(err, "Failed to SetOwnerReferences for builder", "namespace", builder.Namespace, "name", builder.Name)
+		log.Error(err, "Failed to SetOwnerReferences for builder")
 		return err
 	}
 
 	if err := r.Create(r.ctx, builder); err != nil {
-		log.Error(err, "Failed to create builder", "namespace", builder.Namespace, "name", builder.Name)
+		log.Error(err, "Failed to create builder")
 		return err
 	}
 
@@ -152,17 +150,18 @@ func (r *FunctionReconciler) createBuilder(fn *openfunction.Function) error {
 		ResourceHash: util.Hash(builder.Spec),
 	}
 	if err := r.Status().Update(r.ctx, fn); err != nil {
-		log.Error(err, "Failed to update function build status", "namespace", fn.Namespace, "name", fn.Name)
+		log.Error(err, "Failed to update function build status")
 		return err
 	}
 
-	log.V(1).Info("Builder created", "namespace", builder.Namespace, "name", builder.Name)
+	log.V(1).Info("Builder created", "Builder", builder.Name)
 	return nil
 }
 
 // Update the status of the function with the result of the build.
 func (r *FunctionReconciler) updateFuncWithBuilderStatus(fn *openfunction.Function) error {
-	log := r.Log.WithName("UpdateFuncWithBuilderStatus")
+	log := r.Log.WithName("UpdateFuncWithBuilderStatus").
+		WithValues("Function", fmt.Sprintf("%s/%s", fn.Namespace, fn.Name))
 
 	// Build had not created or not completed, no need to update function status.
 	if fn.Status.Build == nil || fn.Status.Build.State == "" {
@@ -174,12 +173,12 @@ func (r *FunctionReconciler) updateFuncWithBuilderStatus(fn *openfunction.Functi
 	builder.Namespace = fn.Namespace
 
 	if builder.Name == "" {
-		log.V(1).Info("Function has no builder", "namespace", fn.Namespace, "name", fn.Name)
+		log.V(1).Info("Function has no builder")
 		return nil
 	}
 
 	if err := r.Get(r.ctx, client.ObjectKey{Namespace: builder.Namespace, Name: builder.Name}, &builder); util.IgnoreNotFound(err) != nil {
-		log.Error(err, "Failed to get builder", "namespace", builder.Namespace, "name", builder.Name)
+		log.Error(err, "Failed to get builder", "Builder", builder.Name)
 		return util.IgnoreNotFound(err)
 	}
 
@@ -202,7 +201,7 @@ func (r *FunctionReconciler) updateFuncWithBuilderStatus(fn *openfunction.Functi
 	}
 
 	if err := r.Status().Update(r.ctx, fn); err != nil {
-		log.Error(err, "Failed to update function status", "namespace", fn.Namespace, "name", fn.Name)
+		log.Error(err, "Failed to update function status")
 		return err
 	}
 
@@ -214,7 +213,8 @@ func (r *FunctionReconciler) updateFuncWithBuilderStatus(fn *openfunction.Functi
 }
 
 func (r *FunctionReconciler) cleanupBuilder(fn *openfunction.Function) error {
-	log := r.Log.WithName("CleanupBuilder")
+	log := r.Log.WithName("CleanupBuilder").
+		WithValues("Function", fmt.Sprintf("%s/%s", fn.Namespace, fn.Name))
 
 	if fn.Status.Build == nil {
 		return nil
@@ -231,26 +231,25 @@ func (r *FunctionReconciler) cleanupBuilder(fn *openfunction.Function) error {
 		return util.IgnoreNotFound(err)
 	}
 
-	log.V(1).Info("Function builder cleanup", "namespace", builder.Namespace, "name", builder.Name)
+	log.V(1).Info("Function builder cleanup", "Builder", builder.Name)
 	return nil
 }
 
 // Delete old builders which created by function.
 func (r *FunctionReconciler) deleteOldBuilder(fn *openfunction.Function) error {
-	log := r.Log.WithName("DeleteOldBuilder")
+	log := r.Log.WithName("DeleteOldBuilder").
+		WithValues("Function", fmt.Sprintf("%s/%s", fn.Namespace, fn.Name))
 
 	builders := &openfunction.BuilderList{}
-	if err := r.List(r.ctx, builders, client.InNamespace(fn.Namespace), client.MatchingLabels{functionLabel: fn.Name}); err != nil {
+	if err := r.List(r.ctx, builders, client.InNamespace(fn.Namespace), client.MatchingLabels{constants.FunctionLabel: fn.Name}); err != nil {
 		return err
 	}
 
 	for _, item := range builders.Items {
-		if strings.HasPrefix(item.Name, fmt.Sprintf("%s-builder", fn.Name)) {
-			if err := r.Delete(context.Background(), &item); util.IgnoreNotFound(err) != nil {
-				return err
-			}
-			log.V(1).Info("Delete Builder", "namespace", item.Namespace, "name", item.Name)
+		if err := r.Delete(context.Background(), &item); util.IgnoreNotFound(err) != nil {
+			return err
 		}
+		log.V(1).Info("Delete Builder", "builder", item.Name)
 	}
 
 	return nil
@@ -280,24 +279,25 @@ func (r *FunctionReconciler) createBuilderSpec(fn *openfunction.Function) openfu
 }
 
 func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
-	log := r.Log.WithName("CreateServing")
+	log := r.Log.WithName("CreateServing").
+		WithValues("Function", fmt.Sprintf("%s/%s", fn.Namespace, fn.Name))
 
 	if !r.needToCreateServing(fn) {
-		log.V(1).Info("No need to create serving", "namespace", fn.Namespace, "name", fn.Name)
+		log.V(1).Info("No need to create Serving")
 
 		if running, err := r.isServingRunning(fn); err != nil {
-			log.Error(err, "Failed to get serving status", "namespace", fn.Namespace, "name", fn.Name)
+			log.Error(err, "Failed to get serving status")
 			return err
 		} else if running {
 			if err := r.deleteOldServing(fn); err != nil {
-				log.Error(err, "Failed to clean old serving", "namespace", fn.Namespace, "name", fn.Name)
+				log.Error(err, "Failed to clean old serving")
 				return err
 			}
 
 			if fn.Status.Serving.State != openfunction.Running {
 				fn.Status.Serving.State = openfunction.Running
 				if err := r.Status().Update(r.ctx, fn); err != nil {
-					log.Error(err, "Failed to update function serving status", "namespace", fn.Namespace, "name", fn.Name)
+					log.Error(err, "Failed to update function serving status")
 					return err
 				}
 			}
@@ -313,7 +313,7 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 	fn.Status.Serving.State = ""
 	fn.Status.Serving.ResourceHash = ""
 	if err := r.Status().Update(r.ctx, fn); err != nil {
-		log.Error(err, "Failed to update function serving status", "namespace", fn.Namespace, "name", fn.Name)
+		log.Error(err, "Failed to update function serving status")
 		return err
 	}
 
@@ -323,32 +323,32 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 			ResourceHash: util.Hash(openfunction.ServingSpec{}),
 		}
 		if err := r.Status().Update(r.ctx, fn); err != nil {
-			log.Error(err, "Failed to update function serving status", "namespace", fn.Namespace, "name", fn.Name)
+			log.Error(err, "Failed to update function serving status")
 			return err
 		}
 
-		log.V(1).Info("Skip serving", "namespace", fn.Namespace, "name", fn.Name)
+		log.V(1).Info("Skip serving")
 		return nil
 	}
 
 	serving := &openfunction.Serving{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-serving-", fn.Name),
+			GenerateName: "serving-",
 			Namespace:    fn.Namespace,
 			Labels: map[string]string{
-				functionLabel: fn.Name,
+				constants.FunctionLabel: fn.Name,
 			},
 		},
 		Spec: r.createServingSpec(fn),
 	}
 	serving.SetOwnerReferences(nil)
 	if err := ctrl.SetControllerReference(fn, serving, r.Scheme); err != nil {
-		log.Error(err, "Failed to SetOwnerReferences for serving", "namespace", serving.Namespace, "name", serving.Name)
+		log.Error(err, "Failed to SetOwnerReferences for serving")
 		return err
 	}
 
 	if err := r.Create(r.ctx, serving); err != nil {
-		log.Error(err, "Failed to create serving", "namespace", serving.Namespace, "name", serving.Name)
+		log.Error(err, "Failed to create serving")
 		return err
 	}
 
@@ -358,11 +358,11 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 		ResourceHash: util.Hash(serving.Spec),
 	}
 	if err := r.Status().Update(r.ctx, fn); err != nil {
-		log.Error(err, "Failed to update function serving status", "namespace", fn.Namespace, "name", fn.Name)
+		log.Error(err, "Failed to update function serving status")
 		return err
 	}
 
-	log.V(1).Info("Function serving created", "namespace", serving.Namespace, "name", serving.Name)
+	log.V(1).Info("Serving created", "Serving", serving.Name)
 	return nil
 }
 
@@ -389,7 +389,8 @@ func (r *FunctionReconciler) isServingRunning(fn *openfunction.Function) (bool, 
 
 // Clean up redundant servings caused by the `createOrUpdateBuilder` function failed.
 func (r *FunctionReconciler) deleteOldServing(fn *openfunction.Function) error {
-	log := r.Log.WithName("DeleteOldServing")
+	log := r.Log.WithName("DeleteOldServing").
+		WithValues("Function", fmt.Sprintf("%s/%s", fn.Namespace, fn.Name))
 
 	name := ""
 	if fn.Status.Serving != nil {
@@ -397,16 +398,16 @@ func (r *FunctionReconciler) deleteOldServing(fn *openfunction.Function) error {
 	}
 
 	servings := &openfunction.ServingList{}
-	if err := r.List(r.ctx, servings, client.InNamespace(fn.Namespace), client.MatchingLabels{functionLabel: fn.Name}); err != nil {
+	if err := r.List(r.ctx, servings, client.InNamespace(fn.Namespace), client.MatchingLabels{constants.FunctionLabel: fn.Name}); err != nil {
 		return err
 	}
 
 	for _, item := range servings.Items {
-		if strings.HasPrefix(item.Name, fmt.Sprintf("%s-serving", fn.Name)) && item.Name != name {
+		if item.Name != name {
 			if err := r.Delete(context.Background(), &item); util.IgnoreNotFound(err) != nil {
 				return err
 			}
-			log.V(1).Info("Delete Serving", "namespace", item.Namespace, "name", item.Name)
+			log.V(1).Info("Delete Serving", "Serving", item.Name)
 		}
 	}
 
@@ -447,20 +448,21 @@ func (r *FunctionReconciler) createServingSpec(fn *openfunction.Function) openfu
 }
 
 func (r *FunctionReconciler) needToCreateBuilder(fn *openfunction.Function) bool {
-	log := r.Log.WithName("NeedToCreateBuilder")
+	log := r.Log.WithName("NeedToCreateBuilder").
+		WithValues("Function", fmt.Sprintf("%s/%s", fn.Namespace, fn.Name))
 
 	// Builder had not created, need to create.
 	if fn.Status.Build == nil ||
 		fn.Status.Build.ResourceHash == "" ||
 		(fn.Status.Build.ResourceRef == "" && fn.Spec.Build != nil) {
-		log.V(1).Info("Builder not created", "namespace", fn.Namespace, "name", fn.Name)
+		log.V(1).Info("Builder not created")
 		return true
 	}
 
 	newHash := util.Hash(r.createBuilderSpec(fn))
 	// Builder changed, need to create.
 	if newHash != fn.Status.Build.ResourceHash {
-		log.V(1).Info("builder changed", "namespace", fn.Namespace, "name", fn.Name, "old", fn.Status.Build.ResourceHash, "new", newHash)
+		log.V(1).Info("builder changed", "old", fn.Status.Build.ResourceHash, "new", newHash)
 		return true
 	}
 
@@ -474,7 +476,7 @@ func (r *FunctionReconciler) needToCreateBuilder(fn *openfunction.Function) bool
 	if err := r.Get(r.ctx, key, &builder); util.IsNotFound(err) {
 		// If the builder is deleted before the build is completed, the builder needs to be recreated.
 		if fn.Status.Build.State != openfunction.Succeeded {
-			log.V(1).Info("Builder had been deleted", "namespace", fn.Namespace, "name", fn.Name)
+			log.V(1).Info("Builder had been deleted")
 			return true
 		}
 	}
@@ -484,11 +486,12 @@ func (r *FunctionReconciler) needToCreateBuilder(fn *openfunction.Function) bool
 
 func (r *FunctionReconciler) needToCreateServing(fn *openfunction.Function) bool {
 
-	log := r.Log.WithName("NeedToCreateServing")
+	log := r.Log.WithName("NeedToCreateServing").
+		WithValues("Function", fmt.Sprintf("%s/%s", fn.Namespace, fn.Name))
 
 	// The build is still in process, no need to create or update serving.
 	if fn.Status.Serving == nil {
-		log.V(1).Info("Build not completed", "namespace", fn.Namespace, "name", fn.Name)
+		log.V(1).Info("Build not completed")
 		return false
 	}
 
@@ -496,14 +499,14 @@ func (r *FunctionReconciler) needToCreateServing(fn *openfunction.Function) bool
 	oldName := fn.Status.Serving.ResourceRef
 	// Serving had not created, need to create.
 	if fn.Status.Serving.State == "" || oldHash == "" || (oldName == "" && fn.Spec.Serving != nil) {
-		log.V(1).Info("Serving not created", "namespace", fn.Namespace, "name", fn.Name)
+		log.V(1).Info("Serving not created")
 		return true
 	}
 
 	newHash := util.Hash(r.createServingSpec(fn))
 	// Serving changed, need to update.
 	if newHash != oldHash {
-		log.V(1).Info("Serving changed", "namespace", fn.Namespace, "name", fn.Name, "old", oldHash, "new", newHash)
+		log.V(1).Info("Serving changed", "old", oldHash, "new", newHash)
 		return true
 	}
 
@@ -516,7 +519,7 @@ func (r *FunctionReconciler) needToCreateServing(fn *openfunction.Function) bool
 	key := client.ObjectKey{Namespace: fn.Namespace, Name: oldName}
 	if err := r.Get(r.ctx, key, &serving); util.IsNotFound(err) {
 		// If the serving is deleted, need to be recreated.
-		log.V(1).Info("Serving had been deleted", "namespace", fn.Namespace, "name", fn.Name)
+		log.V(1).Info("Serving had been deleted")
 		return true
 	}
 

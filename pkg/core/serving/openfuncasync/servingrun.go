@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/openfunction/pkg/constants"
+
 	openfunctioncontext "github.com/OpenFunction/functions-framework-go/openfunction-context"
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	"github.com/go-logr/logr"
@@ -16,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -26,13 +27,21 @@ import (
 )
 
 const (
-	servingLabel = "openfunction.io/serving"
+	servingLabel        = "openfunction.io/serving"
+	openfunctionManaged = "openfunction.io/managed"
+	runtimeLabel        = "runtime"
 
-	workloadName     = "OpenFuncAsync/workload"
-	serviceName      = "OpenFuncAsync/service"
-	scalerName       = "OpenFuncAsync/scaler"
-	componentName    = "OpenFuncAsync/component"
-	subscriptionName = "OpenFuncAsync/subscription"
+	workloadName  = "OpenFuncAsync/workload"
+	scalerName    = "OpenFuncAsync/scaler"
+	componentName = "OpenFuncAsync/component"
+
+	daprEnabled     = "dapr.io/enabled"
+	daprAPPID       = "dapr.io/app-id"
+	daprLogAsJSON   = "dapr.io/log-as-json"
+	daprAPPProtocol = "dapr.io/app-protocol"
+	daprAPPPort     = "dapr.io/app-port"
+
+	FUNCCONTEXT = "FUNC_CONTEXT"
 )
 
 type servingRun struct {
@@ -53,50 +62,46 @@ func NewServingRun(ctx context.Context, c client.Client, scheme *runtime.Scheme,
 
 func (r *servingRun) Run(s *openfunction.Serving) error {
 
-	log := r.log.WithName("Run")
+	log := r.log.WithName("Run").
+		WithValues("Serving", fmt.Sprintf("%s/%s", s.Namespace, s.Name))
 
 	if s.Spec.OpenFuncAsync == nil {
 		return fmt.Errorf("OpenFuncAsync config must not be nil when using OpenFuncAsync runtime")
 	}
 
 	if err := r.clean(s); err != nil {
-		log.Error(err, "Failed to Clean", "name", s.Name, "namespace", s.Namespace)
+		log.Error(err, "Failed to Clean")
 		return err
 	}
 
 	if err := r.checkComponentSpecExist(s); err != nil {
-		log.Error(err, "Failed to CheckComponentSpecExist", "name", s.Name, "namespace", s.Namespace)
+		log.Error(err, "Some Components does not exist")
+		return err
+	}
+
+	s.Status.ResourceRef = make(map[string]string)
+	if err := r.createComponents(s); err != nil {
+		log.Error(err, "Failed to create Dapr Components")
 		return err
 	}
 
 	workload := r.generateWorkload(s)
 	if err := controllerutil.SetControllerReference(s, workload, r.scheme); err != nil {
-		log.Error(err, "Failed to SetControllerReference", "name", s.Name, "namespace", s.Namespace)
+		log.Error(err, "Failed to SetControllerReference for workload")
 		return err
 	}
 
 	if err := r.Create(r.ctx, workload); err != nil {
-		log.Error(err, "Failed to create workload", "name", s.Name, "namespace", s.Namespace)
+		log.Error(err, "Failed to create workload")
 		return err
 	}
 
-	log.V(1).Info("Workload created", "name", workload.GetName(), "namespace", workload.GetNamespace())
+	log.V(1).Info("Workload created", "Workload", workload.GetName())
 
-	s.Status.ResourceRef = make(map[string]string)
 	s.Status.ResourceRef[workloadName] = workload.GetName()
 
 	if err := r.createScaler(s, workload); err != nil {
-		log.Error(err, "Failed to create keda triggers", "name", s.Name, "namespace", s.Namespace)
-		return err
-	}
-
-	if err := r.createService(s, workload); err != nil {
-		log.Error(err, "Failed to create Service", "name", s.Name, "namespace", s.Namespace)
-		return err
-	}
-
-	if err := r.createOrUpdateComponents(s); err != nil {
-		log.Error(err, "Failed to create dapr components", "name", s.Name, "namespace", s.Namespace)
+		log.Error(err, "Failed to create Keda triggers")
 		return err
 	}
 
@@ -104,7 +109,8 @@ func (r *servingRun) Run(s *openfunction.Serving) error {
 }
 
 func (r *servingRun) clean(s *openfunction.Serving) error {
-	log := r.log.WithName("Clean")
+	log := r.log.WithName("Clean").
+		WithValues("Serving", fmt.Sprintf("%s/%s", s.Namespace, s.Name))
 
 	list := func(lists []client.ObjectList) error {
 		for _, list := range lists {
@@ -121,7 +127,7 @@ func (r *servingRun) clean(s *openfunction.Serving) error {
 			if err := r.Delete(context.Background(), obj); util.IgnoreNotFound(err) != nil {
 				return err
 			}
-			log.V(1).Info("Delete", "namespace", s.Namespace, "name", obj.GetName())
+			log.V(1).Info("Delete", "name", obj.GetName())
 		}
 
 		return nil
@@ -133,8 +139,9 @@ func (r *servingRun) clean(s *openfunction.Serving) error {
 	scalerJobList := &kedav1alpha1.ScaledJobList{}
 	scaledObjectList := &kedav1alpha1.ScaledObjectList{}
 	serviceList := &corev1.ServiceList{}
+	componentList := &componentsv1alpha1.ComponentList{}
 
-	if err := list([]client.ObjectList{jobList, deploymentList, statefulSetList, scalerJobList, scaledObjectList, serviceList}); err != nil {
+	if err := list([]client.ObjectList{jobList, deploymentList, statefulSetList, scalerJobList, scaledObjectList, serviceList, componentList}); err != nil {
 		return err
 	}
 
@@ -168,7 +175,13 @@ func (r *servingRun) clean(s *openfunction.Serving) error {
 		}
 	}
 
-	for _, item := range serviceList.Items {
+	for _, item := range scaledObjectList.Items {
+		if err := deleteObj(&item); err != nil {
+			return err
+		}
+	}
+
+	for _, item := range componentList.Items {
 		if err := deleteObj(&item); err != nil {
 			return err
 		}
@@ -180,9 +193,9 @@ func (r *servingRun) clean(s *openfunction.Serving) error {
 func (r *servingRun) generateWorkload(s *openfunction.Serving) client.Object {
 
 	labels := map[string]string{
-		"openfunction.io/managed": "true",
-		servingLabel:              s.Name,
-		"runtime":                 string(openfunction.OpenFuncAsync),
+		openfunctionManaged: "true",
+		servingLabel:        s.Name,
+		runtimeLabel:        string(openfunction.OpenFuncAsync),
 	}
 
 	selector := &metav1.LabelSelector{
@@ -202,9 +215,9 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving) client.Object {
 	}
 
 	annotations := make(map[string]string)
-	annotations["dapr.io/enabled"] = "true"
-	annotations["dapr.io/app-id"] = fmt.Sprintf("%s-%s", strings.TrimSuffix(s.Name, "-serving"), s.Namespace)
-	annotations["dapr.io/log-as-json"] = "true"
+	annotations[daprEnabled] = "true"
+	annotations[daprAPPID] = fmt.Sprintf("%s-%s", getFunctionName(s), s.Namespace)
+	annotations[daprLogAsJSON] = "true"
 	if s.Spec.OpenFuncAsync.Dapr != nil {
 		for k, v := range s.Spec.OpenFuncAsync.Dapr.Annotations {
 			annotations[k] = v
@@ -212,9 +225,9 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving) client.Object {
 	}
 
 	// The dapr protocol must equal to the protocol of function framework.
-	annotations["dapr.io/app-protocol"] = "grpc"
+	annotations[daprAPPProtocol] = "grpc"
 	// The dapr port must equal the function port.
-	annotations["dapr.io/app-port"] = fmt.Sprintf("%d", port)
+	annotations[daprAPPPort] = fmt.Sprintf("%d", port)
 
 	spec := s.Spec.Template
 	if spec == nil {
@@ -250,7 +263,7 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving) client.Object {
 	})
 
 	container.Env = append(container.Env, corev1.EnvVar{
-		Name:  "FUNC_CONTEXT",
+		Name:  FUNCCONTEXT,
 		Value: createFunctionContext(s),
 	})
 
@@ -275,14 +288,12 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving) client.Object {
 		Spec: *spec,
 	}
 
-	objectMeta := metav1.ObjectMeta{
-		GenerateName: fmt.Sprintf("%s-%s-", s.Name, strings.ReplaceAll(*s.Spec.Version, ".", "")),
-		Namespace:    s.Namespace,
-		Labels:       labels,
-	}
-
 	deploy := &appsv1.Deployment{
-		ObjectMeta: objectMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: fmt.Sprintf("%s-deployment-%s-", s.Name, strings.ReplaceAll(*s.Spec.Version, ".", "")),
+			Namespace:    s.Namespace,
+			Labels:       labels,
+		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: selector,
@@ -291,7 +302,11 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving) client.Object {
 	}
 
 	statefulset := &appsv1.StatefulSet{
-		ObjectMeta: objectMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: fmt.Sprintf("%s-statefulset-%s-", s.Name, strings.ReplaceAll(*s.Spec.Version, ".", "")),
+			Namespace:    s.Namespace,
+			Labels:       labels,
+		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas: &replicas,
 			Selector: selector,
@@ -300,7 +315,11 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving) client.Object {
 	}
 
 	job := &batchv1.Job{
-		ObjectMeta: objectMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: fmt.Sprintf("%s-job-%s-", s.Name, strings.ReplaceAll(*s.Spec.Version, ".", "")),
+			Namespace:    s.Namespace,
+			Labels:       labels,
+		},
 		Spec: batchv1.JobSpec{
 			Template: template,
 		},
@@ -331,7 +350,8 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving) client.Object {
 }
 
 func (r *servingRun) createScaler(s *openfunction.Serving, workload runtime.Object) error {
-	log := r.log.WithName("CreateKedaScaler")
+	log := r.log.WithName("CreateKedaScaler").
+		WithValues("Serving", fmt.Sprintf("%s/%s", s.Namespace, s.Name))
 
 	keda := s.Spec.OpenFuncAsync.Keda
 	if keda == nil || (keda.ScaledJob == nil && keda.ScaledObject == nil) {
@@ -351,9 +371,9 @@ func (r *servingRun) createScaler(s *openfunction.Serving, workload runtime.Obje
 				GenerateName: fmt.Sprintf("%s-scaler-", s.Name),
 				Namespace:    s.Namespace,
 				Labels: map[string]string{
-					"openfunction.io/managed": "true",
-					servingLabel:              s.Name,
-					"runtime":                 string(openfunction.OpenFuncAsync),
+					openfunctionManaged: "true",
+					servingLabel:        s.Name,
+					runtimeLabel:        string(openfunction.OpenFuncAsync),
 				},
 			},
 			Spec: kedav1alpha1.ScaledJobSpec{
@@ -379,9 +399,9 @@ func (r *servingRun) createScaler(s *openfunction.Serving, workload runtime.Obje
 				GenerateName: fmt.Sprintf("%s-scaler-", s.Name),
 				Namespace:    s.Namespace,
 				Labels: map[string]string{
-					"openfunction.io/managed": "true",
-					servingLabel:              s.Name,
-					"runtime":                 string(openfunction.OpenFuncAsync),
+					openfunctionManaged: "true",
+					servingLabel:        s.Name,
+					runtimeLabel:        string(openfunction.OpenFuncAsync),
 				},
 			},
 			Spec: kedav1alpha1.ScaledObjectSpec{
@@ -397,18 +417,18 @@ func (r *servingRun) createScaler(s *openfunction.Serving, workload runtime.Obje
 	}
 
 	if err := controllerutil.SetControllerReference(s, obj, r.scheme); err != nil {
-		log.Error(err, "Failed to SetControllerReference", "name", s.Name, "namespace", s.Namespace)
+		log.Error(err, "Failed to SetControllerReference")
 		return err
 	}
 
 	if err := r.Create(r.ctx, obj); err != nil {
-		log.Error(err, "Failed to create keda scaler", "name", s.Name, "namespace", s.Namespace)
+		log.Error(err, "Failed to create Keda scaler")
 		return err
 	}
 
 	s.Status.ResourceRef[scalerName] = obj.GetName()
 
-	log.V(1).Info("Keda scaler Created", "serving", obj.GetName(), "namespace", obj.GetNamespace())
+	log.V(1).Info("Keda scaler Created", "Scaler", obj.GetName())
 	return nil
 }
 
@@ -443,59 +463,9 @@ func (r *servingRun) getObjectTargetRef(workload runtime.Object) (*kedav1alpha1.
 	return ref, nil
 }
 
-func (r *servingRun) createService(s *openfunction.Serving, workload client.Object) error {
-
-	log := r.log.WithName("CreateService")
-
-	var port int32 = 8080
-	if s.Spec.Port != nil {
-		port = *s.Spec.Port
-	}
-
-	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-svc-", s.Name),
-			Namespace:    s.Namespace,
-			Labels: map[string]string{
-				"openfunction.io/managed": "true",
-				servingLabel:              s.Name,
-				"runtime":                 string(openfunction.OpenFuncAsync),
-			},
-		},
-		Spec: corev1.ServiceSpec{
-			Selector: workload.GetLabels(),
-			Type:     corev1.ServiceTypeClusterIP,
-			Ports: []corev1.ServicePort{
-				{
-					Name: "serving",
-					Port: port,
-					TargetPort: intstr.IntOrString{
-						IntVal: port,
-					},
-					Protocol: corev1.ProtocolTCP,
-				},
-			},
-		},
-	}
-
-	if err := controllerutil.SetControllerReference(s, svc, r.scheme); err != nil {
-		log.Error(err, "Failed to mutate dapr service", "name", s.Name, "namespace", s.Namespace)
-		return err
-	}
-
-	if err := r.Create(r.ctx, svc); err != nil {
-		log.Error(err, "Failed to create service", "name", s.Name, "namespace", s.Namespace)
-		return err
-	}
-
-	s.Status.ResourceRef[serviceName] = svc.Name
-
-	log.V(1).Info("Service created", "name", svc.Name, "namespace", svc.Namespace)
-	return nil
-}
-
-func (r *servingRun) createOrUpdateComponents(s *openfunction.Serving) error {
-	log := r.log.WithName("CreateOrUpdateDaprComponents")
+func (r *servingRun) createComponents(s *openfunction.Serving) error {
+	log := r.log.WithName("CreateDaprComponents").
+		WithValues("Serving", fmt.Sprintf("%s/%s", s.Namespace, s.Name))
 
 	dapr := s.Spec.OpenFuncAsync.Dapr
 	if dapr == nil {
@@ -506,18 +476,31 @@ func (r *servingRun) createOrUpdateComponents(s *openfunction.Serving) error {
 	for name, dc := range dapr.Components {
 		component := &componentsv1alpha1.Component{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: s.Namespace,
+				GenerateName: fmt.Sprintf("%s-component-%s-", s.Name, name),
+				Namespace:    s.Namespace,
+				Labels: map[string]string{
+					openfunctionManaged: "true",
+					servingLabel:        s.Name,
+				},
 			},
 		}
 
-		if _, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, component, r.mutateComponent(component, *dc, s)); err != nil {
-			log.Error(err, "Failed to CreateOrUpdate dapr component", "namespace", s.Namespace, "serving", s.Name, "component", name)
+		if dc != nil {
+			component.Spec = *dc
+		}
+
+		if err := controllerutil.SetControllerReference(s, component, r.scheme); err != nil {
+			log.Error(err, "Failed to SetControllerReference", "Component", name)
+			return err
+		}
+
+		if err := r.Create(r.ctx, component); err != nil {
+			log.Error(err, "Failed to Create Dapr Component", "Component", name)
 			return err
 		}
 
 		value = fmt.Sprintf("%s%s,", value, component.Name)
-		log.V(1).Info("Component CreateOrUpdate", "namespace", s.Namespace, "serving", s.Name, "component", name)
+		log.V(1).Info("Component Created", "Component", component.Name)
 	}
 
 	if value != "" {
@@ -527,22 +510,16 @@ func (r *servingRun) createOrUpdateComponents(s *openfunction.Serving) error {
 	return nil
 }
 
-func (r *servingRun) mutateComponent(component *componentsv1alpha1.Component, spec componentsv1alpha1.ComponentSpec, s *openfunction.Serving) controllerutil.MutateFn {
-
-	return func() error {
-		component.Spec = spec
-		return controllerutil.SetControllerReference(s, component, r.scheme)
-	}
-}
-
 func (r *servingRun) checkComponentSpecExist(s *openfunction.Serving) error {
+
+	var cs []string
 	if s.Spec.OpenFuncAsync != nil && s.Spec.OpenFuncAsync.Dapr != nil {
 		dapr := s.Spec.OpenFuncAsync.Dapr
 
 		if dapr.Inputs != nil && len(dapr.Inputs) > 0 {
 			for _, i := range dapr.Inputs {
 				if _, ok := dapr.Components[i.Component]; !ok {
-					return fmt.Errorf("component %s not found", i.Component)
+					cs = append(cs, i.Component)
 				}
 			}
 		}
@@ -550,10 +527,14 @@ func (r *servingRun) checkComponentSpecExist(s *openfunction.Serving) error {
 		if dapr.Outputs != nil && len(dapr.Outputs) > 0 {
 			for _, o := range dapr.Outputs {
 				if _, ok := dapr.Components[o.Component]; !ok {
-					return fmt.Errorf("component %s not found", o.Component)
+					cs = append(cs, o.Component)
 				}
 			}
 		}
+	}
+
+	if cs != nil && len(cs) > 0 {
+		return fmt.Errorf("component %s does not exist", strings.Join(cs, ","))
 	}
 	return nil
 }
@@ -597,7 +578,7 @@ func createFunctionContext(s *openfunction.Serving) string {
 				}
 				input := openfunctioncontext.Input{
 					Uri:       uri,
-					Component: i.Component,
+					Component: getComponentName(s, i.Component),
 					Type:      openfunctioncontext.ResourceType(componentType),
 					Metadata:  i.Params,
 				}
@@ -617,7 +598,7 @@ func createFunctionContext(s *openfunction.Serving) string {
 				}
 				output := openfunctioncontext.Output{
 					Uri:       uri,
-					Component: o.Component,
+					Component: getComponentName(s, o.Component),
 					Type:      openfunctioncontext.ResourceType(componentType),
 					Metadata:  o.Params,
 					Operation: o.Operation,
@@ -633,5 +614,20 @@ func createFunctionContext(s *openfunction.Serving) string {
 
 func getFunctionName(s *openfunction.Serving) string {
 
-	return s.Name[:strings.LastIndex(s.Name, "-serving")]
+	return s.Labels[constants.FunctionLabel]
+}
+
+func getComponentName(s *openfunction.Serving, name string) string {
+
+	names := strings.Split(s.Status.ResourceRef[componentName], ",")
+	for _, n := range names {
+		tmp := strings.TrimPrefix(n, fmt.Sprintf("%s-component-", s.Name))
+		if index := strings.LastIndex(tmp, "-"); index != -1 {
+			if tmp[:index] == name {
+				return n
+			}
+		}
+	}
+
+	return name
 }
