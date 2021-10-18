@@ -121,7 +121,7 @@ if [ "$with_openFuncAsync" = "true" ]; then
   fi
 fi
 
-if [ "$with_openFuncAsync" = "true" ]; then
+if [ "$with_openFuncAsync" = "true" ] || [ "$poor_network" = "false" ]; then
   kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.5.4/cert-manager.yaml
 else
   kubectl apply -f https://openfunction.sh1a.qingstor.com/cert-manager/v1.5.4/cert-manager.yaml

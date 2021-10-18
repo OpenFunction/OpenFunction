@@ -1,0 +1,19 @@
+apiVersion: core.openfunction.io/v1alpha2
+kind: Function
+metadata:
+  name: function-sample
+spec:
+  version: "v1.0.0"
+  image: "openfunctiondev/sample-go-func:latest"
+  imageCredentials:
+    name: push-secret
+  #port: 8080 # default to 8080
+  build:
+    builder: openfunction/builder:v1
+    env:
+      FUNC_NAME: "HelloWorld"
+      FUNC_TYPE: "http"
+      #FUNC_SRC: "main.py"
+    srcRepo:
+      url: "https://github.com/OpenFunction/samples.git"
+      sourceSubPath: "latest/functions/Knative/hello-world-go"

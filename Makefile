@@ -48,9 +48,13 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-fmt: ## Run go fmt && goimports against code.
+fmt: goimports ## Run go fmt && goimports against code.
 	go fmt ./...
-	goimports -w -local github.com/openfunction main.go controllers/ pkg/ docs/ hack/ apis/
+	$(GOIMPORTS) -w -local github.com/openfunction main.go controllers/ pkg/ docs/ hack/ apis/
+
+GOIMPORTS=$(shell pwd)/bin/goimports
+goimports:
+	$(call go-get-tool,$(GOIMPORTS),golang.org/x/tools/cmd/goimports@v0.1.7)
 
 vet: ## Run go vet against code.
 	go vet ./...
@@ -61,7 +65,17 @@ test: manifests generate fmt vet ## Run tests.
 	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.8.3/hack/setup-envtest.sh
 	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out
 
+verify: verify-crds
+
+verify-crds: generate
+	@if !(git diff --quiet HEAD config/crd); then \
+		echo "generated files are out of date, run make generate"; exit 1; \
+	fi
+
 ##@ Build
+
+binary: ## Build openfunction binary without test.
+	go build -o bin/openfunction main.go
 
 build: generate fmt vet ## Build openfunction binary.
 	go build -o bin/openfunction main.go
@@ -90,8 +104,7 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 	$(KUSTOMIZE) build config/crd | kubectl delete -f -
 
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default | kubectl create -f -
+	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
@@ -122,7 +135,7 @@ TMP_DIR=$$(mktemp -d) ;\
 cd $$TMP_DIR ;\
 go mod init tmp ;\
 echo "Downloading $(2)" ;\
-GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
+GOBIN=$(PROJECT_DIR)/bin go install -v $(2) ;\
 rm -rf $$TMP_DIR ;\
 }
 endef

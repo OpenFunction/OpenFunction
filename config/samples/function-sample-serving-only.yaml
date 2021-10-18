@@ -1,0 +1,15 @@
+apiVersion: core.openfunction.io/v1alpha2
+kind: Function
+metadata:
+  name: function-sample
+spec:
+  version: "v1.0.0"
+  image: "openfunctiondev/sample-go-func:latest"
+  #port: 8080 # default to 8080
+  serving:
+    runtime: Knative
+    template:
+      containers:
+        - name: function
+          imagePullPolicy: Always
+    #runtime: "Knative" # default to Knative
