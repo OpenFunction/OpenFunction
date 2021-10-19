@@ -72,11 +72,26 @@ You can refer to [Prerequisites](#prerequisites) and use `--with-openFuncAsync` 
 
 The OpenFuncAsync functions can be triggered by various event types, such as MQ, cronjob, DB events, etc. In a Kubernetes cluster, OpenFuncAsync functions run in the form of deployments or jobs.
 
+## Compatibility
+
+### Kubernetes compatibility matrix
+
+The following versions are supported and work as we test against these versions in their respective branches. But note that other versions might work!
+
+| kube-prometheus stack                                                       | Kubernetes 1.18 | Kubernetes 1.19 | Kubernetes 1.20 | Kubernetes 1.21 | Kubernetes 1.22 |
+|-----------------------------------------------------------------------------|-----------------|-----------------|-----------------|-----------------|-----------------|
+| [`release-0.1.0`](https://github.com/OpenFunction/OpenFunction/tree/v0.1.0) | &radic;         | &radic;         | &radic;         | &radic;         | &radic;         |
+| [`release-0.2.0`](https://github.com/OpenFunction/OpenFunction/tree/v0.2.0) | &radic;         | &radic;         | &radic;         | &radic;         | &radic;         |
+| [`release-0.3.0`](https://github.com/OpenFunction/OpenFunction/tree/v0.3.0) | &radic;         | &radic;         | &radic;         | &radic;         | &radic;         |
+| [`release-0.3.1`](https://github.com/OpenFunction/OpenFunction/tree/v0.3.1) | &radic;         | &radic;         | &radic;         | &radic;         | &radic;         |
+| [`release-0.4.0`](https://github.com/OpenFunction/OpenFunction/tree/v0.4.0) | &times;         | &times;         | &radic;         | &radic;         | &radic;         |
+| [`HEAD`](https://github.com/prometheus-operator/kube-prometheus/tree/main)  | &times;         | &times;         | &radic;         | &radic;         | &radic;         |
+https://github.com/OpenFunction/OpenFunction/tree/v0.3.1
 ## QuickStart
 
 ### Prerequisites
 
-The current version of OpenFunction requires that you have a Kubernetes cluster with version ``>=1.18.6``.
+The current version of OpenFunction requires that you have a Kubernetes cluster with version ``>=1.20.6``.
 
 In addition, you need to deploy several dependencies for the OpenFunction ```Builder``` and ```Serving```.
 

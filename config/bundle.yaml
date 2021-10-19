@@ -30539,7 +30539,7 @@ spec:
         - --leader-elect
         command:
         - /openfunction
-        image: openfunction/openfunction:latest
+        image: openfunction/openfunction:v0.4.0
         livenessProbe:
           httpGet:
             path: /healthz
