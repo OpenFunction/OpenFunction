@@ -74,9 +74,11 @@
 
 - Use installation script to deploy OpenFunction and deprecate the installation guide. [#122](https://github.com/OpenFunction/OpenFunction/pull/122)
 
-# OpenFunction/samples
 
-> Timeline based on primary repository releases
+
+The following repos' release schedule is based on OpenFunction/OpenFunction
+
+# OpenFunction/samples
 
 ## 0.4.0 / 2021-10-19
 
@@ -86,8 +88,6 @@
 
 # OpenFunction/website
 
-> Timeline based on primary repository releases
-
 ## 0.4.0 / 2021-10-19
 
 ### Features
@@ -96,8 +96,6 @@
 - Support Algolia search. [#14](https://github.com/OpenFunction/website/pull/14)
 
 # OpenFunction/builder
-
-> Timeline based on primary repository releases
 
 ## 0.4.0 / 2021-10-19
 
@@ -111,8 +109,6 @@
 - Enables the OpenFunction functions framework to use the **FUNC_GOPROXY** environment variable. [#16](https://github.com/OpenFunction/builder/pull/16)
 
 # OpenFunction/cli
-
-> Timeline based on primary repository releases
 
 ## 0.4.0 / 2021-10-19
 
@@ -133,8 +129,6 @@
 
 # OpenFunction/functions-framework-go
 
-> Timeline based on primary repository releases
-
 ## 0.4.0 / 2021-10-19
 
 ### Features
@@ -143,8 +137,6 @@
 
 # OpenFunction/functions-framework-nodejs
 
-> Timeline based on primary repository releases
-
 ## 0.4.0 / 2021-10-19
 
 ### Features
@@ -152,8 +144,6 @@
 - Support OpenFunction type function. [#7](https://github.com/OpenFunction/functions-framework-nodejs/pull/7)
 
 # OpenFunction/events-handlers
-
-> Timeline based on primary repository releases
 
 ## 0.4.0 / 2021-10-19
 
