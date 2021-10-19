@@ -97,7 +97,6 @@ You can also customize the installation with the following parameters:
 | --with-knative                     | Install Knative serving runtime |
 | --with-openFuncAsync               | Install OpenFuncAsync serving runtime |
 | --poor-network                     | Use this if you have poor network connectivity to GitHub/Googleapis |
-| --tekton-dashboard-nodeport <port> | Expose the Tekton dashboard service with NodePort |
 
 ### Install OpenFunction
 
@@ -106,7 +105,7 @@ You can install the OpenFunction platform by the following command:
 - Install the latest stable version
 
 ```shell
-kubectl create -f https://github.com/OpenFunction/OpenFunction/releases/download/v0.3.1/bundle.yaml
+kubectl create -f https://github.com/OpenFunction/OpenFunction/releases/download/v0.4.0/bundle.yaml
 ```
 
 - Install the development version

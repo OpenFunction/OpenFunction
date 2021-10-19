@@ -30,4 +30,29 @@
 
 ### Enhancement
 
--  Delete old serving after new serving running. #107
+- Delete old serving after new serving running. #107
+
+
+## 0.4.0 / 2021-10-19
+
+### Features
+
+- Upgrade core.openfunction.io from **v1alpha1** to **v1alpha2**. #115
+- Make event handlers self driven. #115
+
+### Enhancement
+
+- Update dependent Dapr version to v1.3.1. #123
+- Update dependent Tekton pipeline version to 0.28.1. #131
+- Update dependent Knative serving version to 0.26.0. #131
+- Update dependent Shipwright build version to 0.6.0. #131
+- Update go version to 1.16. #131
+- Now Function supports environment variables with commas. #131
+
+### Fixes
+
+- Fix bug rerun serving failed. #132
+
+### Docs
+
+- Use installation script to deploy OpenFunction and deprecate the installation guide. #122
