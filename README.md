@@ -72,6 +72,18 @@ You can refer to [Prerequisites](#prerequisites) and use `--with-openFuncAsync` 
 
 The OpenFuncAsync functions can be triggered by various event types, such as MQ, cronjob, DB events, etc. In a Kubernetes cluster, OpenFuncAsync functions run in the form of deployments or jobs.
 
+## Compatibility
+
+### Kubernetes compatibility matrix
+
+The following versions are supported and work as we test against these versions in their respective branches. But note that other versions might work!
+
+| OpenFunction                                                              | Kubernetes 1.19 | Kubernetes 1.20 | Kubernetes 1.21 | Kubernetes 1.22 |
+|---------------------------------------------------------------------------|-----------------|-----------------|-----------------|-----------------|
+| [`release-0.3`](https://github.com/OpenFunction/OpenFunction/tree/v0.3.0) | &radic;         | &radic;         | &radic;         | &radic;         |
+| [`release-0.4`](https://github.com/OpenFunction/OpenFunction/tree/v0.4.0) | &times;         | &radic;         | &radic;         | &radic;         |
+| [`HEAD`](https://github.com/OpenFunction/OpenFunction/tree/main)          | &times;         | &radic;         | &radic;         | &radic;         |
+
 ## QuickStart
 
 ### Prerequisites
