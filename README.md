@@ -78,14 +78,11 @@ The OpenFuncAsync functions can be triggered by various event types, such as MQ,
 
 The following versions are supported and work as we test against these versions in their respective branches. But note that other versions might work!
 
-| kube-prometheus stack                                                       | Kubernetes 1.18 | Kubernetes 1.19 | Kubernetes 1.20 | Kubernetes 1.21 | Kubernetes 1.22 |
-|-----------------------------------------------------------------------------|-----------------|-----------------|-----------------|-----------------|-----------------|
-| [`release-0.1.0`](https://github.com/OpenFunction/OpenFunction/tree/v0.1.0) | &radic;         | &radic;         | &radic;         | &radic;         | &radic;         |
-| [`release-0.2.0`](https://github.com/OpenFunction/OpenFunction/tree/v0.2.0) | &radic;         | &radic;         | &radic;         | &radic;         | &radic;         |
-| [`release-0.3.0`](https://github.com/OpenFunction/OpenFunction/tree/v0.3.0) | &radic;         | &radic;         | &radic;         | &radic;         | &radic;         |
-| [`release-0.3.1`](https://github.com/OpenFunction/OpenFunction/tree/v0.3.1) | &radic;         | &radic;         | &radic;         | &radic;         | &radic;         |
-| [`release-0.4.0`](https://github.com/OpenFunction/OpenFunction/tree/v0.4.0) | &times;         | &times;         | &radic;         | &radic;         | &radic;         |
-| [`HEAD`](https://github.com/OpenFunction/OpenFunction/tree/main)             | &times;         | &times;         | &radic;         | &radic;         | &radic;         |
+| OpenFunction                                                              | Kubernetes 1.19 | Kubernetes 1.20 | Kubernetes 1.21 | Kubernetes 1.22 |
+|---------------------------------------------------------------------------|-----------------|-----------------|-----------------|-----------------|
+| [`release-0.3`](https://github.com/OpenFunction/OpenFunction/tree/v0.3.0) | &radic;         | &radic;         | &radic;         | &radic;         |
+| [`release-0.4`](https://github.com/OpenFunction/OpenFunction/tree/v0.4.0) | &times;         | &radic;         | &radic;         | &radic;         |
+| [`HEAD`](https://github.com/OpenFunction/OpenFunction/tree/main)          | &times;         | &radic;         | &radic;         | &radic;         |
 
 ## QuickStart
 
