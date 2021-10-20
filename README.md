@@ -183,7 +183,7 @@ func BindingsOutput(ctx *ofctx.OpenFunctionContext, in []byte) int {
 - Uninstall the latest stable version
 
 ```shell
-kubectl delete -f https://raw.githubusercontent.com/OpenFunction/OpenFunction/release-0.3/config/bundle.yaml
+kubectl delete -f https://raw.githubusercontent.com/OpenFunction/OpenFunction/release-0.4/config/bundle.yaml
 ```
 
 - Uninstall the development version
