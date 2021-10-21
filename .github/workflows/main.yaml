@@ -1,0 +1,345 @@
+name: Main CI WorkFlow
+
+on:
+  push:
+    branches:
+      - 'main'
+      - 'release-*'
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - 'main'
+      - 'release-*'
+env:
+  OF_IMAGE: openfunction:latest
+  REGISTRY_SERVER: https://index.docker.io/v1/
+  REGISTRY_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+  REGISTRY_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    name: Basic test and verify
+    env:
+      GO111MODULE: "on"
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16.x
+
+      - uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Install kubebuilder-3.1.0
+        run: |
+          curl -L -o kubebuilder "https://github.com/kubernetes-sigs/kubebuilder/releases/download/v3.1.0/kubebuilder_linux_amd64"
+          chmod +x kubebuilder && mv kubebuilder /usr/local/bin/
+      - name: Run basic test
+        run: make test
+
+      - name: Run verify crds test
+        run:  make verify
+
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    name: Binary build
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16.x
+
+      - uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - run: make binary
+        name: Run build all binaries
+       
+  docker_build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    name: Docker image build
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16.x
+
+      - uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: build image
+        run: |
+          docker build . -t ${{ env.REGISTRY_USER }}/${{ env.OF_IMAGE }} -f Dockerfile --build-arg GOPROXY="https://proxy.golang.org"
+  
+  openfunction_build_check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    name: Test the build process
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ${{ env.REGISTRY_SERVER }}
+          username: ${{ env.REGISTRY_USER }}
+          password: ${{ env.REGISTRY_PASSWORD }}  
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1.2.0
+        with:
+          config: .github/workflows/kind/kind.yaml
+
+      - name: Install related dependencies
+        run: |
+          chmod a+x ./hack/deploy.sh && ./hack/deploy.sh --with-shipwright
+
+      - name: Waiting for 60 seconds to keep the dependencies installed
+        uses: jakejarvis/wait-action@master
+        with:
+          time: '60s'
+
+      - name: Install openfunction CRDs and controllers
+        run: |
+          kubectl create -f config/bundle.yaml
+
+      - name: Waiting for 60 seconds to keep the CRD and controllers installed
+        uses: jakejarvis/wait-action@master
+        with:
+          time: '60s'
+
+      - name: Create push-secret
+        run: |
+          kubectl create secret docker-registry push-secret \
+              --docker-server=${{ env.REGISTRY_SERVER }} \
+              --docker-username=${{ env.REGISTRY_USER }} \
+              --docker-password=${{ env.REGISTRY_PASSWORD }} 
+
+      - name: Deploy function build sample
+        run: |
+          cat config/samples/function-sample-build-only.yaml | sed -e 's/openfunctiondev/${{ env.REGISTRY_USER }}/g' | kubectl apply -f -
+
+      - name: Waiting for 3 min to keep the build process
+        uses: jakejarvis/wait-action@master
+        with:
+          time: '180s'       
+
+      - name: Verify build
+        run: |
+          docker pull ${{ env.REGISTRY_USER }}/sample-go-func:latest
+
+      - name: Uninstall openfunction CRDs and controllers
+        run: |
+          kubectl delete -f config/bundle.yaml 
+
+  openfunction_sync_func_check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    name: Install and uninstall sync function 
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1.2.0
+        with:
+          config: .github/workflows/kind/kind.yaml
+
+      - name: Install related dependencies
+        run: |
+          chmod a+x ./hack/deploy.sh && ./hack/deploy.sh --with-knative
+          kubectl apply --filename https://github.com/shipwright-io/build/releases/download/v0.6.0/release.yaml
+          kubectl -n shipwright-build scale deployments.apps shipwright-build-controller --replicas=0
+
+      - name: Waiting for 90 seconds to keep the dependencies installed
+        uses: jakejarvis/wait-action@master
+        with:
+          time: '90s'
+
+      - name: Install openfunction CRDs and controllers
+        run: |
+          kubectl create -f config/bundle.yaml
+
+      - name: Waiting for 60 seconds to keep the CRD and controllers installed
+        uses: jakejarvis/wait-action@master
+        with:
+          time: '60s'
+
+      - name: Deploy sync function serving sample
+        run: |
+          cat config/samples/function-sample-serving-only.yaml | kubectl apply -f -
+
+      - name: Set environmental variables
+        run: |
+          NODE_IP=$(kubectl get nodes -o jsonpath={.items[0].status.addresses[0].address})
+          echo "NODE_IP=$NODE_IP" >> $GITHUB_ENV
+
+      - name: Patch svc kourier
+        run: | 
+            echo "Patch svc kourier with node ip: $NODE_IP"
+            kubectl patch svc -n kourier-system kourier -p "{\"spec\": {\"type\": \"LoadBalancer\", \"externalIPs\": [\"${NODE_IP}\"]}}"
+            kubectl patch configmap/config-domain -n knative-serving  --type merge --patch "{\"data\":{\"${NODE_IP}.sslip.io\":\"\"}}"
+
+      - name: Waiting for 10 seconds to make sure the function is woken up
+        uses: jakejarvis/wait-action@master
+        with:
+          time: '10s'
+
+      - name: Check the related resources
+        run: |
+            echo "Get functions.core.openfunction.io:"
+            echo "------"
+            kubectl get functions.core.openfunction.io
+            echo "------"
+
+            echo "Get serving status:"
+            echo "------"
+            kubectl get servings.core.openfunction.io
+            echo "------"
+
+            echo "Get revision messages:"
+            echo "------"
+            kubectl describe revision -A
+            echo "------"
+
+            echo "Get Knative serving logs:"
+            echo "------"
+            kubectl -n knative-serving -l app.kubernetes.io/name=controller logs   
+            echo "------"
+
+            echo "Get all pods status:"  
+            kubectl get pods -A
+            echo "------"                
+
+      - name: Verify serving
+        run: |
+          status=`kubectl get ksvc -o jsonpath={.items}`
+          if [ "$status" = "[]" ]; then
+            echo "Cannot find function serving, exit..."
+            exit 1
+          fi
+          server_url=`kubectl get ksvc -o jsonpath={.items[0].status.url}`
+          echo "Function now is serving on ${server_url}"
+          curl ${server_url}
+          res=$?
+          if test "$res" != "0"; then
+             echo "the curl command failed with: $res"
+          fi
+
+      - name: Uninstall openfunction CRDs and controllers
+        run: |
+          kubectl delete -f config/bundle.yaml
+
+  openfunction_async_func_check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    name: Install and uninstall async function 
+    steps:
+      - name: Set up Helm
+        uses: azure/setup-helm@v1
+        with:
+          version: v3.4.0
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1.2.0
+        with:
+          config: .github/workflows/kind/kind.yaml
+
+      - name: Install related dependencies
+        run: |
+          chmod a+x ./hack/deploy.sh && ./hack/deploy.sh --with-openFuncAsync --with-shipwright 
+
+      - name: Waiting for 90 seconds to keep the dependencies installed
+        uses: jakejarvis/wait-action@master
+        with:
+          time: '90s'
+
+      - name: Setting up strimzi kafka operator
+        run: |
+          helm repo add strimzi https://strimzi.io/charts/
+          helm install kafka-operator -n default strimzi/strimzi-kafka-operator
+
+      - name: Waiting for 60 seconds to keep the kafka operator installed
+        uses: jakejarvis/wait-action@master
+        with:
+          time: '60s'
+      
+      - name: Install kafka instances
+        run: |
+          cat config/samples/function-kafka-quick.yaml | kubectl apply -f -
+
+      - name: Waiting for 30 seconds to keep the kafka cluster installed
+        uses: jakejarvis/wait-action@master
+        with:
+          time: '30s'
+
+      - name: Install openfunction CRDs and controllers
+        run: |
+          kubectl create -f config/bundle.yaml
+
+      - name: Waiting for 60 seconds to keep the CRD and controllers installed
+        uses: jakejarvis/wait-action@master
+        with:
+          time: '60s'
+
+      - name: Deploy async function pubsub serving sample
+        run: |
+          cat config/samples/function-pubsub-sample-serving-only.yaml | kubectl apply -f -
+      
+      - name: Waiting for 25 seconds to keep the producers installed
+        uses: jakejarvis/wait-action@master
+        with:
+          time: '25s'
+
+      - name: Checking nums of the pods before waiting
+        run: |
+          kubectl get pods 
+
+      - name: Waiting for 30 seconds to see the consumers
+        uses: jakejarvis/wait-action@master
+        with:
+          time: '30s'
+      
+      - name: Checking nums of the pods after waiting
+        run: |
+          kubectl get pods 
+
+      - name: Uninstall openfunction CRDs and controllers
+        run: |
+          kubectl delete -f config/bundle.yaml 
