@@ -12,7 +12,7 @@ on:
       - 'main'
       - 'release-*'
 env:
-  OF_IMAGE: openfunction:latest
+  OF_IMAGE: openfunction/openfunction:latest
   REGISTRY_SERVER: https://index.docker.io/v1/
   REGISTRY_USER: ${{ secrets.DOCKERHUB_USERNAME }}
   REGISTRY_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
@@ -95,15 +95,24 @@ jobs:
 
       - name: build image
         run: |
-          docker build . -t ${{ env.REGISTRY_USER }}/${{ env.OF_IMAGE }} -f Dockerfile --build-arg GOPROXY="https://proxy.golang.org"
+          docker build . -t ${{ env.OF_IMAGE }} -f Dockerfile --build-arg GOPROXY="https://proxy.golang.org"
   
   openfunction_build_check:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    name: Test the build process
+    name: Test the openfunction build process
     steps:
+      - name: Check whether a Docker account is set
+        run: |
+          build_check_flag=true
+          if [ '${{ env.REGISTRY_USER }}' == '' ] && [ '${{ env.REGISTRY_PASSWORD }}' == '' ]; then
+             build_check_flag=false
+          fi
+          echo "build_check_flag=$build_check_flag" >> $GITHUB_ENV
+
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v1
+        if: ${{ env.build_check_flag == 'true' }}
         with:
           registry: ${{ env.REGISTRY_SERVER }}
           username: ${{ env.REGISTRY_USER }}
@@ -111,33 +120,40 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v2
+        if: ${{ env.build_check_flag == 'true' }}
         with:
           fetch-depth: 0
 
       - name: Create kind cluster
         uses: helm/kind-action@v1.2.0
+        if: ${{ env.build_check_flag == 'true' }}
         with:
           config: .github/workflows/kind/kind.yaml
 
       - name: Install related dependencies
+        if: ${{ env.build_check_flag == 'true' }}
         run: |
           chmod a+x ./hack/deploy.sh && ./hack/deploy.sh --with-shipwright
 
       - name: Waiting for 60 seconds to keep the dependencies installed
         uses: jakejarvis/wait-action@master
+        if: ${{ env.build_check_flag == 'true' }}
         with:
           time: '60s'
 
       - name: Install openfunction CRDs and controllers
+        if: ${{ env.build_check_flag == 'true' }}
         run: |
           kubectl create -f config/bundle.yaml
 
       - name: Waiting for 60 seconds to keep the CRD and controllers installed
         uses: jakejarvis/wait-action@master
+        if: ${{ env.build_check_flag == 'true' }}
         with:
           time: '60s'
 
       - name: Create push-secret
+        if: ${{ env.build_check_flag == 'true' }}
         run: |
           kubectl create secret docker-registry push-secret \
               --docker-server=${{ env.REGISTRY_SERVER }} \
@@ -145,19 +161,23 @@ jobs:
               --docker-password=${{ env.REGISTRY_PASSWORD }} 
 
       - name: Deploy function build sample
+        if: ${{ env.build_check_flag == 'true' }}
         run: |
           cat config/samples/function-sample-build-only.yaml | sed -e 's/openfunctiondev/${{ env.REGISTRY_USER }}/g' | kubectl apply -f -
 
       - name: Waiting for 3 min to keep the build process
         uses: jakejarvis/wait-action@master
+        if: ${{ env.build_check_flag == 'true' }}
         with:
           time: '180s'       
 
       - name: Verify build
+        if: ${{ env.build_check_flag == 'true' }}
         run: |
           docker pull ${{ env.REGISTRY_USER }}/sample-go-func:latest
 
       - name: Uninstall openfunction CRDs and controllers
+        if: ${{ env.build_check_flag == 'true' }}
         run: |
           kubectl delete -f config/bundle.yaml 
 
