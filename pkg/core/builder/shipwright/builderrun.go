@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	shipwrightv1alpha1 "github.com/shipwright-io/build/pkg/apis/build/v1alpha1"
@@ -56,7 +57,7 @@ func (r *builderRun) Start(builder *openfunction.Builder) error {
 		WithValues("Builder", fmt.Sprintf("%s/%s", builder.Namespace, builder.Name))
 
 	// Clean up redundant builds and buildruns caused by the `Start` function failed.
-	if err := r.clean(builder); err != nil {
+	if err := r.Clean(builder); err != nil {
 		log.Error(err, "Clean failed")
 		return err
 	}
@@ -137,7 +138,7 @@ func (r *builderRun) Result(builder *openfunction.Builder) (string, error) {
 }
 
 // Clean up redundant builds and buildruns caused by the `Start` function failed.
-func (r *builderRun) clean(builder *openfunction.Builder) error {
+func (r *builderRun) Clean(builder *openfunction.Builder) error {
 	log := r.log.WithName("Clean").
 		WithValues("Builder", fmt.Sprintf("%s/%s", builder.Namespace, builder.Name))
 
@@ -201,6 +202,12 @@ func (r *builderRun) createShipwrightBuild(builder *openfunction.Builder) *shipw
 		},
 	}
 
+	if builder.Spec.Timeout != nil {
+		shipwrightBuild.Spec.Timeout = &metav1.Duration{
+			Duration: builder.Spec.Timeout.Duration - time.Since(builder.CreationTimestamp.Time),
+		}
+	}
+
 	for k, v := range builder.Spec.Params {
 		shipwrightBuild.Spec.ParamValues = append(shipwrightBuild.Spec.ParamValues, shipwrightv1alpha1.ParamValue{
 			Name:  k,
@@ -245,8 +252,6 @@ func (r *builderRun) createShipwrightBuild(builder *openfunction.Builder) *shipw
 				shipwrightBuild.Spec.Strategy.Kind = &kind
 			}
 		}
-
-		shipwrightBuild.Spec.Timeout = builder.Spec.Shipwright.Timeout
 	}
 
 	shipwrightBuild.SetOwnerReferences(nil)

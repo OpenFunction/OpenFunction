@@ -16,8 +16,12 @@ type BuilderRun interface {
 	// `Succeeded` means build completed.
 	// Other means build failed.
 	Result(builder *openfunction.Builder) (string, error)
+	// Clean all resources which created by builder.
+	Clean(builder *openfunction.Builder) error
 }
 
 type ServingRun interface {
 	Run(s *openfunction.Serving) error
+	// Clean all resources which created by serving.
+	Clean(s *openfunction.Serving) error
 }

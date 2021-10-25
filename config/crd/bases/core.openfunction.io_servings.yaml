@@ -13810,6 +13810,10 @@ spec:
                 required:
                 - containers
                 type: object
+              timeout:
+                description: Timeout defines the maximum amount of time the Serving
+                  should take to execute before the Serving is running.
+                type: string
               version:
                 description: Function version in format like v1.0.0
                 type: string

@@ -58,6 +58,10 @@ type BuilderSpec struct {
 	//
 	// +optional
 	Dockerfile *string `json:"dockerfile,omitempty"`
+	// Timeout defines the maximum amount of time the Build should take to execute.
+	//
+	// +optional
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
 }
 
 // BuilderStatus defines the observed state of Builder

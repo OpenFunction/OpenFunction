@@ -19,17 +19,17 @@ package core
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-
 	openfunction "github.com/openfunction/apis/core/v1alpha2"
 	"github.com/openfunction/pkg/core"
 	"github.com/openfunction/pkg/core/builder/shipwright"
 	"github.com/openfunction/pkg/util"
+	"k8s.io/apimachinery/pkg/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // BuilderReconciler reconciles a Builder object
@@ -88,6 +88,24 @@ func (r *BuilderReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			return ctrl.Result{}, err
 		}
 
+		return ctrl.Result{}, nil
+	}
+
+	if builder.Spec.Timeout != nil &&
+		time.Since(builder.CreationTimestamp.Time) > builder.Spec.Timeout.Duration {
+		log.Error(nil, "Build timeout")
+
+		if err := builderRun.Clean(builder); err != nil {
+			log.Error(err, "Failed to clean builder")
+			return ctrl.Result{}, err
+		}
+
+		builder.Status.Phase = openfunction.BuildPhase
+		builder.Status.State = openfunction.Timeout
+		if err := r.Status().Update(r.ctx, builder); err != nil {
+			log.Error(err, "Failed to update builder status")
+			return ctrl.Result{}, err
+		}
 		return ctrl.Result{}, nil
 	}
 

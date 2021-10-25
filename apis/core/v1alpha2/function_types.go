@@ -46,17 +46,19 @@ type Language string
 type Runtime string
 
 const (
-	BuildPhase            = "Build"
-	ServingPhase          = "Serving"
-	Created               = "Created"
-	Building              = "Building"
-	Running               = "Running"
-	Succeeded             = "Succeeded"
-	Failed                = "Failed"
-	Skipped               = "Skipped"
-	Knative       Runtime = "Knative"
-	OpenFuncAsync Runtime = "OpenFuncAsync"
-	Shipwright            = "Shipwright"
+	BuildPhase             = "Build"
+	ServingPhase           = "Serving"
+	Created                = "Created"
+	Building               = "Building"
+	Running                = "Running"
+	Succeeded              = "Succeeded"
+	Failed                 = "Failed"
+	Skipped                = "Skipped"
+	Timeout                = "Timeout"
+	UnknownRuntime         = "UnknownRuntime"
+	Knative        Runtime = "Knative"
+	OpenFuncAsync  Runtime = "OpenFuncAsync"
+	Shipwright             = "Shipwright"
 )
 
 type Strategy struct {
@@ -102,6 +104,10 @@ type BuildImpl struct {
 	//
 	// +optional
 	Dockerfile *string `json:"dockerfile,omitempty"`
+	// Timeout defines the maximum amount of time the Build should take to execute.
+	//
+	// +optional
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
 }
 
 type ServingImpl struct {
@@ -118,6 +124,10 @@ type ServingImpl struct {
 	// If it is not set, the controller will automatically add one.
 	// +optional
 	Template *v1.PodSpec `json:"template,omitempty"`
+	// Timeout defines the maximum amount of time the Serving should take to execute before the Serving is running.
+	//
+	// +optional
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
 }
 
 // FunctionSpec defines the desired state of Function

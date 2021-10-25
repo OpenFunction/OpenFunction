@@ -269,6 +269,7 @@ func (r *FunctionReconciler) createBuilderSpec(fn *openfunction.Function) openfu
 		Image:              fn.Spec.Image,
 		ImageCredentials:   fn.Spec.ImageCredentials,
 		Port:               fn.Spec.Port,
+		Timeout:            fn.Spec.Build.Timeout,
 	}
 
 	spec.SrcRepo = &openfunction.GitRepo{}
@@ -424,6 +425,7 @@ func (r *FunctionReconciler) createServingSpec(fn *openfunction.Function) openfu
 		Version:          fn.Spec.Version,
 		Image:            fn.Spec.Image,
 		ImageCredentials: fn.Spec.ImageCredentials,
+		Timeout:          fn.Spec.Serving.Timeout,
 	}
 
 	if fn.Spec.Port != nil {
