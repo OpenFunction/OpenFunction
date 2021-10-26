@@ -55,6 +55,12 @@ if [ "$all" = "true" ]; then
   with_openFuncAsync=true
 fi
 
+if [ "$poor_network" = "false" ]; then
+  kubectl apply --filename https://github.com/jetstack/cert-manager/releases/download/v1.5.4/cert-manager.yaml
+else
+  kubectl apply --filename https://openfunction.sh1a.qingstor.com/cert-manager/v1.5.4/cert-manager.yaml
+fi
+
 if [ "$with_shipwright" = "true" ]; then
   if [ "$poor_network" = "false" ]; then
     # Install Tekton pipeline
@@ -119,10 +125,4 @@ if [ "$with_openFuncAsync" = "true" ]; then
     # Installs the latest release version
     kubectl apply -f https://openfunction.sh1a.qingstor.com/keda/v2.4.0/keda-2.4.0.yaml
   fi
-fi
-
-if [ "$with_openFuncAsync" = "true" ] || [ "$poor_network" = "false" ]; then
-  kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.5.4/cert-manager.yaml
-else
-  kubectl apply -f https://openfunction.sh1a.qingstor.com/cert-manager/v1.5.4/cert-manager.yaml
 fi
