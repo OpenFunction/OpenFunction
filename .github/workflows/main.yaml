@@ -7,10 +7,28 @@ on:
       - 'release-*'
     tags:
       - 'v*'
+    paths:
+      - '.github/workflows/**'
+      - 'apis/**'
+      - 'config/bundle.yaml'
+      - 'controllers/**'
+      - 'pkg/**'
+      - 'Dockerfile'
+      - 'main.go'
+      - 'Makefile'
   pull_request:
     branches:
       - 'main'
       - 'release-*'
+    paths:
+      - '.github/workflows/**'
+      - 'apis/**'
+      - 'config/bundle.yaml'
+      - 'controllers/**'
+      - 'pkg/**'
+      - 'Dockerfile'
+      - 'main.go'
+      - 'Makefile'
 env:
   OF_IMAGE: openfunction/openfunction:latest
   REGISTRY_SERVER: https://index.docker.io/v1/
