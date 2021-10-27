@@ -7437,6 +7437,10 @@ spec:
                     required:
                     - url
                     type: object
+                  timeout:
+                    description: Timeout defines the maximum amount of time the Build
+                      should take to execute.
+                    type: string
                 required:
                 - srcRepo
                 type: object
@@ -14543,6 +14547,10 @@ spec:
                     required:
                     - containers
                     type: object
+                  timeout:
+                    description: Timeout defines the maximum amount of time the Serving
+                      should take to execute before the Serving is running.
+                    type: string
                 required:
                 - runtime
                 type: object

@@ -138,6 +138,10 @@ type ServingSpec struct {
 	// If it is not set, the controller will automatically add one.
 	// +optional
 	Template *v1.PodSpec `json:"template,omitempty"`
+	// Timeout defines the maximum amount of time the Serving should take to execute before the Serving is running.
+	//
+	// +optional
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
 }
 
 // ServingStatus defines the observed state of Serving

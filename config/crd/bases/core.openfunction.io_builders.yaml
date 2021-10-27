@@ -288,6 +288,10 @@ spec:
                 required:
                 - url
                 type: object
+              timeout:
+                description: Timeout defines the maximum amount of time the Build
+                  should take to execute.
+                type: string
             required:
             - image
             - srcRepo

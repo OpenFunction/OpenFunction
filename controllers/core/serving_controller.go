@@ -18,17 +18,17 @@ package core
 
 import (
 	"context"
+	"time"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	openfunction "github.com/openfunction/apis/core/v1alpha2"
 	"github.com/openfunction/pkg/core"
 	"github.com/openfunction/pkg/core/serving/knative"
 	"github.com/openfunction/pkg/core/serving/openfuncasync"
 	"github.com/openfunction/pkg/util"
+	"k8s.io/apimachinery/pkg/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ServingReconciler reconciles a Serving object
@@ -79,6 +79,30 @@ func (r *ServingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	servingRun := r.getServingRun(&s)
 	if util.InterfaceIsNil(servingRun) {
 		log.Error(nil, "Unknown runtime", "runtime", *s.Spec.Runtime)
+		s.Status.Phase = openfunction.ServingPhase
+		s.Status.State = openfunction.UnknownRuntime
+		if err := r.Status().Update(r.ctx, &s); err != nil {
+			log.Error(err, "Failed to update serving status")
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
+
+	if s.Spec.Timeout != nil &&
+		time.Since(s.CreationTimestamp.Time) > s.Spec.Timeout.Duration {
+		log.Error(nil, "Serving start timeout")
+
+		if err := servingRun.Clean(&s); err != nil {
+			log.Error(err, "Failed to clean serving")
+			return ctrl.Result{}, err
+		}
+
+		s.Status.Phase = openfunction.ServingPhase
+		s.Status.State = openfunction.Timeout
+		if err := r.Status().Update(r.ctx, &s); err != nil {
+			log.Error(err, "Failed to update serving status")
+			return ctrl.Result{}, err
+		}
 		return ctrl.Result{}, nil
 	}
 

@@ -50,7 +50,7 @@ func (r *servingRun) Run(s *openfunction.Serving) error {
 	log := r.log.WithName("Run").
 		WithValues("Serving", fmt.Sprintf("%s/%s", s.Namespace, s.Name))
 
-	if err := r.clean(s); err != nil {
+	if err := r.Clean(s); err != nil {
 		log.Error(err, "Clean failed")
 		return err
 	}
@@ -78,7 +78,7 @@ func (r *servingRun) Run(s *openfunction.Serving) error {
 	return nil
 }
 
-func (r *servingRun) clean(s *openfunction.Serving) error {
+func (r *servingRun) Clean(s *openfunction.Serving) error {
 	log := r.log.WithName("Clean").
 		WithValues("Serving", fmt.Sprintf("%s/%s", s.Namespace, s.Name))
 

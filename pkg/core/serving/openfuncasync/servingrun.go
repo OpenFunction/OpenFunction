@@ -69,7 +69,7 @@ func (r *servingRun) Run(s *openfunction.Serving) error {
 		return fmt.Errorf("OpenFuncAsync config must not be nil when using OpenFuncAsync runtime")
 	}
 
-	if err := r.clean(s); err != nil {
+	if err := r.Clean(s); err != nil {
 		log.Error(err, "Failed to Clean")
 		return err
 	}
@@ -108,7 +108,7 @@ func (r *servingRun) Run(s *openfunction.Serving) error {
 	return nil
 }
 
-func (r *servingRun) clean(s *openfunction.Serving) error {
+func (r *servingRun) Clean(s *openfunction.Serving) error {
 	log := r.log.WithName("Clean").
 		WithValues("Serving", fmt.Sprintf("%s/%s", s.Namespace, s.Name))
 
