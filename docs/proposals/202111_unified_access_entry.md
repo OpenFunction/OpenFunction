@@ -6,7 +6,7 @@ Use ingress to create a unified access entry for Function.
 
 ### Plan A
 
-Firstly, create an external service which direction to the Ingress Controller for each Function.
+Step 1: Create an external service for each Function that points to the ingress controller's service.
 
 ```yaml
 apiVersion: v1
@@ -28,9 +28,9 @@ ports:
   loadBalancer: {}
 ```
 
-Secondly, all Functions in the same namespace will use the same ingress.
-The Function operator will add a corresponding `path` to the ingress when the Function created,
-and update the `path` when the Function updated.
+Step 2: All functions in the same namespace will use the same ingress.
+The function controller will add a corresponding `path` to the ingress whenever the function is created,
+and update the `path` whenever the function is updated.
 
 The ingress looks like this.
 ```yaml
@@ -58,7 +58,7 @@ status:
  loadBalancer: {}
 ```
 
-Thirdly, use
+Step 3: Use
 
 ```
 http://<Function name>.<Function namespace>/
@@ -66,16 +66,13 @@ http://<Function name>.<Function namespace>/
 
 to access the Function.
 
-  
-
 ### Plan B
 
-Firstly, create a service such as `openfunction` in the namespace which ingress controller be in such as `ingress-nginx`, 
-the endpoints of the service are the ingress controller pod.
+Step 1: Create a service named `openfunction` in the same namespace as the ingress controller, for example `ingress-nginx`.  The endpoints of the service are the ingress controller pod.
 
-Secondly, all Functions in the same namespace will use the same ingress.
-The Function operator will add a corresponding `path` to the ingress when the Function created,
-and update the `path` when the Function updated.
+Step 2: All functions in the same namespace will use the same ingress.
+The function controller will add a corresponding `path` to the ingress whenever the function is created,
+and update the `path` whenever the function is updated.
 
 The ingress looks like this.
 
@@ -104,7 +101,7 @@ rules:
       loadBalancer: {}
 ```
 
-Thirdly, use 
+Step 3: Use
 
 ```shell
 http://<Service name>.<Ingress controller namespace>/<Function namespace>/<Function name>/
