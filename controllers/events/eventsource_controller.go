@@ -325,6 +325,32 @@ func (r *EventSourceReconciler) handleEventSource(ctx context.Context, log logr.
 		}
 	}
 
+	if eventSource.Spec.Mqtt != nil {
+		for eventName, spec := range eventSource.Spec.Mqtt {
+			componentName := fmt.Sprintf(EventSourceComponentNameTmpl, eventSource.Name, SourceKindMQTT, eventName)
+
+			// We need to assign a separate consumerID name to each mqtt component
+			metadataMap := spec.ConvertToMetadataMap()
+			metadataMap = append(metadataMap, map[string]interface{}{
+				"name":  "consumerID",
+				"value": fmt.Sprintf("%s-%s", eventSource.Namespace, componentName),
+			})
+
+			component, err := spec.GenComponent(eventSource.Namespace, componentName, metadataMap)
+			if err != nil {
+				condition := ofevent.CreateCondition(
+					ofevent.Error, metav1.ConditionFalse, ofevent.ErrorGenerateComponent,
+				).SetMessage(err.Error())
+				eventSource.AddCondition(*condition)
+				log.Error(err, "Failed to generate eventSource component for MQTT.",
+					"namespace", eventSource.Namespace, "name", eventSource.Name)
+				return err
+			}
+			function := r.addEventSourceForFunction(eventSource, SourceKindMQTT, eventName, component, nil)
+			functions = append(functions, function)
+		}
+	}
+
 	for _, f := range functions {
 		l := f.GetLabels()
 		r.EventSourceConfig.EventBusTopic = l[EventBusTopicName]

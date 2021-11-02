@@ -14,10 +14,11 @@ import (
 const (
 	ComponentVersion    = "v1"
 	BindingsKafka       = "bindings.kafka"
-	ScaleKafka          = "kafka"
-	ScaleNatsStreaming  = "stan"
 	BindingsRedis       = "bindings.redis"
 	BindingsCron        = "bindings.cron"
+	BindingsMQTT        = "bindings.mqtt"
+	ScaleKafka          = "kafka"
+	ScaleNatsStreaming  = "stan"
 	PubsubNatsStreaming = "pubsub.natsstreaming"
 )
 
@@ -384,6 +385,71 @@ func (spec *CronSpec) GenComponent(namespace string, name string, metadataMap []
 		},
 	}
 	component.Spec.Type = BindingsCron
+	component.Spec.Version = ComponentVersion
+
+	var metadataItems []componentsv1alpha1.MetadataItem
+	metadataBytes, err := json.Marshal(metadataMap)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(metadataBytes, &metadataItems)
+	if err != nil {
+		return nil, err
+	}
+	component.Spec.Metadata = metadataItems
+
+	return component, nil
+}
+
+type MQTTSpec struct {
+	Url          string  `json:"url"`
+	Topic        string  `json:"topic"`
+	ConsumerID   *string `json:"consumerID,omitempty"`
+	Qos          *int64  `json:"qos,omitempty"`
+	Retain       *bool   `json:"retain,omitempty"`
+	CleanSession *bool   `json:"cleanSession,omitempty"`
+	CaCert       *string `json:"caCert,omitempty"`
+	ClientCert   *string `json:"clientCert,omitempty"`
+	ClientKey    *string `json:"clientKey,omitempty"`
+}
+
+func (spec *MQTTSpec) ConvertToMetadataMap() []map[string]interface{} {
+	var m []map[string]interface{}
+
+	// Handling mandatory parameters
+	m = append(m, map[string]interface{}{"name": "url", "value": spec.Url})
+	m = append(m, map[string]interface{}{"name": "topic", "value": spec.Topic})
+
+	// Handling optional parameters
+	if spec.Qos != nil {
+		m = append(m, map[string]interface{}{"name": "qos", "value": *spec.Qos})
+	}
+	if spec.Retain != nil {
+		m = append(m, map[string]interface{}{"name": "retain", "value": *spec.Retain})
+	}
+	if spec.CleanSession != nil {
+		m = append(m, map[string]interface{}{"name": "cleanSession", "value": *spec.CleanSession})
+	}
+	if spec.CaCert != nil {
+		m = append(m, map[string]interface{}{"name": "caCert", "value": *spec.CaCert})
+	}
+	if spec.ClientCert != nil {
+		m = append(m, map[string]interface{}{"name": "clientCert", "value": *spec.ClientCert})
+	}
+	if spec.ClientKey != nil {
+		m = append(m, map[string]interface{}{"name": "clientKey", "value": *spec.ClientKey})
+	}
+	return m
+}
+
+func (spec *MQTTSpec) GenComponent(namespace string, name string, metadataMap []map[string]interface{}) (*componentsv1alpha1.Component, error) {
+	component := &componentsv1alpha1.Component{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+	component.Spec.Type = BindingsMQTT
 	component.Spec.Version = ComponentVersion
 
 	var metadataItems []componentsv1alpha1.MetadataItem

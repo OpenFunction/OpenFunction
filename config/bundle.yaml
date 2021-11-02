@@ -1239,6 +1239,35 @@ spec:
                 description: Kafka event source, the Key is used to refer to the name
                   of the event
                 type: object
+              mqtt:
+                additionalProperties:
+                  properties:
+                    caCert:
+                      type: string
+                    cleanSession:
+                      type: boolean
+                    clientCert:
+                      type: string
+                    clientKey:
+                      type: string
+                    consumerID:
+                      type: string
+                    qos:
+                      format: int64
+                      type: integer
+                    retain:
+                      type: boolean
+                    topic:
+                      type: string
+                    url:
+                      type: string
+                  required:
+                  - topic
+                  - url
+                  type: object
+                description: Mqtt event source, the Key is used to refer to the name
+                  of the event
+                type: object
               redis:
                 additionalProperties:
                   properties:
