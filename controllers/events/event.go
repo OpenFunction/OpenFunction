@@ -34,8 +34,8 @@ const (
 	EventSourceBusComponentNameTmpl = "ebfes-%s"
 	// TriggerBusComponentNameTmpl => ebft(EventBus for Trigger)-{triggerName}
 	TriggerBusComponentNameTmpl = "ebft-%s"
-	// SinkComponentNameTmpl => ts-{resourceName}-{sinkNamespace}-{sinkName}
-	SinkComponentNameTmpl = "ts-%s-%s-%s"
+	// SinkComponentNameTmpl => ts-{resourceName}-{sinkNamespace}
+	SinkComponentNameTmpl = "ts-%s-%s"
 
 	// EventSourceWorkloadsNameTmpl => esw(EventSource Workloads)-{eventSourceName}-{sourceKind}-{eventName}
 	EventSourceWorkloadsNameTmpl = "esw-%s-%s-%s"
@@ -174,7 +174,7 @@ func newSinkComponentSpec(c client.Client, log logr.Logger, ref *ofevent.Referen
 func createSinkComponent(ctx context.Context, c client.Client, log logr.Logger, resource client.Object, sink *ofevent.SinkSpec) (*componentsv1alpha1.Component, error) {
 	component := &componentsv1alpha1.Component{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf(SinkComponentNameTmpl, resource.GetName(), sink.Ref.Namespace, sink.Ref.Name),
+			Name:      fmt.Sprintf(SinkComponentNameTmpl, resource.GetName(), sink.Ref.Namespace),
 			Namespace: resource.GetNamespace(),
 		},
 	}
