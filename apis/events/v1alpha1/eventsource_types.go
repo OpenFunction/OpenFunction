@@ -42,6 +42,9 @@ type EventSourceSpec struct {
 	// Cron event source, the Key is used to refer to the name of the event
 	// +optional
 	Cron map[string]*CronSpec `json:"cron,omitempty"`
+	// Mqtt event source, the Key is used to refer to the name of the event
+	// +optional
+	Mqtt map[string]*MQTTSpec `json:"mqtt,omitempty"`
 	// Sink is a callable address, such as Knative Service
 	// +optional
 	Sink *SinkSpec `json:"sink,omitempty"`

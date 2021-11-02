@@ -59,6 +59,8 @@ const (
 	SourceKindKafka = "kafka"
 	// SourceKindCron indicates cron (scheduler) event source
 	SourceKindCron = "cron"
+	// SourceKindMQTT indicates mqtt event source
+	SourceKindMQTT = "mqtt"
 )
 
 type EventSourceConfig struct {
