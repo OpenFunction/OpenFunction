@@ -22,14 +22,15 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	openfunction "github.com/openfunction/apis/core/v1alpha2"
-	"github.com/openfunction/pkg/core"
-	"github.com/openfunction/pkg/core/builder/shipwright"
-	"github.com/openfunction/pkg/util"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	openfunction "github.com/openfunction/apis/core/v1alpha2"
+	"github.com/openfunction/pkg/core"
+	"github.com/openfunction/pkg/core/builder/shipwright"
+	"github.com/openfunction/pkg/util"
 )
 
 // BuilderReconciler reconciles a Builder object
@@ -38,7 +39,7 @@ type BuilderReconciler struct {
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 	ctx    context.Context
-	owns   []client.Object
+	timers map[string]*time.Timer
 }
 
 func NewBuilderReconciler(mgr manager.Manager) *BuilderReconciler {
@@ -47,9 +48,9 @@ func NewBuilderReconciler(mgr manager.Manager) *BuilderReconciler {
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Builder"),
+		timers: make(map[string]*time.Timer),
 	}
 
-	r.owns = append(r.owns, shipwright.Registry()...)
 	return r
 }
 
@@ -75,37 +76,40 @@ func (r *BuilderReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	if err := r.Get(ctx, req.NamespacedName, builder); err != nil {
 		if util.IsNotFound(err) {
 			log.V(1).Info("Builder deleted")
+			r.stopTimer(req.NamespacedName.String())
 		}
 		return ctrl.Result{}, util.IgnoreNotFound(err)
 	}
 
-	builderRun := r.createBuilderRun()
+	if builder.Status.IsCompleted() {
+		log.V(1).Info("Build had completed")
+		return ctrl.Result{}, nil
+	}
 
-	// Builder is running, no need to update.
-	if builder.Status.Phase != "" && builder.Status.State != "" {
-		// Update the status of the builder according to the result of the build.
-		if err := r.getBuilderResult(builder, builderRun); err != nil {
+	// Build timeout, update builder status.
+	// when the operator restarts, update the status of builder that has timed out, without creating a timer.
+	if builder.Spec.Timeout != nil &&
+		time.Since(builder.CreationTimestamp.Time) > builder.Spec.Timeout.Duration {
+		builder.Status.State = openfunction.Timeout
+		if err := r.Status().Update(r.ctx, builder); err != nil {
+			log.Error(err, "Failed to update builder status")
 			return ctrl.Result{}, err
 		}
 
 		return ctrl.Result{}, nil
 	}
 
-	if builder.Spec.Timeout != nil &&
-		time.Since(builder.CreationTimestamp.Time) > builder.Spec.Timeout.Duration {
-		log.Error(nil, "Build timeout")
+	// Start timer if build is not completed.
+	r.startTimer(builder)
 
-		if err := builderRun.Clean(builder); err != nil {
-			log.Error(err, "Failed to clean builder")
+	builderRun := r.createBuilderRun()
+
+	// If Builder had created, Update the status of the builder according to the result of the build.
+	if builder.Status.Phase != "" && builder.Status.State != "" {
+		if err := r.getBuilderResult(builder, builderRun); err != nil {
 			return ctrl.Result{}, err
 		}
 
-		builder.Status.Phase = openfunction.BuildPhase
-		builder.Status.State = openfunction.Timeout
-		if err := r.Status().Update(r.ctx, builder); err != nil {
-			log.Error(err, "Failed to update builder status")
-			return ctrl.Result{}, err
-		}
 		return ctrl.Result{}, nil
 	}
 
@@ -160,19 +164,78 @@ func (r *BuilderReconciler) getBuilderResult(builder *openfunction.Builder, buil
 			return err
 		}
 
+		r.stopTimer(fmt.Sprintf("%s/%s", builder.Namespace, builder.Name))
 		log.V(1).Info("Update builder status", "state", res)
 	}
 
 	return nil
 }
 
+func (r *BuilderReconciler) startTimer(builder *openfunction.Builder) {
+	namespacedName := fmt.Sprintf("%s/%s", builder.Namespace, builder.Name)
+	log := r.Log.WithName("Timer").WithValues("Builder", namespacedName)
+
+	if builder.Spec.Timeout == nil ||
+		time.Since(builder.CreationTimestamp.Time) > builder.Spec.Timeout.Duration {
+		return
+	}
+
+	// Skipped when timer had started.
+	t, ok := r.timers[namespacedName]
+	if ok {
+		return
+	}
+
+	t = time.NewTimer(builder.Spec.Timeout.Duration - time.Since(builder.CreationTimestamp.Time))
+	r.timers[namespacedName] = t
+
+	go func() {
+
+		defer r.stopTimer(namespacedName)
+
+		select {
+		case <-t.C:
+			b := &openfunction.Builder{}
+			if err := r.Get(r.ctx, client.ObjectKeyFromObject(builder), b); err != nil {
+				if util.IsNotFound(err) {
+					log.Info("Builder had delete")
+					return
+				}
+
+				log.Error(err, "Failed to get Builder")
+				return
+			}
+
+			if !b.Status.IsCompleted() {
+				log.Error(nil, "Build timeout")
+				builder.Status.State = openfunction.Timeout
+				if err := r.Status().Update(r.ctx, builder); err != nil {
+					log.Error(err, "Failed to update builder status")
+				}
+			}
+		}
+	}()
+
+	log.V(1).Info("Timer started")
+}
+
+func (r *BuilderReconciler) stopTimer(key string) {
+	log := r.Log.WithName("Timer").WithValues("Builder", key)
+	t := r.timers[key]
+	if t != nil {
+		t.Stop()
+		delete(r.timers, key)
+		log.Info("Timer stopped")
+	}
+}
+
 // SetupWithManager sets up the controller with the Manager.
-func (r *BuilderReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *BuilderReconciler) SetupWithManager(mgr ctrl.Manager, owns []client.Object) error {
 
 	b := ctrl.NewControllerManagedBy(mgr).
 		For(&openfunction.Builder{})
 
-	for _, own := range r.owns {
+	for _, own := range owns {
 		b.Owns(own)
 	}
 

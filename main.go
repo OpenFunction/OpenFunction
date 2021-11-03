@@ -33,11 +33,12 @@ import (
 	openfunctionevent "github.com/openfunction/apis/events/v1alpha1"
 	"github.com/openfunction/controllers/core"
 	eventcontrollers "github.com/openfunction/controllers/events"
+	"github.com/openfunction/pkg/core/builder"
+	"github.com/openfunction/pkg/core/serving"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	kneventing "knative.dev/eventing/pkg/client/clientset/versioned/scheme"
 	knserving "knative.dev/serving/pkg/client/clientset/versioned/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -53,7 +54,6 @@ var (
 func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = knserving.AddToScheme(scheme)
-	_ = kneventing.AddToScheme(scheme)
 	_ = corev1alpha1.AddToScheme(scheme)
 	_ = corev1alpha2.AddToScheme(scheme)
 	_ = componentsv1alpha1.AddToScheme(scheme)
@@ -106,16 +106,12 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "Function")
 		os.Exit(1)
 	}
-	if err = core.NewBuilderReconciler(mgr).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Builder")
+	if err = core.NewBuilderReconciler(mgr).SetupWithManager(mgr, builder.Registry()); err != nil {
+		setupLog.Error(err, "unable to create builder controller")
 		os.Exit(1)
 	}
-	if err = (&core.ServingReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("Serving"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Serving")
+	if err = core.NewServingReconciler(mgr).SetupWithManager(mgr, serving.Registry()); err != nil {
+		setupLog.Error(err, "unable to create serving controller")
 		os.Exit(1)
 	}
 	if err = (&eventcontrollers.EventSourceReconciler{

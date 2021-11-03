@@ -15960,6 +15960,8 @@ spec:
             properties:
               build:
                 properties:
+                  oldResourceRef:
+                    type: string
                   resourceHash:
                     type: string
                   resourceRef:
@@ -15969,6 +15971,8 @@ spec:
                 type: object
               serving:
                 properties:
+                  oldResourceRef:
+                    type: string
                   resourceHash:
                     type: string
                   resourceRef:

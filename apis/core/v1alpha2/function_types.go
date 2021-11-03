@@ -50,6 +50,7 @@ const (
 	ServingPhase           = "Serving"
 	Created                = "Created"
 	Building               = "Building"
+	Starting               = "Starting"
 	Running                = "Running"
 	Succeeded              = "Succeeded"
 	Failed                 = "Failed"
@@ -150,9 +151,10 @@ type FunctionSpec struct {
 }
 
 type Condition struct {
-	State        string `json:"state,omitempty"`
-	ResourceRef  string `json:"resourceRef,omitempty"`
-	ResourceHash string `json:"resourceHash,omitempty"`
+	State          string `json:"state,omitempty"`
+	ResourceRef    string `json:"resourceRef,omitempty"`
+	OldResourceRef string `json:"oldResourceRef,omitempty"`
+	ResourceHash   string `json:"resourceHash,omitempty"`
 }
 
 // FunctionStatus defines the observed state of Function
