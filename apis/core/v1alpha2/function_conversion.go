@@ -227,10 +227,10 @@ func (dst *Function) ConvertFrom(srcRaw conversion.Hub) error {
 	}
 	if src.Status.Serving != nil {
 		dst.Status.Serving = &Condition{
-			State:          src.Status.Serving.State,
-			ResourceRef:    src.Status.Serving.ResourceRef,
-			OldResourceRef: src.Status.Serving.ResourceRef,
-			ResourceHash:   src.Status.Serving.ResourceHash,
+			State:                     src.Status.Serving.State,
+			ResourceRef:               src.Status.Serving.ResourceRef,
+			LastSuccessfulResourceRef: src.Status.Serving.ResourceRef,
+			ResourceHash:              src.Status.Serving.ResourceHash,
 		}
 	}
 

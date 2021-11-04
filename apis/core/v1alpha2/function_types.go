@@ -151,10 +151,10 @@ type FunctionSpec struct {
 }
 
 type Condition struct {
-	State          string `json:"state,omitempty"`
-	ResourceRef    string `json:"resourceRef,omitempty"`
-	OldResourceRef string `json:"oldResourceRef,omitempty"`
-	ResourceHash   string `json:"resourceHash,omitempty"`
+	State                     string `json:"state,omitempty"`
+	ResourceRef               string `json:"resourceRef,omitempty"`
+	LastSuccessfulResourceRef string `json:"lastSuccessfulResourceRef,omitempty"`
+	ResourceHash              string `json:"resourceHash,omitempty"`
 }
 
 // FunctionStatus defines the observed state of Function

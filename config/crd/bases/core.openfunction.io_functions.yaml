@@ -14565,7 +14565,7 @@ spec:
             properties:
               build:
                 properties:
-                  oldResourceRef:
+                  lastSuccessfulResourceRef:
                     type: string
                   resourceHash:
                     type: string
@@ -14576,7 +14576,7 @@ spec:
                 type: object
               serving:
                 properties:
-                  oldResourceRef:
+                  lastSuccessfulResourceRef:
                     type: string
                   resourceHash:
                     type: string

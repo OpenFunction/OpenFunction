@@ -345,10 +345,10 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 	}
 
 	fn.Status.Serving = &openfunction.Condition{
-		State:          openfunction.Created,
-		ResourceRef:    serving.Name,
-		ResourceHash:   util.Hash(serving.Spec),
-		OldResourceRef: fn.Status.Serving.OldResourceRef,
+		State:                     openfunction.Created,
+		ResourceRef:               serving.Name,
+		ResourceHash:              util.Hash(serving.Spec),
+		LastSuccessfulResourceRef: fn.Status.Serving.LastSuccessfulResourceRef,
 	}
 	if err := r.Status().Update(r.ctx, fn); err != nil {
 		log.Error(err, "Failed to update function serving status")
@@ -394,7 +394,7 @@ func (r *FunctionReconciler) updateFuncWithServingStatus(fn *openfunction.Functi
 
 		// If new serving is running, clean old serving.
 		if serving.Status.State == openfunction.Running {
-			fn.Status.Serving.OldResourceRef = fn.Status.Serving.ResourceRef
+			fn.Status.Serving.LastSuccessfulResourceRef = fn.Status.Serving.ResourceRef
 			if err := r.cleanServing(fn); err != nil {
 				log.Error(err, "Failed to clean Serving")
 				return err
@@ -420,7 +420,7 @@ func (r *FunctionReconciler) cleanServing(fn *openfunction.Function) error {
 	oldName := ""
 	if fn.Status.Serving != nil {
 		name = fn.Status.Serving.ResourceRef
-		oldName = fn.Status.Serving.OldResourceRef
+		oldName = fn.Status.Serving.LastSuccessfulResourceRef
 	}
 
 	servings := &openfunction.ServingList{}
