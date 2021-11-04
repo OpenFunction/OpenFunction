@@ -18,17 +18,20 @@ package core
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+
 	openfunction "github.com/openfunction/apis/core/v1alpha2"
 	"github.com/openfunction/pkg/core"
 	"github.com/openfunction/pkg/core/serving/knative"
 	"github.com/openfunction/pkg/core/serving/openfuncasync"
 	"github.com/openfunction/pkg/util"
-	"k8s.io/apimachinery/pkg/runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ServingReconciler reconciles a Serving object
@@ -37,6 +40,19 @@ type ServingReconciler struct {
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 	ctx    context.Context
+	timers map[string]*time.Timer
+}
+
+func NewServingReconciler(mgr manager.Manager) *ServingReconciler {
+
+	r := &ServingReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		Log:    ctrl.Log.WithName("controllers").WithName("Serving"),
+		timers: make(map[string]*time.Timer),
+	}
+
+	return r
 }
 
 //+kubebuilder:rbac:groups=core.openfunction.io,resources=servings,verbs=get;list;watch;create;update;patch;delete
@@ -67,13 +83,9 @@ func (r *ServingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	if err := r.Get(ctx, req.NamespacedName, &s); err != nil {
 		if util.IsNotFound(err) {
 			log.V(1).Info("Serving deleted")
+			r.stopTimer(req.NamespacedName.String())
 		}
 		return ctrl.Result{}, util.IgnoreNotFound(err)
-	}
-
-	// Serving is running, no need to create.
-	if s.Status.Phase != "" && s.Status.State != "" {
-		return ctrl.Result{}, nil
 	}
 
 	servingRun := r.getServingRun(&s)
@@ -83,6 +95,33 @@ func (r *ServingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		s.Status.State = openfunction.UnknownRuntime
 		if err := r.Status().Update(r.ctx, &s); err != nil {
 			log.Error(err, "Failed to update serving status")
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
+
+	// Serving start timeout, update serving status.
+	if s.Spec.Timeout != nil &&
+		time.Since(s.CreationTimestamp.Time) > s.Spec.Timeout.Duration {
+		if s.Status.IsStarting() {
+			s.Status.State = openfunction.Timeout
+			if err := r.Status().Update(r.ctx, &s); err != nil {
+				log.Error(err, "Failed to update serving status")
+				return ctrl.Result{}, err
+			}
+		}
+		return ctrl.Result{}, nil
+	}
+
+	// Start timer if serving is starting.
+	if s.Status.IsStarting() {
+		r.startTimer(&s)
+	}
+
+	// Serving is running, no need to create.
+	if s.Status.Phase != "" && s.Status.State != "" {
+		// Update the status of the serving according to the result of the serving.
+		if err := r.getServingResult(&s, servingRun); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
@@ -107,18 +146,18 @@ func (r *ServingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	if err := servingRun.Run(&s); err != nil {
-		log.Error(err, "Failed to run serving")
+		log.Error(err, "Failed to start serving")
 		return ctrl.Result{}, err
 	}
 
 	s.Status.Phase = openfunction.ServingPhase
-	s.Status.State = openfunction.Running
+	s.Status.State = openfunction.Starting
 	if err := r.Status().Update(r.ctx, &s); err != nil {
 		log.Error(err, "Failed to update serving status")
 		return ctrl.Result{}, err
 	}
 
-	log.V(1).Info("Serving is running")
+	log.V(1).Info("Serving is starting")
 
 	return ctrl.Result{}, nil
 }
@@ -135,9 +174,102 @@ func (r *ServingReconciler) getServingRun(s *openfunction.Serving) core.ServingR
 	}
 }
 
+// Update the status of the serving according to the result of the serving.
+func (r *ServingReconciler) getServingResult(s *openfunction.Serving, servingRun core.ServingRun) error {
+	log := r.Log.WithName("GetServingResult").
+		WithValues("Serving", fmt.Sprintf("%s/%s", s.Namespace, s.Name))
+
+	res, err := servingRun.Result(s)
+	if err != nil {
+		log.Error(err, "Get serving result error")
+		return err
+	}
+
+	// Serving is starting.
+	if res == "" {
+		return nil
+	}
+
+	if res != s.Status.State {
+		s.Status.State = res
+		if err := r.Status().Update(r.ctx, s); err != nil {
+			return err
+		}
+
+		r.stopTimer(fmt.Sprintf("%s/%s", s.Namespace, s.Name))
+		log.V(1).Info("Update serving status", "state", res)
+	}
+
+	return nil
+}
+
+func (r *ServingReconciler) startTimer(serving *openfunction.Serving) {
+	namespacedName := fmt.Sprintf("%s/%s", serving.Namespace, serving.Name)
+	log := r.Log.WithName("Timer").WithValues("Serving", namespacedName)
+
+	if serving.Spec.Timeout == nil ||
+		time.Since(serving.CreationTimestamp.Time) > serving.Spec.Timeout.Duration {
+		return
+	}
+
+	// Skipped when timer had started.
+	t, ok := r.timers[namespacedName]
+	if ok {
+		return
+	}
+
+	t = time.NewTimer(serving.Spec.Timeout.Duration - time.Since(serving.CreationTimestamp.Time))
+	r.timers[namespacedName] = t
+
+	go func() {
+
+		defer r.stopTimer(namespacedName)
+
+		select {
+		case <-t.C:
+			s := &openfunction.Serving{}
+			if err := r.Get(r.ctx, client.ObjectKeyFromObject(serving), s); err != nil {
+				if util.IsNotFound(err) {
+					log.Info("Serving had delete")
+					return
+				}
+
+				log.Error(err, "Failed to get Serving")
+				return
+			}
+
+			if s.Status.IsStarting() {
+				log.Error(nil, "Serving start timeout")
+				s.Status.State = openfunction.Timeout
+				if err := r.Status().Update(r.ctx, s); err != nil {
+					log.Error(err, "Failed to update serving status")
+				}
+			}
+		}
+	}()
+
+	log.V(1).Info("Timer started")
+}
+
+func (r *ServingReconciler) stopTimer(key string) {
+	log := r.Log.WithName("Timer").WithValues("Serving", key)
+	t := r.timers[key]
+	if t != nil {
+		t.Stop()
+		delete(r.timers, key)
+		log.Info("Timer stopped")
+	}
+}
+
 // SetupWithManager sets up the controller with the Manager.
-func (r *ServingReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&openfunction.Serving{}).
-		Complete(r)
+func (r *ServingReconciler) SetupWithManager(mgr ctrl.Manager, owns []client.Object) error {
+
+	b := ctrl.NewControllerManagedBy(mgr).
+		For(&openfunction.Serving{})
+
+	for _, own := range owns {
+		b.Owns(own)
+	}
+
+	return b.Complete(r)
 }

@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/openfunction/pkg/constants"
-
 	openfunctioncontext "github.com/OpenFunction/functions-framework-go/openfunction-context"
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	"github.com/go-logr/logr"
@@ -22,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	openfunction "github.com/openfunction/apis/core/v1alpha2"
+	"github.com/openfunction/pkg/constants"
 	"github.com/openfunction/pkg/core"
 	"github.com/openfunction/pkg/util"
 )
@@ -49,6 +48,12 @@ type servingRun struct {
 	ctx    context.Context
 	log    logr.Logger
 	scheme *runtime.Scheme
+}
+
+func Registry() []client.Object {
+	return []client.Object{&appsv1.Deployment{}, &appsv1.StatefulSet{}, &batchv1.Job{},
+		&kedav1alpha1.ScaledObject{}, &kedav1alpha1.ScaledJob{},
+		&componentsv1alpha1.Component{}}
 }
 
 func NewServingRun(ctx context.Context, c client.Client, scheme *runtime.Scheme, log logr.Logger) core.ServingRun {
@@ -188,6 +193,38 @@ func (r *servingRun) Clean(s *openfunction.Serving) error {
 	}
 
 	return nil
+}
+
+func (r *servingRun) Result(s *openfunction.Serving) (string, error) {
+
+	// Currently, it only supports updating the status of serving through the status of deployment.
+	if s.Spec.OpenFuncAsync == nil || s.Spec.OpenFuncAsync.Keda == nil ||
+		s.Spec.OpenFuncAsync.Keda.ScaledObject == nil ||
+		s.Spec.OpenFuncAsync.Keda.ScaledObject.WorkloadType == "StatefulSet" {
+		return openfunction.Running, nil
+	}
+
+	deploy := &appsv1.Deployment{}
+	if err := r.Get(r.ctx, client.ObjectKey{Name: getWorkloadName(s), Namespace: s.Namespace}, deploy); err != nil {
+		return "", err
+	}
+
+	for _, cond := range deploy.Status.Conditions {
+		switch cond.Type {
+		case appsv1.DeploymentProgressing:
+			switch cond.Status {
+			case corev1.ConditionUnknown, corev1.ConditionFalse:
+				return "", nil
+			}
+		case appsv1.DeploymentReplicaFailure:
+			switch cond.Status {
+			case corev1.ConditionUnknown, corev1.ConditionTrue:
+				return "", nil
+			}
+		}
+	}
+
+	return openfunction.Running, nil
 }
 
 func (r *servingRun) generateWorkload(s *openfunction.Serving) client.Object {
@@ -630,4 +667,12 @@ func getComponentName(s *openfunction.Serving, name string) string {
 	}
 
 	return name
+}
+
+func getWorkloadName(s *openfunction.Serving) string {
+	if s.Status.ResourceRef == nil {
+		return ""
+	}
+
+	return s.Status.ResourceRef[workloadName]
 }

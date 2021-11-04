@@ -6,20 +6,18 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/apimachinery/pkg/util/rand"
-
-	"github.com/openfunction/pkg/util"
-
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/rand"
 	kservingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	openfunction "github.com/openfunction/apis/core/v1alpha2"
 	"github.com/openfunction/pkg/core"
+	"github.com/openfunction/pkg/util"
 )
 
 const (
@@ -35,6 +33,10 @@ type servingRun struct {
 	ctx    context.Context
 	log    logr.Logger
 	scheme *runtime.Scheme
+}
+
+func Registry() []client.Object {
+	return []client.Object{&kservingv1.Service{}}
 }
 
 func NewServingRun(ctx context.Context, c client.Client, scheme *runtime.Scheme, log logr.Logger) core.ServingRun {
@@ -97,6 +99,31 @@ func (r *servingRun) Clean(s *openfunction.Serving) error {
 	}
 
 	return nil
+}
+
+func (r *servingRun) Result(s *openfunction.Serving) (string, error) {
+	log := r.log.WithName("Result").
+		WithValues("Serving", fmt.Sprintf("%s/%s", s.Namespace, s.Name))
+
+	service := &kservingv1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      getName(s, knativeService),
+			Namespace: s.Namespace,
+		},
+	}
+
+	if err := r.Get(r.ctx, client.ObjectKeyFromObject(service), service); util.IgnoreNotFound(err) != nil {
+		log.Error(err, "Failed to get Service", "Service", service.Name)
+		return "", util.IgnoreNotFound(err)
+	}
+
+	if service.IsReady() {
+		return openfunction.Running, nil
+	} else if service.IsFailed() {
+		return openfunction.Failed, nil
+	} else {
+		return "", nil
+	}
 }
 
 func (r *servingRun) createService(s *openfunction.Serving) *kservingv1.Service {
@@ -184,4 +211,12 @@ func (r *servingRun) createService(s *openfunction.Serving) *kservingv1.Service 
 	}
 
 	return &service
+}
+
+func getName(s *openfunction.Serving, key string) string {
+	if s.Status.ResourceRef == nil {
+		return ""
+	}
+
+	return s.Status.ResourceRef[key]
 }

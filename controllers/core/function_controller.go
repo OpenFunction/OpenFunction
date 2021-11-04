@@ -26,9 +26,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/openfunction/pkg/constants"
-
 	openfunction "github.com/openfunction/apis/core/v1alpha2"
+	"github.com/openfunction/pkg/constants"
 	"github.com/openfunction/pkg/util"
 )
 
@@ -182,8 +181,8 @@ func (r *FunctionReconciler) updateFuncWithBuilderStatus(fn *openfunction.Functi
 		return util.IgnoreNotFound(err)
 	}
 
-	// The build is still in process.
-	if builder.Status.Phase != openfunction.BuildPhase || builder.Status.State == openfunction.Building {
+	// The build does not start.
+	if builder.Status.Phase != openfunction.BuildPhase {
 		return nil
 	}
 
@@ -286,22 +285,8 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 	if !r.needToCreateServing(fn) {
 		log.V(1).Info("No need to create Serving")
 
-		if running, err := r.isServingRunning(fn); err != nil {
-			log.Error(err, "Failed to get serving status")
+		if err := r.updateFuncWithServingStatus(fn); err != nil {
 			return err
-		} else if running {
-			if err := r.deleteOldServing(fn); err != nil {
-				log.Error(err, "Failed to clean old serving")
-				return err
-			}
-
-			if fn.Status.Serving.State != openfunction.Running {
-				fn.Status.Serving.State = openfunction.Running
-				if err := r.Status().Update(r.ctx, fn); err != nil {
-					log.Error(err, "Failed to update function serving status")
-					return err
-				}
-			}
 		}
 
 		return nil
@@ -312,9 +297,15 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 		fn.Status.Serving = &openfunction.Condition{}
 	}
 	fn.Status.Serving.State = ""
+	fn.Status.Serving.ResourceRef = ""
 	fn.Status.Serving.ResourceHash = ""
 	if err := r.Status().Update(r.ctx, fn); err != nil {
 		log.Error(err, "Failed to update function serving status")
+		return err
+	}
+
+	if err := r.cleanServing(fn); err != nil {
+		log.Error(err, "Failed to clean Serving")
 		return err
 	}
 
@@ -354,9 +345,10 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 	}
 
 	fn.Status.Serving = &openfunction.Condition{
-		State:        openfunction.Created,
-		ResourceRef:  serving.Name,
-		ResourceHash: util.Hash(serving.Spec),
+		State:                     openfunction.Created,
+		ResourceRef:               serving.Name,
+		ResourceHash:              util.Hash(serving.Spec),
+		LastSuccessfulResourceRef: fn.Status.Serving.LastSuccessfulResourceRef,
 	}
 	if err := r.Status().Update(r.ctx, fn); err != nil {
 		log.Error(err, "Failed to update function serving status")
@@ -367,10 +359,14 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 	return nil
 }
 
-func (r *FunctionReconciler) isServingRunning(fn *openfunction.Function) (bool, error) {
+// Update the status of the function with the result of the serving.
+func (r *FunctionReconciler) updateFuncWithServingStatus(fn *openfunction.Function) error {
+	log := r.Log.WithName("UpdateFuncWithServingStatus").
+		WithValues("Function", fmt.Sprintf("%s/%s", fn.Namespace, fn.Name))
 
+	// Serving had not created, no need to update function status.
 	if fn.Status.Serving == nil || fn.Status.Serving.State == "" {
-		return false, nil
+		return nil
 	}
 
 	var serving openfunction.Serving
@@ -378,24 +374,53 @@ func (r *FunctionReconciler) isServingRunning(fn *openfunction.Function) (bool, 
 	serving.Namespace = fn.Namespace
 
 	if serving.Name == "" {
-		return false, nil
+		log.V(1).Info("Function has no serving")
+		return nil
 	}
 
-	if err := r.Get(r.ctx, client.ObjectKey{Namespace: serving.Namespace, Name: serving.Name}, &serving); util.IgnoreNotFound(err) != nil {
-		return false, util.IgnoreNotFound(err)
+	if err := r.Get(r.ctx, client.ObjectKeyFromObject(&serving), &serving); util.IgnoreNotFound(err) != nil {
+		log.Error(err, "Failed to get serving", "Serving", serving.Name)
+		return util.IgnoreNotFound(err)
 	}
 
-	return serving.Status.State == openfunction.Running, nil
+	// Serving does not start.
+	if serving.Status.Phase != openfunction.ServingPhase {
+		return nil
+	}
+
+	// If serving status changed, update function serving status.
+	if fn.Status.Serving.State != serving.Status.State {
+		fn.Status.Serving.State = serving.Status.State
+
+		// If new serving is running, clean old serving.
+		if serving.Status.State == openfunction.Running {
+			fn.Status.Serving.LastSuccessfulResourceRef = fn.Status.Serving.ResourceRef
+			if err := r.cleanServing(fn); err != nil {
+				log.Error(err, "Failed to clean Serving")
+				return err
+			}
+			log.V(1).Info("Serving is running", "serving", serving.Name)
+		}
+	}
+
+	if err := r.Status().Update(r.ctx, fn); err != nil {
+		log.Error(err, "Failed to update function status")
+		return err
+	}
+
+	return nil
 }
 
 // Clean up redundant servings caused by the `createOrUpdateBuilder` function failed.
-func (r *FunctionReconciler) deleteOldServing(fn *openfunction.Function) error {
-	log := r.Log.WithName("DeleteOldServing").
+func (r *FunctionReconciler) cleanServing(fn *openfunction.Function) error {
+	log := r.Log.WithName("CleanServing").
 		WithValues("Function", fmt.Sprintf("%s/%s", fn.Namespace, fn.Name))
 
 	name := ""
+	oldName := ""
 	if fn.Status.Serving != nil {
 		name = fn.Status.Serving.ResourceRef
+		oldName = fn.Status.Serving.LastSuccessfulResourceRef
 	}
 
 	servings := &openfunction.ServingList{}
@@ -404,7 +429,7 @@ func (r *FunctionReconciler) deleteOldServing(fn *openfunction.Function) error {
 	}
 
 	for _, item := range servings.Items {
-		if item.Name != name {
+		if item.Name != name && item.Name != oldName {
 			if err := r.Delete(context.Background(), &item); util.IgnoreNotFound(err) != nil {
 				return err
 			}

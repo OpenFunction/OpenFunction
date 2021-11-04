@@ -101,3 +101,7 @@ type BuilderList struct {
 func init() {
 	SchemeBuilder.Register(&Builder{}, &BuilderList{})
 }
+
+func (s *BuilderStatus) IsCompleted() bool {
+	return s.State != "" && s.State != Building
+}
