@@ -1,7 +1,5 @@
 #!/bin/bash
 
-TEMP=$(getopt -o an:p --long all,with-shipwright,with-knative,with-openFuncAsync,poor-network -- "$@")
-
 all=false
 with_shipwright=false
 with_knative=false
@@ -13,40 +11,30 @@ if [ $? != 0 ]; then
   exit 1
 fi
 
-# Note the quotes around `$TEMP': they are essential!
-eval set -- "$TEMP"
-
-while true; do
+while test $# -gt 0
+do
   case "$1" in
-  --all)
-    all=true
-    shift
-    ;;
-  --with-shipwright)
-    with_shipwright=true
-    shift
-    ;;
-  --with-knative)
-    with_knative=true
-    shift
-    ;;
-  --with-openFuncAsync)
-    with_openFuncAsync=true
-    shift
-    ;;
-  -p | --poor-network)
-    poor_network=true
-    shift
-    ;;
-  --)
-    shift
-    break
-    ;;
-  *)
-    echo "Internal error!"
-    exit 1
-    ;;
+    --all)
+      all=true
+      ;;
+    --with-shipwright)
+      with_shipwright=true
+      ;;
+    --with-knative)
+      with_knative=true
+      ;;
+    --with-openFuncAsync)
+      with_openFuncAsync=true
+      ;;
+    -p | --poor-network)
+      poor_network=true
+      ;;
+    *)
+      echo "Internal error!"
+      exit 1
+      ;;
   esac
+  shift
 done
 
 if [ "$all" = "true" ]; then
