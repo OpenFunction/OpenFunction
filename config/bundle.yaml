@@ -15989,6 +15989,8 @@ spec:
             properties:
               build:
                 properties:
+                  lastSuccessfulResourceRef:
+                    type: string
                   resourceHash:
                     type: string
                   resourceRef:
@@ -15998,6 +16000,8 @@ spec:
                 type: object
               serving:
                 properties:
+                  lastSuccessfulResourceRef:
+                    type: string
                   resourceHash:
                     type: string
                   resourceRef:

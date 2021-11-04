@@ -180,3 +180,7 @@ type ServingList struct {
 func init() {
 	SchemeBuilder.Register(&Serving{}, &ServingList{})
 }
+
+func (s *ServingStatus) IsStarting() bool {
+	return s.State == "" || s.State == Starting
+}

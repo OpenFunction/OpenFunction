@@ -1,6 +1,8 @@
 package core
 
-import openfunction "github.com/openfunction/apis/core/v1alpha2"
+import (
+	openfunction "github.com/openfunction/apis/core/v1alpha2"
+)
 
 const (
 	FunctionContainer = "function"
@@ -22,6 +24,11 @@ type BuilderRun interface {
 
 type ServingRun interface {
 	Run(s *openfunction.Serving) error
+	// Result get the serving result.
+	// '' means serving is starting.
+	// `Running` means serving is running.
+	// Other means serving failed.
+	Result(s *openfunction.Serving) (string, error)
 	// Clean all resources which created by serving.
 	Clean(s *openfunction.Serving) error
 }

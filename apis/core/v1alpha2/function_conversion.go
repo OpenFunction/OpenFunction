@@ -66,8 +66,20 @@ func (src *Function) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Spec.ImageCredentials = src.Spec.ImageCredentials
 
 	// Status
-	dst.Status.Build = (*v1alpha1.Condition)(src.Status.Build)
-	dst.Status.Serving = (*v1alpha1.Condition)(src.Status.Serving)
+	if src.Status.Build != nil {
+		dst.Status.Build = &v1alpha1.Condition{
+			State:        src.Status.Build.State,
+			ResourceRef:  src.Status.Build.ResourceRef,
+			ResourceHash: src.Status.Build.ResourceHash,
+		}
+	}
+	if src.Status.Serving != nil {
+		dst.Status.Serving = &v1alpha1.Condition{
+			State:        src.Status.Serving.State,
+			ResourceRef:  src.Status.Serving.ResourceRef,
+			ResourceHash: src.Status.Serving.ResourceHash,
+		}
+	}
 
 	// +kubebuilder:docs-gen:collapse=rote conversion
 	return nil
@@ -206,8 +218,21 @@ func (dst *Function) ConvertFrom(srcRaw conversion.Hub) error {
 	dst.Spec.ImageCredentials = src.Spec.ImageCredentials
 
 	// Status
-	dst.Status.Build = (*Condition)(src.Status.Build)
-	dst.Status.Serving = (*Condition)(src.Status.Serving)
+	if src.Status.Build != nil {
+		dst.Status.Build = &Condition{
+			State:        src.Status.Build.State,
+			ResourceRef:  src.Status.Build.ResourceRef,
+			ResourceHash: src.Status.Build.ResourceHash,
+		}
+	}
+	if src.Status.Serving != nil {
+		dst.Status.Serving = &Condition{
+			State:                     src.Status.Serving.State,
+			ResourceRef:               src.Status.Serving.ResourceRef,
+			LastSuccessfulResourceRef: src.Status.Serving.ResourceRef,
+			ResourceHash:              src.Status.Serving.ResourceHash,
+		}
+	}
 
 	// +kubebuilder:docs-gen:collapse=rote conversion
 	return nil
