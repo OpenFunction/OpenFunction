@@ -48,12 +48,6 @@ if [ "$all" = "true" ]; then
   with_openFuncAsync=true
 fi
 
-if [ "$poor_network" = "false" ]; then
-  kubectl delete --filename https://github.com/jetstack/cert-manager/releases/download/v1.5.4/cert-manager.yaml
-else
-  kubectl delete --filename https://openfunction.sh1a.qingstor.com/cert-manager/v1.5.4/cert-manager.yaml
-fi
-
 if [ "$with_shipwright" = "true" ]; then
   if [ "$poor_network" = "false" ]; then
     kubectl delete --filename https://github.com/tektoncd/pipeline/releases/download/v0.28.1/release.yaml
