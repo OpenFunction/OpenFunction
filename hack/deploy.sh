@@ -16,23 +16,18 @@ do
   case "$1" in
     --all)
       all=true
-      shift
       ;;
     --with-shipwright)
       with_shipwright=true
-      shift
       ;;
     --with-knative)
       with_knative=true
-      shift
       ;;
     --with-openFuncAsync)
       with_openFuncAsync=true
-      shift
       ;;
     -p | --poor-network)
       poor_network=true
-      shift
       ;;
     *)
       echo "Internal error!"
