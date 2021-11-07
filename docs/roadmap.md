@@ -45,5 +45,6 @@
 SYNAPSE](https://github.com/serverlessworkflow/synapse), [FunctionGraph](https://www.huaweicloud.com/en-us/product/functiongraph.html), [Kogito](https://kogito.kie.org/), [Automatiko](https://automatiko.io/).
 - [ ] Use [ShipWright](https://github.com/shipwright-io/build) to build functions or apps with Dockerfile.
 - [ ] Support Rust functions & WebAssembly runtime.
+- [ ] Function Tracing: Integrate [go2sky](https://github.com/SkyAPM/go2sky) with go function framework and send tracing data to Skywalking. (Needs to use other [instrument SDKs](https://github.com/SkyAPM) to integrate with more function frameworks)
 - [ ] Integration with KubeSphere
 - [ ] Integration with Notification Manager to provide Serverless notification, maybe by a new project called `Elastic Notification`.
