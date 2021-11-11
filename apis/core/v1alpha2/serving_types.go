@@ -42,8 +42,8 @@ type KedaScaledObject struct {
 
 type KedaScaledJob struct {
 	// Restart policy for all containers within the pod.
-	// One of OnFailure, Never.
-	// Default to Never.
+	// One of 'OnFailure', 'Never'.
+	// Default to 'Never'.
 	// +optional
 	RestartPolicy *v1.RestartPolicy `json:"restartPolicy,omitempty"`
 	// +optional
@@ -150,6 +150,9 @@ type ServingStatus struct {
 	State string `json:"state,omitempty"`
 	// Associate resources.
 	ResourceRef map[string]string `json:"resourceRef,omitempty"`
+	// Service holds the service name used to access the serving.
+	// +optional
+	Service string `json:"url,omitempty"`
 }
 
 //+kubebuilder:object:root=true

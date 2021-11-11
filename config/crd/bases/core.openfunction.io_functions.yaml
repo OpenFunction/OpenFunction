@@ -7327,6 +7327,9 @@ spec:
     - jsonPath: .status.serving.resourceRef
       name: Serving
       type: string
+    - jsonPath: .status.url
+      name: URL
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -7460,6 +7463,22 @@ spec:
                 description: The port on which the function will be invoked
                 format: int32
                 type: integer
+              service:
+                description: Information needed to create an access entry for function.
+                properties:
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    description: Annotations for Ingress. Take effect when `UseSeparateIngress`
+                      is true.
+                    type: object
+                  useSeparateIngress:
+                    description: UseSeparateIngress determines whether to create a
+                      separate ingress for the function. If it is true, an ingress
+                      will be created for this function, else it will use the default
+                      ingress under the current namespace.
+                    type: boolean
+                type: object
               serving:
                 description: Information needed to run a function. The serving step
                   will be skipped if `Serving` is nil.
@@ -7614,7 +7633,8 @@ spec:
                                 type: integer
                               restartPolicy:
                                 description: Restart policy for all containers within
-                                  the pod. One of OnFailure, Never. Default to Never.
+                                  the pod. One of 'OnFailure', 'Never'. Default to
+                                  'Never'.
                                 type: string
                               scalingStrategy:
                                 description: ScalingStrategy defines the strategy
@@ -14571,6 +14591,8 @@ spec:
                     type: string
                   resourceRef:
                     type: string
+                  service:
+                    type: string
                   state:
                     type: string
                 type: object
@@ -14582,9 +14604,15 @@ spec:
                     type: string
                   resourceRef:
                     type: string
+                  service:
+                    type: string
                   state:
                     type: string
                 type: object
+              url:
+                description: URL holds the url that used to access the Function. It
+                  generally has the form http://{domain-name}.{domain-namespace}:{domain-port}/{function-namespace}/{function-name}
+                type: string
             type: object
         type: object
     served: true

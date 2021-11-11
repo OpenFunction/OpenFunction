@@ -7133,7 +7133,7 @@ spec:
                             type: integer
                           restartPolicy:
                             description: Restart policy for all containers within
-                              the pod. One of OnFailure, Never. Default to Never.
+                              the pod. One of 'OnFailure', 'Never'. Default to 'Never'.
                             type: string
                           scalingStrategy:
                             description: ScalingStrategy defines the strategy of Scaling
@@ -13832,6 +13832,9 @@ spec:
                 description: Associate resources.
                 type: object
               state:
+                type: string
+              url:
+                description: Service holds the service name used to access the serving.
                 type: string
             type: object
         type: object

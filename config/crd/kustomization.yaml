@@ -5,6 +5,7 @@ resources:
   - bases/core.openfunction.io_functions.yaml
   - bases/core.openfunction.io_servings.yaml
   - bases/core.openfunction.io_builders.yaml
+  - bases/core.openfunction.io_domains.yaml
   - bases/events.openfunction.io_eventsources.yaml
   - bases/events.openfunction.io_eventbus.yaml
   - bases/events.openfunction.io_triggers.yaml

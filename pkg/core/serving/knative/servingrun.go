@@ -76,6 +76,7 @@ func (r *servingRun) Run(s *openfunction.Serving) error {
 	}
 
 	s.Status.ResourceRef[knativeService] = service.Name
+	s.Status.Service = service.Name
 
 	return nil
 }
@@ -112,9 +113,9 @@ func (r *servingRun) Result(s *openfunction.Serving) (string, error) {
 		},
 	}
 
-	if err := r.Get(r.ctx, client.ObjectKeyFromObject(service), service); util.IgnoreNotFound(err) != nil {
+	if err := r.Get(r.ctx, client.ObjectKeyFromObject(service), service); err != nil {
 		log.Error(err, "Failed to get Service", "Service", service.Name)
-		return "", util.IgnoreNotFound(err)
+		return "", err
 	}
 
 	if service.IsReady() {

@@ -59,7 +59,6 @@ const (
 	UnknownRuntime         = "UnknownRuntime"
 	Knative        Runtime = "Knative"
 	OpenFuncAsync  Runtime = "OpenFuncAsync"
-	Shipwright             = "Shipwright"
 )
 
 type Strategy struct {
@@ -131,6 +130,19 @@ type ServingImpl struct {
 	Timeout *metav1.Duration `json:"timeout,omitempty"`
 }
 
+type ServiceImpl struct {
+	// Annotations for Ingress. Take effect when `UseSeparateIngress` is true.
+	//
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
+	// UseSeparateIngress determines whether to create a separate ingress for the function.
+	// If it is true, an ingress will be created for this function,
+	// else it will use the default ingress under the current namespace.
+	//
+	// +optional
+	UseSeparateIngress bool `json:"useSeparateIngress,omitempty"`
+}
+
 // FunctionSpec defines the desired state of Function
 type FunctionSpec struct {
 	// Function version in format like v1.0.0
@@ -148,6 +160,10 @@ type FunctionSpec struct {
 	Build *BuildImpl `json:"build,omitempty"`
 	// Information needed to run a function. The serving step will be skipped if `Serving` is nil.
 	Serving *ServingImpl `json:"serving,omitempty"`
+	// Information needed to create an access entry for function.
+	//
+	// +optional
+	Service *ServiceImpl `json:"service,omitempty"`
 }
 
 type Condition struct {
@@ -155,12 +171,17 @@ type Condition struct {
 	ResourceRef               string `json:"resourceRef,omitempty"`
 	LastSuccessfulResourceRef string `json:"lastSuccessfulResourceRef,omitempty"`
 	ResourceHash              string `json:"resourceHash,omitempty"`
+	Service                   string `json:"service,omitempty"`
 }
 
 // FunctionStatus defines the observed state of Function
 type FunctionStatus struct {
 	Build   *Condition `json:"build,omitempty"`
 	Serving *Condition `json:"serving,omitempty"`
+	// URL holds the url that used to access the Function.
+	// It generally has the form http://{domain-name}.{domain-namespace}:{domain-port}/{function-namespace}/{function-name}
+	// +optional
+	URL string `json:"url,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -171,6 +192,7 @@ type FunctionStatus struct {
 //+kubebuilder:printcolumn:name="ServingState",type=string,JSONPath=`.status.serving.state`
 //+kubebuilder:printcolumn:name="Builder",type=string,JSONPath=`.status.build.resourceRef`
 //+kubebuilder:printcolumn:name="Serving",type=string,JSONPath=`.status.serving.resourceRef`
+//+kubebuilder:printcolumn:name="URL",type=string,JSONPath=`.status.url`
 //+kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Function is the Schema for the functions API
