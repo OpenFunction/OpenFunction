@@ -635,7 +635,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: DomainSpec defines the desired state of Domain
+            description: DomainSpec defines the desired state of a Domain
             properties:
               ingress:
                 description: Ingress configuration.

@@ -96,7 +96,7 @@ func (r *DomainReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, err
 	}
 
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, svc, r.svcMutate(&d, svc))
+	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, svc, r.mutateService(&d, svc))
 	if err != nil {
 		log.Error(err, "Failed to CreateOrUpdate domain")
 		return ctrl.Result{}, err
@@ -111,7 +111,7 @@ func (r *DomainReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	return ctrl.Result{}, nil
 }
 
-func (r *DomainReconciler) svcMutate(d *openfunction.Domain, svc *corev1.Service) controllerutil.MutateFn {
+func (r *DomainReconciler) mutateService(d *openfunction.Domain, svc *corev1.Service) controllerutil.MutateFn {
 
 	return func() error {
 

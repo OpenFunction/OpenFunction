@@ -40,7 +40,7 @@ type IngressConfig struct {
 	IngressClassName string `json:"ingressClassName"`
 }
 
-// DomainSpec defines the desired state of Domain
+// DomainSpec defines the desired state of a Domain
 type DomainSpec struct {
 	// Ingress configuration.
 	Ingress IngressConfig `json:"ingress"`

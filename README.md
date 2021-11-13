@@ -31,7 +31,7 @@ The core capability of OpenFunction is to enable users to develop, run and manag
 - **Function**, defines a function.
 - **Builder**, defines a function builder.
 - **Serving**, defines a function workload.
-- **Domain**, defines a unified access entry for sync function.
+- **Domain**, defines a unified entry point for sync functions.
 
 #### Function
 
@@ -57,7 +57,7 @@ OpenFunction Builder controls the build process of application images by [Shipwr
 
 #### Serving
 
-The goal of `Serving` is serving user functions in a highly elastic manner (dynamically scale 0 <-> N).
+The goal of `Serving` is to run functions in a highly elastic manner (dynamically scale 0 <-> N).
 
 Currently, OpenFunction supports two serving runtimes, [Knative](#knative) and [OpenFuncAsync](#openfuncasync). At least one of these runtimes is required.
 
@@ -75,16 +75,16 @@ The OpenFuncAsync functions can be triggered by various event types, such as MQ,
 
 ### Domain
 
-`Domain` defines a unified access entry for sync function used ingress, user can use 
+`Domain` defines a unified entry point for sync functions using ingress, user can use 
 
 ```
-http://<domain-name>.<domain-namespace>/<function-namespace>.<function-name>
+http://<domain-name>.<domain-namespace>/<function-namespace>/<function-name>
 ```
 
-to access the function.
+to access a function.
 
-Only one `Domain` can be defined in the cluster. A `Domain` requires a `Ingress Controller`. By default, we use `nginx-ingress`.
-You can refer to [Prerequisites](#prerequisites) and use `--with-ingress` to install it, or install manually.
+Only one `Domain` can be defined in a cluster. A `Domain` requires a `Ingress Controller`. By default, we use `nginx-ingress`.
+You can refer to [Prerequisites](#prerequisites) and use `--with-ingress` to install it, or install it manually.
 If the `nginx-ingress` does not use the default namespace and name, please modify the `config/domain/default-domain.yaml`, 
 and run 
 
