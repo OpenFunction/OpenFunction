@@ -625,12 +625,12 @@ func (r *FunctionReconciler) createOrUpdateService(fn *openfunction.Function) er
 
 func (r *FunctionReconciler) cleanIngress(fn *openfunction.Function) error {
 
-	// If the function use a separate ingress, delete configuration from default ingress.
-	if fn.Spec.Service != nil && fn.Spec.Service.UseSeparateIngress {
+	// If the function use a standalone ingress, delete configuration from default ingress.
+	if fn.Spec.Service != nil && fn.Spec.Service.UseStandaloneIngress {
 		return r.cleanDefaultIngress(fn)
 	}
 
-	// The function use default ingress, delete the separate ingress for function.
+	// The function use default ingress, delete the standalone ingress for function.
 	ingress := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fn.Name,
@@ -683,7 +683,7 @@ func (r *FunctionReconciler) cleanDefaultIngress(fn *openfunction.Function) erro
 func (r *FunctionReconciler) createOrUpdateIngress(fn *openfunction.Function, domain *openfunction.Domain) (controllerutil.OperationResult, error) {
 
 	name := defaultIngressName
-	if fn.Spec.Service != nil && fn.Spec.Service.UseSeparateIngress {
+	if fn.Spec.Service != nil && fn.Spec.Service.UseStandaloneIngress {
 		name = fn.Name
 	}
 
@@ -694,7 +694,7 @@ func (r *FunctionReconciler) createOrUpdateIngress(fn *openfunction.Function, do
 		},
 	}
 
-	op, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, ingress, r.ingressMutate(fn, domain, ingress))
+	op, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, ingress, r.mutateIngress(fn, domain, ingress))
 	if err != nil {
 		return controllerutil.OperationResultNone, err
 	}
@@ -702,12 +702,12 @@ func (r *FunctionReconciler) createOrUpdateIngress(fn *openfunction.Function, do
 	return op, nil
 }
 
-func (r *FunctionReconciler) ingressMutate(fn *openfunction.Function, domain *openfunction.Domain, ingress *networkingv1.Ingress) controllerutil.MutateFn {
+func (r *FunctionReconciler) mutateIngress(fn *openfunction.Function, domain *openfunction.Domain, ingress *networkingv1.Ingress) controllerutil.MutateFn {
 
 	return func() error {
 		path := createIngressPath(fn)
 		ingressClassName := domain.Spec.Ingress.IngressClassName
-		if fn.Spec.Service != nil && fn.Spec.Service.UseSeparateIngress {
+		if fn.Spec.Service != nil && fn.Spec.Service.UseStandaloneIngress {
 			ingress.Spec = networkingv1.IngressSpec{
 				IngressClassName: &ingressClassName,
 				Rules: []networkingv1.IngressRule{

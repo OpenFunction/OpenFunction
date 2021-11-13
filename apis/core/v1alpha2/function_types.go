@@ -131,16 +131,16 @@ type ServingImpl struct {
 }
 
 type ServiceImpl struct {
-	// Annotations for Ingress. Take effect when `UseSeparateIngress` is true.
+	// Annotations for Ingress. Take effect when `UseStandaloneIngress` is true.
 	//
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty"`
-	// UseSeparateIngress determines whether to create a separate ingress for the function.
+	// UseStandaloneIngress determines whether to create a standalone ingress for the function.
 	// If it is true, an ingress will be created for this function,
 	// else it will use the default ingress under the current namespace.
 	//
 	// +optional
-	UseSeparateIngress bool `json:"useSeparateIngress,omitempty"`
+	UseStandaloneIngress bool `json:"UseStandaloneIngress,omitempty"`
 }
 
 // FunctionSpec defines the desired state of Function

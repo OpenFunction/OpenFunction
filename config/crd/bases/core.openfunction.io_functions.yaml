@@ -7466,18 +7466,18 @@ spec:
               service:
                 description: Information needed to create an access entry for function.
                 properties:
-                  annotations:
-                    additionalProperties:
-                      type: string
-                    description: Annotations for Ingress. Take effect when `UseSeparateIngress`
-                      is true.
-                    type: object
-                  useSeparateIngress:
-                    description: UseSeparateIngress determines whether to create a
-                      separate ingress for the function. If it is true, an ingress
+                  UseStandaloneIngress:
+                    description: UseStandaloneIngress determines whether to create
+                      a standalone ingress for the function. If it is true, an ingress
                       will be created for this function, else it will use the default
                       ingress under the current namespace.
                     type: boolean
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    description: Annotations for Ingress. Take effect when `UseStandaloneIngress`
+                      is true.
+                    type: object
                 type: object
               serving:
                 description: Information needed to run a function. The serving step
