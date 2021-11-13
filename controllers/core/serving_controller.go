@@ -63,7 +63,6 @@ func NewServingReconciler(mgr manager.Manager) *ServingReconciler {
 //+kubebuilder:rbac:groups=keda.sh,resources=scaledjobs;scaledobjects,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=apps,resources=deployments;statefulsets,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -143,6 +142,13 @@ func (r *ServingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
+	}
+
+	// Reset serving status.
+	s.Status = openfunction.ServingStatus{}
+	if err := r.Status().Update(r.ctx, &s); err != nil {
+		log.Error(err, "Failed to reset serving status")
+		return ctrl.Result{}, err
 	}
 
 	if err := servingRun.Run(&s); err != nil {

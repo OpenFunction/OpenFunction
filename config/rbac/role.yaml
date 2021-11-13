@@ -66,6 +66,26 @@ rules:
 - apiGroups:
   - core.openfunction.io
   resources:
+  - domains
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - core.openfunction.io
+  resources:
+  - domains/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - core.openfunction.io
+  resources:
   - functions
   verbs:
   - create
@@ -237,6 +257,18 @@ rules:
   resources:
   - scaledjobs
   - scaledobjects
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
   verbs:
   - create
   - delete

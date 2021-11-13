@@ -21,14 +21,20 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	openfunction "github.com/openfunction/apis/core/v1alpha2"
 	"github.com/openfunction/pkg/constants"
 	"github.com/openfunction/pkg/util"
+)
+
+const (
+	defaultIngressName = "openfunction"
 )
 
 // FunctionReconciler reconciles a Function object
@@ -41,6 +47,7 @@ type FunctionReconciler struct {
 
 //+kubebuilder:rbac:groups=core.openfunction.io,resources=functions,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core.openfunction.io,resources=functions/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -55,12 +62,18 @@ func (r *FunctionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	r.ctx = ctx
 	log := r.Log.WithValues("Function", req.NamespacedName)
 
-	var fn openfunction.Function
+	fn := openfunction.Function{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      req.Name,
+			Namespace: req.Namespace,
+		},
+	}
 
 	if err := r.Get(ctx, req.NamespacedName, &fn); err != nil {
 
 		if util.IsNotFound(err) {
 			log.V(1).Info("Function deleted")
+			return ctrl.Result{}, r.cleanDefaultIngress(&fn)
 		}
 
 		return ctrl.Result{}, util.IgnoreNotFound(err)
@@ -71,6 +84,10 @@ func (r *FunctionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	if err := r.createServing(&fn); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if err := r.createOrUpdateService(&fn); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -395,6 +412,7 @@ func (r *FunctionReconciler) updateFuncWithServingStatus(fn *openfunction.Functi
 		// If new serving is running, clean old serving.
 		if serving.Status.State == openfunction.Running {
 			fn.Status.Serving.LastSuccessfulResourceRef = fn.Status.Serving.ResourceRef
+			fn.Status.Serving.Service = serving.Status.Service
 			if err := r.cleanServing(fn); err != nil {
 				log.Error(err, "Failed to clean Serving")
 				return err
@@ -551,6 +569,244 @@ func (r *FunctionReconciler) needToCreateServing(fn *openfunction.Function) bool
 	}
 
 	return false
+}
+
+func (r *FunctionReconciler) createOrUpdateService(fn *openfunction.Function) error {
+	log := r.Log.WithName("CreateOrUpdateService").
+		WithValues("Function", fmt.Sprintf("%s/%s", fn.Namespace, fn.Name))
+
+	// Does not create service when serving is not running or function is an async function.
+	if fn.Status.Serving == nil ||
+		fn.Status.Serving.State != openfunction.Running ||
+		fn.Status.Serving.Service == "" {
+		return nil
+	}
+
+	dl := &openfunction.DomainList{}
+	if err := r.List(r.ctx, dl); err != nil {
+		log.Error(err, "Failed to list domain")
+		return err
+	}
+
+	if len(dl.Items) == 0 {
+		log.Error(nil, "No Domain defined")
+		return fmt.Errorf("no Domain defined")
+	}
+
+	domain := &dl.Items[0]
+
+	if err := r.cleanIngress(fn); err != nil {
+		log.Error(err, "Failed to clean ingress")
+		return err
+	}
+
+	op, err := r.createOrUpdateIngress(fn, domain)
+	if err != nil {
+		log.Error(err, "Failed to createOrUpdate ingress")
+		return err
+	}
+
+	url := fmt.Sprintf("%s://%s.%s", "http", domain.Name, domain.Namespace)
+	if domain.Spec.Ingress.Service.Port != 0 && domain.Spec.Ingress.Service.Port != 80 {
+		url = fmt.Sprintf("%s:%d", url, domain.Spec.Ingress.Service.Port)
+	}
+	url = fmt.Sprintf("%s/%s/%s", url, fn.Namespace, fn.Name)
+	if url != fn.Status.URL {
+		fn.Status.URL = url
+		if err := r.Status().Update(r.ctx, fn); err != nil {
+			log.Error(err, "Failed to update function url")
+			return err
+		}
+	}
+
+	log.V(1).Info(fmt.Sprintf("Service %s", op))
+	return nil
+}
+
+func (r *FunctionReconciler) cleanIngress(fn *openfunction.Function) error {
+
+	// If the function use a standalone ingress, delete configuration from default ingress.
+	if fn.Spec.Service != nil && fn.Spec.Service.UseStandaloneIngress {
+		return r.cleanDefaultIngress(fn)
+	}
+
+	// The function use default ingress, delete the standalone ingress for function.
+	ingress := &networkingv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fn.Name,
+			Namespace: fn.Namespace,
+		},
+	}
+
+	return util.IgnoreNotFound(r.Delete(r.ctx, ingress))
+}
+
+// Delete `path` from default ingress.
+func (r *FunctionReconciler) cleanDefaultIngress(fn *openfunction.Function) error {
+	ingress := &networkingv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      defaultIngressName,
+			Namespace: fn.Namespace,
+		},
+	}
+
+	if err := r.Get(r.ctx, client.ObjectKeyFromObject(ingress), ingress); err != nil {
+		return util.IgnoreNotFound(err)
+	}
+
+	for i := 0; i < len(ingress.Spec.Rules); i++ {
+		rule := ingress.Spec.Rules[i]
+		if rule.HTTP == nil {
+			continue
+		}
+
+		for i := 0; i < len(rule.HTTP.Paths); i++ {
+			if rule.HTTP.Paths[i].Path == fmt.Sprintf("/%s/%s(/|$)(.*)", fn.Namespace, fn.Name) {
+				rule.HTTP.Paths = append(rule.HTTP.Paths[:i], rule.HTTP.Paths[i+1:]...)
+				break
+			}
+		}
+
+		if len(rule.HTTP.Paths) == 0 {
+			ingress.Spec.Rules = append(ingress.Spec.Rules[:i], ingress.Spec.Rules[i+1:]...)
+			i = i - 1
+		}
+	}
+
+	if len(ingress.Spec.Rules) == 0 {
+		return util.IgnoreNotFound(r.Delete(r.ctx, ingress))
+	}
+
+	return r.Update(r.ctx, ingress)
+}
+
+func (r *FunctionReconciler) createOrUpdateIngress(fn *openfunction.Function, domain *openfunction.Domain) (controllerutil.OperationResult, error) {
+
+	name := defaultIngressName
+	if fn.Spec.Service != nil && fn.Spec.Service.UseStandaloneIngress {
+		name = fn.Name
+	}
+
+	ingress := &networkingv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: fn.Namespace,
+		},
+	}
+
+	op, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, ingress, r.mutateIngress(fn, domain, ingress))
+	if err != nil {
+		return controllerutil.OperationResultNone, err
+	}
+
+	return op, nil
+}
+
+func (r *FunctionReconciler) mutateIngress(fn *openfunction.Function, domain *openfunction.Domain, ingress *networkingv1.Ingress) controllerutil.MutateFn {
+
+	return func() error {
+		path := createIngressPath(fn)
+		ingressClassName := domain.Spec.Ingress.IngressClassName
+		if fn.Spec.Service != nil && fn.Spec.Service.UseStandaloneIngress {
+			ingress.Spec = networkingv1.IngressSpec{
+				IngressClassName: &ingressClassName,
+				Rules: []networkingv1.IngressRule{
+					{
+						IngressRuleValue: networkingv1.IngressRuleValue{
+							HTTP: &networkingv1.HTTPIngressRuleValue{
+								Paths: []networkingv1.HTTPIngressPath{
+									path,
+								},
+							},
+						},
+					},
+				},
+			}
+
+			addAnnotations(ingress, domain.Spec.Ingress.Annotations)
+			if fn.Spec.Service != nil {
+				addAnnotations(ingress, fn.Spec.Service.Annotations)
+			}
+
+			return controllerutil.SetControllerReference(fn, ingress, r.Scheme)
+
+		} else {
+			if err := r.Get(r.ctx, client.ObjectKeyFromObject(ingress), ingress); util.IgnoreNotFound(err) != nil {
+				return err
+			}
+
+			found := false
+			findPath := func(paths []networkingv1.HTTPIngressPath) bool {
+				for i := 0; i < len(paths); i++ {
+					if paths[i].Path == fmt.Sprintf("/%s/%s(/|$)(.*)", fn.Namespace, fn.Name) {
+						paths[i] = path
+						return true
+					}
+				}
+
+				return false
+			}
+
+			for _, rule := range ingress.Spec.Rules {
+				if rule.HTTP == nil {
+					continue
+				}
+
+				if res := findPath(rule.HTTP.Paths); res {
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				if len(ingress.Spec.Rules) == 0 {
+					ingress.Spec.Rules = append(ingress.Spec.Rules, networkingv1.IngressRule{})
+				}
+
+				if ingress.Spec.Rules[0].HTTP == nil {
+					ingress.Spec.Rules[0].HTTP = &networkingv1.HTTPIngressRuleValue{}
+				}
+				ingress.Spec.Rules[0].HTTP.Paths = append(ingress.Spec.Rules[0].HTTP.Paths, path)
+			}
+
+			ingress.Annotations = nil
+			addAnnotations(ingress, domain.Spec.Ingress.Annotations)
+			ingress.Spec.IngressClassName = &ingressClassName
+
+			return nil
+		}
+	}
+}
+
+func createIngressPath(fn *openfunction.Function) networkingv1.HTTPIngressPath {
+
+	pathType := networkingv1.PathTypePrefix
+	return networkingv1.HTTPIngressPath{
+		Path:     fmt.Sprintf("/%s/%s(/|$)(.*)", fn.Namespace, fn.Name),
+		PathType: &pathType,
+		Backend: networkingv1.IngressBackend{
+			Service: &networkingv1.IngressServiceBackend{
+				Name: fn.Status.Serving.Service,
+				Port: networkingv1.ServiceBackendPort{
+					Number: 80,
+				},
+			},
+		},
+	}
+}
+
+func addAnnotations(ingress *networkingv1.Ingress, annotations map[string]string) {
+	if annotations == nil {
+		return
+	}
+
+	if ingress.Annotations == nil {
+		ingress.Annotations = make(map[string]string)
+	}
+
+	for k, v := range annotations {
+		ingress.Annotations[k] = v
+	}
 }
 
 // SetupWithManager sets up the controller with the Manager.

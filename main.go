@@ -114,6 +114,10 @@ func main() {
 		setupLog.Error(err, "unable to create serving controller")
 		os.Exit(1)
 	}
+	if err = core.NewDomainReconciler(mgr).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create domain controller")
+		os.Exit(1)
+	}
 	if err = (&eventcontrollers.EventSourceReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("EventSource"),

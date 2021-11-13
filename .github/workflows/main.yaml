@@ -155,7 +155,7 @@ jobs:
       - name: Install related dependencies
         if: ${{ env.build_check_flag == 'true' }}
         run: |
-          chmod a+x ./hack/deploy.sh && ./hack/deploy.sh --with-shipwright
+          chmod a+x ./hack/deploy.sh && ./hack/deploy.sh --with-shipwright --with-cert-manager
 
       - name: Waiting for 60 seconds to keep the dependencies installed
         uses: jakejarvis/wait-action@master
@@ -201,7 +201,7 @@ jobs:
       - name: Uninstall openfunction CRDs and controllers
         if: ${{ env.build_check_flag == 'true' }}
         run: |
-          kubectl delete -f config/bundle.yaml 
+          kubectl delete -f config/bundle.yaml --ignore-not-found
 
   openfunction_sync_func_check:
     runs-on: ubuntu-latest
@@ -220,7 +220,7 @@ jobs:
 
       - name: Install related dependencies
         run: |
-          chmod a+x ./hack/deploy.sh && ./hack/deploy.sh --with-knative
+          chmod a+x ./hack/deploy.sh && ./hack/deploy.sh --with-knative --with-cert-manager
           kubectl apply --filename https://github.com/shipwright-io/build/releases/download/v0.6.0/release.yaml
           kubectl -n shipwright-build scale deployments.apps shipwright-build-controller --replicas=0
 
@@ -301,7 +301,7 @@ jobs:
 
       - name: Uninstall openfunction CRDs and controllers
         run: |
-          kubectl delete -f config/bundle.yaml
+          kubectl delete -f config/bundle.yaml --ignore-not-found
 
   openfunction_async_func_check:
     runs-on: ubuntu-latest
@@ -325,7 +325,7 @@ jobs:
 
       - name: Install related dependencies
         run: |
-          chmod a+x ./hack/deploy.sh && ./hack/deploy.sh --with-openFuncAsync --with-shipwright 
+          chmod a+x ./hack/deploy.sh && ./hack/deploy.sh --with-openFuncAsync --with-shipwright --with-cert-manager
 
       - name: Waiting for 90 seconds to keep the dependencies installed
         uses: jakejarvis/wait-action@master
@@ -384,4 +384,4 @@ jobs:
 
       - name: Uninstall openfunction CRDs and controllers
         run: |
-          kubectl delete -f config/bundle.yaml 
+          kubectl delete -f config/bundle.yaml --ignore-not-found

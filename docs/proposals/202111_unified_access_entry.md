@@ -80,25 +80,25 @@ The ingress looks like this.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-annotations:
-nginx.ingress.kubernetes.io/upstream-vhost: $service_name.$namespace
-nginx.ingress.kubernetes.io/rewrite-target: /$2
-name: function-sample
-namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/upstream-vhost: $service_name.$namespace
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+  name: function-sample
+  namespace: default
 spec:
-ingressClassName: nginx
-rules:
-- http:
-  paths:
-    - backend:
-      service:
-      name: serving-d55zz-ksvc-gd64w
-      port:
-      number: 80
-      path: /default/function-sample(/|$)(.*)
-      pathType: Prefix
-      status:
-      loadBalancer: {}
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - backend:
+          service:
+            name: serving-d55zz-ksvc-gd64w
+            port:
+              number: 80
+        path: /default/function-sample(/|$)(.*)
+        pathType: Prefix
+status:
+  loadBalancer: {}
 ```
 
 Step 3: Use

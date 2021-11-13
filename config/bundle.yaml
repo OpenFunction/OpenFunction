@@ -606,6 +606,95 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
+  name: domains.core.openfunction.io
+spec:
+  group: core.openfunction.io
+  names:
+    kind: Domain
+    listKind: DomainList
+    plural: domains
+    singular: domain
+  scope: Namespaced
+  versions:
+  - name: v1alpha2
+    schema:
+      openAPIV3Schema:
+        description: Domain define a unified entry for function, user can access function
+          through it.
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: DomainSpec defines the desired state of a Domain
+            properties:
+              ingress:
+                description: Ingress configuration.
+                properties:
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    description: Annotations for Ingress.
+                    type: object
+                  ingressClassName:
+                    description: IngressClassName is the name of the IngressClass
+                      cluster resource. The associated IngressClass defines which
+                      controller will implement the resource.
+                    type: string
+                  service:
+                    description: Ingress controller service.
+                    properties:
+                      name:
+                        description: Name of the Ingress controller service.
+                        type: string
+                      namespace:
+                        description: Namespace of the Ingress controller service.
+                        type: string
+                      port:
+                        description: Port of the Ingress controller service, default
+                          is 80.
+                        format: int32
+                        type: integer
+                    required:
+                    - name
+                    - namespace
+                    type: object
+                required:
+                - ingressClassName
+                - service
+                type: object
+            required:
+            - ingress
+            type: object
+          status:
+            description: DomainStatus defines the observed state of Domain
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
   name: eventbus.events.openfunction.io
 spec:
   group: events.openfunction.io
@@ -8751,6 +8840,9 @@ spec:
     - jsonPath: .status.serving.resourceRef
       name: Serving
       type: string
+    - jsonPath: .status.url
+      name: URL
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -8884,6 +8976,22 @@ spec:
                 description: The port on which the function will be invoked
                 format: int32
                 type: integer
+              service:
+                description: Information needed to create an access entry for function.
+                properties:
+                  UseStandaloneIngress:
+                    description: UseStandaloneIngress determines whether to create
+                      a standalone ingress for the function. If it is true, an ingress
+                      will be created for this function, else it will use the default
+                      ingress under the current namespace.
+                    type: boolean
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    description: Annotations for Ingress. Take effect when `UseStandaloneIngress`
+                      is true.
+                    type: object
+                type: object
               serving:
                 description: Information needed to run a function. The serving step
                   will be skipped if `Serving` is nil.
@@ -9038,7 +9146,8 @@ spec:
                                 type: integer
                               restartPolicy:
                                 description: Restart policy for all containers within
-                                  the pod. One of OnFailure, Never. Default to Never.
+                                  the pod. One of 'OnFailure', 'Never'. Default to
+                                  'Never'.
                                 type: string
                               scalingStrategy:
                                 description: ScalingStrategy defines the strategy
@@ -15995,6 +16104,8 @@ spec:
                     type: string
                   resourceRef:
                     type: string
+                  service:
+                    type: string
                   state:
                     type: string
                 type: object
@@ -16006,9 +16117,15 @@ spec:
                     type: string
                   resourceRef:
                     type: string
+                  service:
+                    type: string
                   state:
                     type: string
                 type: object
+              url:
+                description: URL holds the url that used to access the Function. It
+                  generally has the form http://{domain-name}.{domain-namespace}:{domain-port}/{function-namespace}/{function-name}
+                type: string
             type: object
         type: object
     served: true
@@ -23165,7 +23282,7 @@ spec:
                             type: integer
                           restartPolicy:
                             description: Restart policy for all containers within
-                              the pod. One of OnFailure, Never. Default to Never.
+                              the pod. One of 'OnFailure', 'Never'. Default to 'Never'.
                             type: string
                           scalingStrategy:
                             description: ScalingStrategy defines the strategy of Scaling
@@ -29865,6 +29982,9 @@ spec:
                 type: object
               state:
                 type: string
+              url:
+                description: Service holds the service name used to access the serving.
+                type: string
             type: object
         type: object
     served: true
@@ -30235,6 +30355,26 @@ rules:
 - apiGroups:
   - core.openfunction.io
   resources:
+  - domains
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - core.openfunction.io
+  resources:
+  - domains/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - core.openfunction.io
+  resources:
   - functions
   verbs:
   - create
@@ -30406,6 +30546,18 @@ rules:
   resources:
   - scaledjobs
   - scaledobjects
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
   verbs:
   - create
   - delete
@@ -30770,3 +30922,26 @@ spec:
       description: Environment variables to set during _build-time_. The formate is
         `key1=value1,key2=value2`.
       name: ENV_VARS
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    control-plane: controller-manager
+  name: io
+
+---
+apiVersion: core.openfunction.io/v1alpha2
+kind: Domain
+metadata:
+  name: openfunction
+  namespace: io
+spec:
+  ingress:
+    annotations:
+      nginx.ingress.kubernetes.io/upstream-vhost: $service_name.$namespace
+      nginx.ingress.kubernetes.io/rewrite-target: /$2
+    service:
+      name: ingress-nginx-controller
+      namespace: ingress-nginx
+    ingressClassName: nginx
