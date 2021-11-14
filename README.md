@@ -73,7 +73,7 @@ You can refer to [Prerequisites](#prerequisites) and use `--with-openFuncAsync` 
 
 The OpenFuncAsync functions can be triggered by various event types, such as MQ, cronjob, DB events, etc. In a Kubernetes cluster, OpenFuncAsync functions run in the form of deployments or jobs.
 
-### Domain
+#### Domain
 
 `Domain` defines a unified entry point for sync functions using ingress, user can use 
 
