@@ -30923,6 +30923,267 @@ spec:
         `key1=value1,key2=value2`.
       name: ENV_VARS
 ---
+apiVersion: shipwright.io/v1alpha1
+kind: ClusterBuildStrategy
+metadata:
+  name: buildah
+spec:
+  buildSteps:
+    - name: build-and-push
+      image: openfunction/buildah:v1.23.1
+      workingDir: $(params.shp-source-root)
+      securityContext:
+        privileged: true
+      command:
+        - /bin/bash
+      args:
+        - -c
+        - |
+          set -euo pipefail
+
+          # Building the image
+          echo '[INFO] Building image $(params.shp-output-image)'
+          buildah bud \
+            --tag='$(params.shp-output-image)' \
+            --file='$(build.dockerfile)' \
+            '$(params.shp-source-context)'
+
+          # Push the image
+          echo '[INFO] Pushing image $(params.shp-output-image)'
+          buildah push \
+            --tls-verify=false \
+            '$(params.shp-output-image)' \
+            'docker://$(params.shp-output-image)'
+
+          # Store the digest result
+          buildah images \
+            --format='{{.Digest}}' \
+            '$(params.shp-output-image)' | tr -d "\n" > '$(results.shp-image-digest.path)'
+      resources:
+        limits:
+          cpu: 500m
+          memory: 1Gi
+        requests:
+          cpu: 250m
+          memory: 65Mi
+---
+apiVersion: shipwright.io/v1alpha1
+kind: ClusterBuildStrategy
+metadata:
+  name: kaniko
+spec:
+  buildSteps:
+    - name: build-and-push
+      image: openfunction/kaniko-executor:v1.7.0
+      workingDir: $(params.shp-source-root)
+      securityContext:
+        runAsUser: 0
+        capabilities:
+          add:
+            - CHOWN
+            - DAC_OVERRIDE
+            - FOWNER
+            - SETGID
+            - SETUID
+            - SETFCAP
+            - KILL
+      env:
+        - name: HOME
+          value: /tekton/home
+        - name: DOCKER_CONFIG
+          value: /tekton/home/.docker
+        - name: AWS_ACCESS_KEY_ID
+          value: NOT_SET
+        - name: AWS_SECRET_KEY
+          value: NOT_SET
+      command:
+        - /kaniko/executor
+      args:
+        - --skip-tls-verify=true
+        - --dockerfile=$(build.dockerfile)
+        - --context=$(params.shp-source-context)
+        - --destination=$(params.shp-output-image)
+        - --oci-layout-path=/kaniko/oci-image-layout
+        - --snapshotMode=redo
+        - --push-retry=3
+      resources:
+        limits:
+          cpu: 500m
+          memory: 1Gi
+        requests:
+          cpu: 250m
+          memory: 65Mi
+      volumeMounts:
+        - name: layout
+          mountPath: /kaniko/oci-image-layout
+    - name: results
+      image: golang:latest
+      command:
+        - /bin/bash
+      args:
+        - -c
+        - |
+          set -euo pipefail
+
+          # Store the image digest
+          grep digest /kaniko/oci-image-layout/index.json | sed -E 's/.*sha256([^"]*).*/sha256\1/' | tr -d '\n' > "$(results.shp-image-digest.path)"
+
+          # Store the image size
+          du -b -c /kaniko/oci-image-layout/blobs/sha256/* | tail -1 | sed 's/\s*total//' | tr -d '\n' > "$(results.shp-image-size.path)"
+      resources:
+        limits:
+          cpu: 100m
+          memory: 128Mi
+        requests:
+          cpu: 100m
+          memory: 128Mi
+      volumeMounts:
+        - name: layout
+          mountPath: /kaniko/oci-image-layout
+---
+apiVersion: shipwright.io/v1alpha1
+kind: ClusterBuildStrategy
+metadata:
+  name: ko
+spec:
+  parameters:
+    - name: go-flags
+      description: "Value for the GOFLAGS environment variable."
+      default: ""
+    - name: go-version
+      description: "Version of Go, must match a tag from https://hub.docker.com/_/golang?tab=tags"
+      default: "1.17"
+    - name: ko-version
+      description: "Version of ko, must be either 'latest', or a release name from https://github.com/google/ko/releases"
+      default: latest
+    - name: package-directory
+      description: "The directory inside the context directory containing the main package."
+      default: "."
+    - name: target-platform
+      description: "Target platform to be built. For example: 'linux/arm64'. Multiple platforms can be provided separated by comma, for example: 'linux/arm64,linux/amd64'. The value 'all' will build all platforms supported by the base image. The value 'current' will build the platform on which the build runs."
+      default: current
+  buildSteps:
+    - name: prepare
+      image: golang:$(params.go-version)
+      imagePullPolicy: Always
+      securityContext:
+        runAsUser: 0
+        capabilities:
+          add:
+            - CHOWN
+      command:
+        - chown
+      args:
+        - -R
+        - "1000:1000"
+        - /tekton/home
+      resources:
+        limits:
+          cpu: 100m
+          memory: 128Mi
+        requests:
+          cpu: 100m
+          memory: 128Mi
+    - name: build-and-push
+      image: golang:$(params.go-version)
+      imagePullPolicy: Always
+      workingDir: $(params.shp-source-root)
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+      env:
+        - name: DOCKER_CONFIG
+          value: /tekton/home/.docker
+        - name: HOME
+          value: /tekton/home
+        - name: GOFLAGS
+          value: $(params.go-flags)
+      command:
+        - /bin/bash
+      args:
+        - -c
+        - |
+          set -euo pipefail
+
+          # Parse image URL to extract repository and tag, must work with
+          # - a URL without a tag and a port: registry/image
+          # - a URL without a tag but a port: registry:port/image
+          # - a URL with a tag but without a port: registry/image:tag
+          # - a URL with both a tag and a port: registry:port/image:tag
+
+          IMAGE=$(params.shp-output-image)
+
+          REPO=
+          TAG=
+
+          IFS=':' read -ra PARTS <<< "${IMAGE}"
+          for PART in "${PARTS[@]}"; do
+            if [ "${REPO}" == "" ]; then
+              REPO="${PART}"
+          	elif [[ "${PART}" == *"/"* ]]; then
+              REPO="${REPO}:${PART}"
+            elif [ "${TAG}" == "" ]; then
+              TAG="${PART}"
+            else
+              REPO="${REPO}:${TAG}"
+              TAG="${PART}"
+            fi
+          done
+
+          # Determine the ko version
+          KO_VERSION='$(params.ko-version)'
+          if [ "${KO_VERSION}" == "latest" ]; then
+            KO_VERSION=$(curl --silent "https://api.github.com/repos/google/ko/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+          fi
+
+          # Create one variable with v-suffix and one without as we need both for the download URL
+          if [[ ${KO_VERSION} = v* ]]; then
+            KO_VERSION_WITH_V=${KO_VERSION}
+            KO_VERSION_WITHOUT_V=${KO_VERSION:1}
+          else
+            KO_VERSION_WITH_V=v${KO_VERSION}
+            KO_VERSION_WITHOUT_V=${KO_VERSION}
+          fi
+
+          # Download ko to the temp directory
+          curl -f -s -L "https://github.com/google/ko/releases/download/${KO_VERSION_WITH_V}/ko_${KO_VERSION_WITHOUT_V}_$(uname)_$(uname -m | sed 's/aarch64/arm64/').tar.gz" | tar xzf - -C /tmp ko
+
+          # Determine the platform
+          PLATFORM='$(params.target-platform)'
+          if [ "${PLATFORM}" == "current" ]; then
+            PLATFORM="$(uname | tr '[:upper:]' '[:lower:]')/$(uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/')"
+          fi
+
+          # Print version information
+          go version
+          echo "ko version $(/tmp/ko version)"
+
+          # Run ko
+
+          export GOROOT=$(go env GOROOT)
+          export KO_DOCKER_REPO="${REPO}"
+
+          pushd '$(params.shp-source-context)' > /dev/null
+            if [ "${TAG}" == "" ]; then
+              /tmp/ko publish '$(params.package-directory)' --bare --oci-layout-path=/tmp/layout --platform="${PLATFORM}"
+            else
+              /tmp/ko publish '$(params.package-directory)' --bare --oci-layout-path=/tmp/layout --platform="${PLATFORM}" --tags="${TAG}"
+            fi
+          popd > /dev/null
+
+          # Store the image digest
+          grep digest /tmp/layout/index.json | sed -E 's/.*sha256([^"]*).*/sha256\1/' | tr -d '\n' > '$(results.shp-image-digest.path)'
+
+          # Store the image size
+          du -b -c /tmp/layout/blobs/sha256/* | tail -1 | sed 's/\s*total//' | tr -d '\n' > '$(results.shp-image-size.path)'
+      resources:
+        limits:
+          cpu: 500m
+          memory: 1Gi
+        requests:
+          cpu: 250m
+          memory: 65Mi
+---
 apiVersion: v1
 kind: Namespace
 metadata:
