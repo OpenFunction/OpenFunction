@@ -1,7 +1,7 @@
 ARG GOPROXY="https://goproxy.cn"
 
 # Build the openfunction binary
-FROM golang:1.16 as builder
+FROM golang:1.16.10 as builder
 ARG GOPROXY
 
 WORKDIR /workspace

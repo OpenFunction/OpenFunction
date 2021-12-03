@@ -285,6 +285,8 @@ func (r *FunctionReconciler) createBuilderSpec(fn *openfunction.Function) openfu
 		Image:              fn.Spec.Image,
 		ImageCredentials:   fn.Spec.ImageCredentials,
 		Port:               fn.Spec.Port,
+		Shipwright:         fn.Spec.Build.Shipwright,
+		Dockerfile:         fn.Spec.Build.Dockerfile,
 		Timeout:            fn.Spec.Build.Timeout,
 	}
 
