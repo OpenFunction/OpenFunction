@@ -25,8 +25,7 @@ const (
 	builderLabel           = "openfunction.io/builder"
 	defaultStrategy        = "openfunction"
 
-	envVars  = "ENV_VARS"
-	appImage = "APP_IMAGE"
+	envVars = "ENV_VARS"
 )
 
 type builderRun struct {
@@ -215,11 +214,6 @@ func (r *builderRun) createShipwrightBuild(builder *openfunction.Builder) *shipw
 		})
 	}
 
-	shipwrightBuild.Spec.ParamValues = append(shipwrightBuild.Spec.ParamValues, shipwrightv1alpha1.ParamValue{
-		Name:  appImage,
-		Value: builder.Spec.Image,
-	})
-
 	env := ""
 	for k, v := range builder.Spec.Env {
 		env = fmt.Sprintf("%s%s=%s#", env, k, v)
@@ -228,10 +222,12 @@ func (r *builderRun) createShipwrightBuild(builder *openfunction.Builder) *shipw
 		env = fmt.Sprintf("%sPORT=%d", env, *builder.Spec.Port)
 	}
 
-	shipwrightBuild.Spec.ParamValues = append(shipwrightBuild.Spec.ParamValues, shipwrightv1alpha1.ParamValue{
-		Name:  envVars,
-		Value: env,
-	})
+	if len(env) > 0 {
+		shipwrightBuild.Spec.ParamValues = append(shipwrightBuild.Spec.ParamValues, shipwrightv1alpha1.ParamValue{
+			Name:  envVars,
+			Value: env,
+		})
+	}
 
 	if builder.Spec.Shipwright == nil || builder.Spec.Shipwright.Strategy == nil {
 		kind := shipwrightv1alpha1.ClusterBuildStrategyKind

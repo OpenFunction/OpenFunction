@@ -103,6 +103,7 @@ func (src *Function) convertBuildTo(dst *v1alpha1.Function) error {
 	if src.Spec.Build.Shipwright != nil {
 		dst.Spec.Build.Shipwright = &v1alpha1.ShipwrightEngine{}
 		if src.Spec.Build.Shipwright.Strategy != nil {
+			dst.Spec.Build.Shipwright.Strategy = &v1alpha1.Strategy{}
 			dst.Spec.Build.Shipwright.Strategy.Name = src.Spec.Build.Shipwright.Strategy.Name
 			dst.Spec.Build.Shipwright.Strategy.Kind = src.Spec.Build.Shipwright.Strategy.Kind
 		}
@@ -256,6 +257,7 @@ func (dst *Function) convertBuildFrom(src *v1alpha1.Function) error {
 	if src.Spec.Build.Shipwright != nil {
 		dst.Spec.Build.Shipwright = &ShipwrightEngine{}
 		if src.Spec.Build.Shipwright.Strategy != nil {
+			dst.Spec.Build.Shipwright.Strategy = &Strategy{}
 			dst.Spec.Build.Shipwright.Strategy.Name = src.Spec.Build.Shipwright.Strategy.Name
 			dst.Spec.Build.Shipwright.Strategy.Kind = src.Spec.Build.Shipwright.Strategy.Kind
 		}

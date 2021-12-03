@@ -55,9 +55,9 @@ spec:
         - -report=/layers/report.toml
         - -process-type=$(params.PROCESS_TYPE)
         - -skip-restore=$(params.SKIP_RESTORE)
-        - -previous-image=$(params.APP_IMAGE)
+        - -previous-image=$(params.shp-output-image)
         - -run-image=$(params.RUN_IMAGE)
-        - $(params.APP_IMAGE)
+        - $(params.shp-output-image)
       command:
         - /cnb/lifecycle/creator
       image: $(params.BUILDER_IMAGE)
@@ -87,11 +87,6 @@ spec:
         - mountPath: /layers
           name: layers-dir
   parameters:
-    - description: The name of where to store the app image.
-      name: APP_IMAGE
-    - default: ""
-      description: A subpath within the source input where the source to build is located.
-      name: SOURCE_SUBPATH
     - default: web
       description: The default process type to set on the image.
       name: PROCESS_TYPE
@@ -126,7 +121,7 @@ metadata:
 spec:
   buildSteps:
     - name: build-and-push
-      image: openfunction/buildah:v1.23.1
+      image: $(params.BUILDER_IMAGE)
       workingDir: $(params.shp-source-root)
       securityContext:
         privileged: true
@@ -135,11 +130,36 @@ spec:
       args:
         - -c
         - |
-          set -euo pipefail
+          set -eo pipefail
+
+          echo "[INFO] Creating registries config file..."
+
+          formate(){
+              array=(`echo $1 | tr ',' ' '`)
+              str=""
+              for m in "${array[@]}"; do
+                  str=$str"'${m}', "
+              done
+
+              echo ${str%??}
+          }
+
+          path="/tmp/registries.conf"
+          registries_search="$(formate "$(params.REGISTRIES_SEARCH)")"
+          registries_insecure="$(formate "$(params.REGISTRIES_INSECURE)")"
+          registries_block="$(formate "$(params.REGISTRIES_BLOCK)")"
+
+          echo -e "[registries.search]" >> "$path"
+          echo -e "registries = [${registries_search}]\n" >> "$path"
+          echo -e "[registries.insecure]" >> "$path"
+          echo -e "registries = [${registries_insecure}]\n" >> "$path"
+          echo -e "[registries.block]" >> "$path"
+          echo -e "registries = [${registries_block}]\n" >> "$path"
 
           # Building the image
           echo '[INFO] Building image $(params.shp-output-image)'
           buildah bud \
+            --registries-conf='/tmp/registries.conf' \
             --tag='$(params.shp-output-image)' \
             --file='$(build.dockerfile)' \
             '$(params.shp-source-context)'
@@ -162,6 +182,16 @@ spec:
         requests:
           cpu: 250m
           memory: 65Mi
+  parameters:
+    - description: The registries for searching short name images such as `golang:latest`, separated by commas.
+      name: REGISTRIES_SEARCH
+      default: docker.io,quay.io
+    - description: The fully-qualified name of insecure registries. An insecure registry is one that does not have a valid SSL certificate or only does HTTP.
+      name: REGISTRIES_INSECURE
+      default: ""
+    - description: The registries that need to block pull access.
+      name: REGISTRIES_BLOCK
+      default: ""
 ---
 apiVersion: shipwright.io/v1alpha1
 kind: ClusterBuildStrategy
@@ -170,7 +200,7 @@ metadata:
 spec:
   buildSteps:
     - name: build-and-push
-      image: openfunction/kaniko-executor:v1.7.0
+      image: $(params.BUILDER_IMAGE)
       workingDir: $(params.shp-source-root)
       securityContext:
         runAsUser: 0
@@ -204,7 +234,7 @@ spec:
         - --push-retry=3
       resources:
         limits:
-          cpu: 500m
+          cpu: 1
           memory: 1Gi
         requests:
           cpu: 250m
@@ -246,9 +276,6 @@ spec:
     - name: go-flags
       description: "Value for the GOFLAGS environment variable."
       default: ""
-    - name: go-version
-      description: "Version of Go, must match a tag from https://hub.docker.com/_/golang?tab=tags"
-      default: "1.17"
     - name: ko-version
       description: "Version of ko, must be either 'latest', or a release name from https://github.com/google/ko/releases"
       default: latest
@@ -260,7 +287,7 @@ spec:
       default: current
   buildSteps:
     - name: prepare
-      image: golang:$(params.go-version)
+      image: $(params.BUILDER_IMAGE)
       imagePullPolicy: Always
       securityContext:
         runAsUser: 0
@@ -281,7 +308,7 @@ spec:
           cpu: 100m
           memory: 128Mi
     - name: build-and-push
-      image: golang:$(params.go-version)
+      image: $(params.BUILDER_IMAGE)
       imagePullPolicy: Always
       workingDir: $(params.shp-source-root)
       securityContext:
