@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: curl
+  namespace: default
+spec:
+  containers:
+    - command:
+        - /bin/sh
+        - -c
+        - apk add --update curl && sleep 600
+      image: alpine
+      imagePullPolicy: IfNotPresent
+      name: curl
+  serviceAccount: default

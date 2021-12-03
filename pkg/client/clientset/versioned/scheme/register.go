@@ -18,14 +18,15 @@ limitations under the License.
 package scheme
 
 import (
-	corev1alpha1 "github.com/openfunction/apis/core/v1alpha1"
-	corev1alpha2 "github.com/openfunction/apis/core/v1alpha2"
-	eventsv1alpha1 "github.com/openfunction/apis/events/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+
+	corev1alpha1 "github.com/openfunction/apis/core/v1alpha1"
+	corev1alpha2 "github.com/openfunction/apis/core/v1alpha2"
+	eventsv1alpha1 "github.com/openfunction/apis/events/v1alpha1"
 )
 
 var Scheme = runtime.NewScheme()

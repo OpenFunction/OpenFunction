@@ -18,9 +18,10 @@ limitations under the License.
 package fake
 
 import (
-	v1alpha2 "github.com/openfunction/pkg/client/clientset/versioned/typed/core/v1alpha2"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
+
+	v1alpha2 "github.com/openfunction/pkg/client/clientset/versioned/typed/core/v1alpha2"
 )
 
 type FakeCoreV1alpha2 struct {

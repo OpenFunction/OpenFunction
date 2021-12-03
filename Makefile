@@ -64,7 +64,7 @@ ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
 test: manifests generate fmt vet ## Run tests.
 	mkdir -p ${ENVTEST_ASSETS_DIR}
 	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.8.3/hack/setup-envtest.sh
-	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out
+	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./pkg/... ./controllers/... -coverprofile cover.out
 
 verify: verify-crds
 
@@ -140,3 +140,24 @@ GOBIN=$(PROJECT_DIR)/bin go install -v $(2) ;\
 rm -rf $$TMP_DIR ;\
 }
 endef
+
+ginkgo:
+ifeq (, $(shell which ginkgo))
+	@{ \
+	set -e ;\
+	GINKGO_GEN_TMP_DIR=$$(mktemp -d) ;\
+	cd $$GINKGO_GEN_TMP_DIR ;\
+	go mod init tmp ;\
+	go install github.com/onsi/ginkgo/ginkgo@latest ;\
+	go install github.com/onsi/gomega/... ;\
+	rm -rf $$GINKGO_GEN_TMP_DIR ;\
+	}
+GINKGO=$(GOBIN)/ginkgo
+else
+GINKGO=$(shell which ginkgo)
+endif
+
+e2e-test: ginkgo
+	GO111MODULE=on \
+	TAG=${TAG} \
+	$(GINKGO) ${TEST_E2E_FLAGS} test/e2e

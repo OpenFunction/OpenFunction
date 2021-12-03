@@ -18,9 +18,10 @@ limitations under the License.
 package v1alpha2
 
 import (
+	rest "k8s.io/client-go/rest"
+
 	v1alpha2 "github.com/openfunction/apis/core/v1alpha2"
 	"github.com/openfunction/pkg/client/clientset/versioned/scheme"
-	rest "k8s.io/client-go/rest"
 )
 
 type CoreV1alpha2Interface interface {
