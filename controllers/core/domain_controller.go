@@ -146,6 +146,9 @@ func (r *DomainReconciler) updateFunction() error {
 	}
 
 	for _, fn := range fnList.Items {
+		if fn.Annotations == nil {
+			fn.Annotations = make(map[string]string)
+		}
 		fn.Annotations[reloadTimestamp] = time.Now().String()
 		if err := r.Update(r.ctx, &fn); err != nil {
 			return err

@@ -17,9 +17,11 @@ type BuilderRun interface {
 	// "" means build has not been completed.
 	// `Succeeded` means build completed.
 	// Other means build failed.
-	Result(builder *openfunction.Builder) (string, error)
+	Result(builder *openfunction.Builder) (string, string, error)
 	// Clean all resources which created by builder.
 	Clean(builder *openfunction.Builder) error
+	// Cancel the builder.
+	Cancel(builder *openfunction.Builder) error
 }
 
 type ServingRun interface {

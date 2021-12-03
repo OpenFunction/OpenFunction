@@ -56,6 +56,7 @@ const (
 	Failed                 = "Failed"
 	Skipped                = "Skipped"
 	Timeout                = "Timeout"
+	Canceled               = "Canceled"
 	UnknownRuntime         = "UnknownRuntime"
 	Knative        Runtime = "Knative"
 	OpenFuncAsync  Runtime = "OpenFuncAsync"
@@ -108,6 +109,17 @@ type BuildImpl struct {
 	//
 	// +optional
 	Timeout *metav1.Duration `json:"timeout,omitempty"`
+
+	// The number of successful completed builders to retain, default is 0.
+	// +optional
+	SuccessfulBuildsHistoryLimit *int32 `json:"successfulBuildsHistoryLimit,omitempty"`
+
+	// The number of failed completed builders to retain, default is 1.
+	// +optional
+	FailedBuildsHistoryLimit *int32 `json:"failedBuildsHistoryLimit,omitempty"`
+	// The maximum time to retain completed builder, default is 0, means ever.
+	// +optional
+	BuilderMaxAge *metav1.Duration `json:"builderMaxAge,omitempty"`
 }
 
 type ServingImpl struct {

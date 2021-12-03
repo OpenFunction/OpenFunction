@@ -25,6 +25,9 @@ const (
 	builderLabel           = "openfunction.io/builder"
 	defaultStrategy        = "openfunction"
 
+	waitBuildInterval = time.Second
+	waitBuildTimeout  = time.Minute
+
 	envVars = "ENV_VARS"
 )
 
@@ -72,6 +75,11 @@ func (r *builderRun) Start(builder *openfunction.Builder) error {
 		return err
 	}
 
+	if err := r.waitForBuildReady(shipwrightBuild); err != nil {
+		log.Error(err, "Failed to wait for the Build to be ready", "Build", shipwrightBuild.Name)
+		return err
+	}
+
 	log.V(1).Info("Build created", "Build", shipwrightBuild.Name)
 
 	shipwrightBuildRun := r.createShipwrightBuildRun(builder, shipwrightBuild.Name)
@@ -95,7 +103,7 @@ func (r *builderRun) Start(builder *openfunction.Builder) error {
 	return nil
 }
 
-func (r *builderRun) Result(builder *openfunction.Builder) (string, error) {
+func (r *builderRun) Result(builder *openfunction.Builder) (string, string, error) {
 	log := r.log.WithName("Result").
 		WithValues("Builder", fmt.Sprintf("%s/%s", builder.Namespace, builder.Name))
 
@@ -107,11 +115,13 @@ func (r *builderRun) Result(builder *openfunction.Builder) (string, error) {
 	}
 	if err := r.Get(r.ctx, client.ObjectKeyFromObject(shipwrightBuild), shipwrightBuild); util.IgnoreNotFound(err) != nil {
 		log.Error(err, "Failed to get Build", "Build", shipwrightBuild.Name)
-		return "", util.IgnoreNotFound(err)
+		return "", "", util.IgnoreNotFound(err)
 	}
 
-	if shipwrightBuild.Status.Registered != corev1.ConditionTrue {
-		return string(shipwrightBuild.Status.Reason), nil
+	if shipwrightBuild.Status.Registered == corev1.ConditionFalse {
+		return openfunction.Failed, string(shipwrightBuild.Status.Reason), nil
+	} else if shipwrightBuild.Status.Registered == corev1.ConditionUnknown {
+		return "", "", nil
 	}
 
 	shipwrightBuildRun := &shipwrightv1alpha1.BuildRun{
@@ -122,18 +132,40 @@ func (r *builderRun) Result(builder *openfunction.Builder) (string, error) {
 	}
 	if err := r.Get(r.ctx, client.ObjectKeyFromObject(shipwrightBuildRun), shipwrightBuildRun); util.IgnoreNotFound(err) != nil {
 		log.Error(err, "Failed to get BuildRun", "BuildRun", shipwrightBuildRun.Name)
-		return "", util.IgnoreNotFound(err)
+		return "", "", util.IgnoreNotFound(err)
 	}
 
 	if shipwrightBuildRun.Status.CompletionTime == nil {
-		return "", nil
+		return "", "", nil
 	}
 
-	if shipwrightBuildRun.Status.IsFailed(shipwrightv1alpha1.Succeeded) {
-		return openfunction.Failed, nil
-	} else {
-		return openfunction.Succeeded, nil
+	for _, c := range shipwrightBuildRun.Status.Conditions {
+		if c.Type == shipwrightv1alpha1.Succeeded {
+			if c.Status == corev1.ConditionFalse {
+				switch c.Reason {
+				case "BuildRunTimeout":
+					return openfunction.Timeout, c.Reason, nil
+				case shipwrightv1alpha1.BuildRunStateCancel:
+					return openfunction.Canceled, c.Reason, nil
+				default:
+					return openfunction.Failed, c.Reason, nil
+				}
+			} else if c.Status == corev1.ConditionTrue {
+				if shipwrightBuildRun.Status.Output != nil {
+					builder.Status.Output = &openfunction.Output{
+						Digest: shipwrightBuildRun.Status.Output.Digest,
+						Size:   shipwrightBuildRun.Status.Output.Size,
+					}
+				}
+
+				return openfunction.Succeeded, openfunction.Succeeded, nil
+			} else {
+				return "", "", nil
+			}
+		}
 	}
+
+	return "", "", nil
 }
 
 // Clean up redundant builds and buildruns caused by the `Start` function failed.
@@ -166,6 +198,34 @@ func (r *builderRun) Clean(builder *openfunction.Builder) error {
 				return err
 			}
 			log.V(1).Info("Delete BuildRun", "BuildRun", item.Name)
+		}
+	}
+
+	return nil
+}
+
+// Cancel the running builder.
+func (r *builderRun) Cancel(builder *openfunction.Builder) error {
+	log := r.log.WithName("Cancel").
+		WithValues("Builder", fmt.Sprintf("%s/%s", builder.Namespace, builder.Name))
+
+	shipwrightBuildRun := &shipwrightv1alpha1.BuildRun{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      getName(builder, shipwrightBuildRunName),
+			Namespace: builder.Namespace,
+		},
+	}
+
+	if err := r.Get(r.ctx, client.ObjectKeyFromObject(shipwrightBuildRun), shipwrightBuildRun); util.IgnoreNotFound(err) != nil {
+		log.Error(err, "Failed to get BuildRun", "BuildRun", shipwrightBuildRun.Name)
+		return util.IgnoreNotFound(err)
+	}
+
+	if shipwrightBuildRun.Spec.State != shipwrightv1alpha1.BuildRunStateCancel {
+		shipwrightBuildRun.Spec.State = shipwrightv1alpha1.BuildRunStateCancel
+		if err := r.Update(r.ctx, shipwrightBuildRun); util.IgnoreNotFound(err) != nil {
+			log.Error(err, "Failed to cancel BuildRun", "BuildRun", shipwrightBuildRun.Name)
+			return err
 		}
 	}
 
@@ -273,6 +333,30 @@ func (r *builderRun) createShipwrightBuildRun(builder *openfunction.Builder, nam
 
 	shipwrightBuildRun.SetOwnerReferences(nil)
 	return shipwrightBuildRun
+}
+
+func (r *builderRun) waitForBuildReady(build *shipwrightv1alpha1.Build) error {
+
+	ticker := time.NewTicker(waitBuildInterval)
+	timer := time.NewTimer(waitBuildTimeout)
+
+	for {
+		select {
+		case <-ticker.C:
+			b := &shipwrightv1alpha1.Build{}
+			if err := r.Get(r.ctx, client.ObjectKeyFromObject(build), b); err != nil {
+				continue
+			}
+
+			if b.Status.Registered == corev1.ConditionUnknown {
+				continue
+			} else {
+				return nil
+			}
+		case <-timer.C:
+			return fmt.Errorf("wait for build ready timeout")
+		}
+	}
 }
 
 func getName(builder *openfunction.Builder, key string) string {

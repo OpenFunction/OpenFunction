@@ -19,6 +19,8 @@ package core
 import (
 	"context"
 	"fmt"
+	"sort"
+	"time"
 
 	"github.com/go-logr/logr"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -27,6 +29,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	openfunction "github.com/openfunction/apis/core/v1alpha2"
 	"github.com/openfunction/pkg/constants"
@@ -40,9 +43,24 @@ const (
 // FunctionReconciler reconciles a Function object
 type FunctionReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
-	ctx    context.Context
+	Log      logr.Logger
+	Scheme   *runtime.Scheme
+	ctx      context.Context
+	interval time.Duration
+}
+
+func NewFunctionReconciler(mgr manager.Manager, interval time.Duration) *FunctionReconciler {
+
+	r := &FunctionReconciler{
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Log:      ctrl.Log.WithName("controllers").WithName("Function"),
+		interval: interval,
+	}
+
+	r.startFunctionWatcher()
+
+	return r
 }
 
 //+kubebuilder:rbac:groups=core.openfunction.io,resources=functions,verbs=get;list;watch;create;update;patch;delete
@@ -116,6 +134,13 @@ func (r *FunctionReconciler) createBuilder(fn *openfunction.Function) error {
 	if err := r.Status().Update(r.ctx, fn); err != nil {
 		log.Error(err, "Failed to reset function build status")
 		return err
+	}
+
+	if waitBuilderCancel, err := r.cancelOldBuilder(fn); err != nil {
+		log.Error(err, "Failed to cancel builder")
+		return err
+	} else if waitBuilderCancel {
+		return nil
 	}
 
 	if err := r.deleteOldBuilder(fn); err != nil {
@@ -214,41 +239,42 @@ func (r *FunctionReconciler) updateFuncWithBuilderStatus(fn *openfunction.Functi
 
 			fn.Status.Serving.State = ""
 		}
+
+		if err := r.Status().Update(r.ctx, fn); err != nil {
+			log.Error(err, "Failed to update function status")
+			return err
+		}
 	}
 
-	if err := r.Status().Update(r.ctx, fn); err != nil {
-		log.Error(err, "Failed to update function status")
-		return err
-	}
-
-	if builder.Status.State == openfunction.Succeeded {
-		return r.cleanupBuilder(fn)
-	}
-
-	return nil
+	return r.deleteOldBuilder(fn)
 }
 
-func (r *FunctionReconciler) cleanupBuilder(fn *openfunction.Function) error {
-	log := r.Log.WithName("CleanupBuilder").
+// Only one builder can run at the same time, cancel old builders.
+func (r *FunctionReconciler) cancelOldBuilder(fn *openfunction.Function) (bool, error) {
+	log := r.Log.WithName("CancelOldBuilder").
 		WithValues("Function", fmt.Sprintf("%s/%s", fn.Namespace, fn.Name))
 
-	if fn.Status.Build == nil {
-		return nil
-	}
-	var builder openfunction.Builder
-	builder.Name = fn.Status.Build.ResourceRef
-	builder.Namespace = fn.Namespace
-
-	if builder.Name == "" {
-		return nil
+	builders := &openfunction.BuilderList{}
+	if err := r.List(r.ctx, builders, client.InNamespace(fn.Namespace), client.MatchingLabels{constants.FunctionLabel: fn.Name}); err != nil {
+		return false, err
 	}
 
-	if err := r.Delete(r.ctx, &builder); err != nil {
-		return util.IgnoreNotFound(err)
+	waitBuilderCancel := false
+	for _, item := range builders.Items {
+		builder := item
+		if !builder.Status.IsCompleted() {
+			log.V(1).Info("Builder is still running, cancel it", "builder", builder.Name)
+
+			builder.Spec.State = openfunction.BuilderStateCancel
+			if err := r.Update(r.ctx, &builder); err != nil {
+				return false, err
+			}
+
+			waitBuilderCancel = true
+		}
 	}
 
-	log.V(1).Info("Function builder cleanup", "Builder", builder.Name)
-	return nil
+	return waitBuilderCancel, nil
 }
 
 // Delete old builders which created by function.
@@ -261,11 +287,44 @@ func (r *FunctionReconciler) deleteOldBuilder(fn *openfunction.Function) error {
 		return err
 	}
 
+	sort.SliceStable(builders.Items, func(i, j int) bool {
+		return builders.Items[i].CreationTimestamp.Time.After(builders.Items[j].CreationTimestamp.Time)
+	})
+
+	var failedBuildsHistoryLimit int32 = 1
+	if fn.Spec.Build != nil && fn.Spec.Build.FailedBuildsHistoryLimit != nil {
+		failedBuildsHistoryLimit = *fn.Spec.Build.FailedBuildsHistoryLimit
+	}
+
+	var successfulBuildsHistoryLimit int32 = 0
+	if fn.Spec.Build != nil && fn.Spec.Build.SuccessfulBuildsHistoryLimit != nil {
+		successfulBuildsHistoryLimit = *fn.Spec.Build.SuccessfulBuildsHistoryLimit
+	}
+
+	var failedBuildsHistoryNum int32 = 0
+	var successfulBuildsHistoryNum int32 = 0
 	for _, item := range builders.Items {
-		if err := r.Delete(context.Background(), &item); util.IgnoreNotFound(err) != nil {
+		builder := item
+		if !builder.Status.IsCompleted() {
+			continue
+		}
+
+		if builder.Status.IsSucceeded() {
+			successfulBuildsHistoryNum++
+			if successfulBuildsHistoryNum <= successfulBuildsHistoryLimit {
+				continue
+			}
+		} else {
+			failedBuildsHistoryNum++
+			if failedBuildsHistoryNum <= failedBuildsHistoryLimit {
+				continue
+			}
+		}
+
+		if err := r.Delete(context.Background(), &builder); util.IgnoreNotFound(err) != nil {
 			return err
 		}
-		log.V(1).Info("Delete Builder", "builder", item.Name)
+		log.V(1).Info("Delete Builder", "builder", builder.Name)
 	}
 
 	return nil
@@ -808,6 +867,64 @@ func addAnnotations(ingress *networkingv1.Ingress, annotations map[string]string
 
 	for k, v := range annotations {
 		ingress.Annotations[k] = v
+	}
+}
+
+func (r *FunctionReconciler) startFunctionWatcher() {
+
+	ticker := time.NewTicker(r.interval)
+
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				r.cleanExpiredBuilder()
+			}
+		}
+	}()
+}
+
+func (r *FunctionReconciler) cleanExpiredBuilder() {
+
+	log := ctrl.Log.WithName("FunctionWatcher")
+
+	fnList := &openfunction.FunctionList{}
+	if err := r.List(context.Background(), fnList); err != nil {
+		log.Error(err, "Failed to list function")
+		return
+	}
+
+	for _, fn := range fnList.Items {
+		if fn.Spec.Build == nil ||
+			fn.Spec.Build.BuilderMaxAge == nil ||
+			(*fn.Spec.Build.BuilderMaxAge).Duration == 0 {
+			continue
+		}
+
+		builders := &openfunction.BuilderList{}
+		if err := r.List(r.ctx, builders, client.InNamespace(fn.Namespace), client.MatchingLabels{constants.FunctionLabel: fn.Name}); err != nil {
+			log.Error(err, "Failed to list builder", "Function", fmt.Sprintf("%s/%s", fn.Name, fn.Namespace))
+			return
+		}
+
+		for _, item := range builders.Items {
+			builder := item
+			if !builder.Status.IsCompleted() {
+				continue
+			}
+
+			if time.Since(builder.CreationTimestamp.Time) > (*fn.Spec.Build.BuilderMaxAge).Duration {
+				if err := r.Delete(r.ctx, &builder); err != nil {
+					log.Error(err, "Failed to delete expired builder",
+						"Function", fmt.Sprintf("%s/%s", fn.Name, fn.Namespace),
+						"Builder", fmt.Sprintf("%s/%s", builder.Name, builder.Namespace))
+				} else {
+					log.V(1).Info("Delete expired builder",
+						"Function", fmt.Sprintf("%s/%s", fn.Name, fn.Namespace),
+						"Builder", fmt.Sprintf("%s/%s", builder.Name, builder.Namespace))
+				}
+			}
+		}
 	}
 }
 
