@@ -1,6 +1,6 @@
 <div align=center><img  width="334" height="117" src=docs/images/logo.png></div>
 
-## Overview
+## 👀 Overview
 
 **OpenFunction** is a cloud-native open source FaaS (Function as a Service) platform aiming to enable users to focus on their business logic without worrying about the underlying runtime environment and infrastructure. Users only need to submit business-related source code in the form of functions.
 
@@ -14,7 +14,7 @@ OpenFunction features but not limited to the following:
 - Provide event management functions for trigger functions.
 - Provide additional functions to manage function versions, ingress management etc.
 
-## CustomResourceDefinitions
+## ☸ CustomResourceDefinitions
 
 <div align=center><img src=docs/images/openfunction-overview.svg></div>
 
@@ -94,7 +94,7 @@ make manifests
 
 to update the `config/bundle.yaml`, and use this file to deploy `openFunction`.
 
-## Compatibility
+## ✔️ Compatibility
 
 ### Kubernetes compatibility matrix
 
@@ -106,7 +106,7 @@ The following versions are supported and work as we test against these versions 
 | [`release-0.4`](https://github.com/OpenFunction/OpenFunction/tree/v0.4.0) | &times;         | &radic;         | &radic;         | &radic;         |
 | [`HEAD`](https://github.com/OpenFunction/OpenFunction/tree/main)          | &times;         | &radic;         | &radic;         | &radic;         |
 
-## QuickStart
+## 🚀 QuickStart
 
 ### Prerequisites
 
@@ -215,15 +215,15 @@ kubectl delete -f https://raw.githubusercontent.com/OpenFunction/OpenFunction/re
 kubectl delete -f https://raw.githubusercontent.com/OpenFunction/OpenFunction/main/config/bundle.yaml
 ```
 
-## Development
+## 💻 Development
 
 You can get help on developing this project by visiting [Development Guide](docs/development/README.md).
 
-## Roadmap
+## 🛣️ Roadmap
 
 [Here](docs/roadmap.md) you can find OpenFunction's roadmap.
 
-## Community
+## 🏘️ Community
 
 ### Community Call
 
@@ -236,3 +236,7 @@ Meeting Time: Wednesday at 15:30~16:30 Beijing Time (biweekly, starting from Jun
 ### Contact Us
 
 - Slack [#sig-serverless](https://kubesphere.slack.com/archives/C021XAR3CG3)
+
+## 📊 Stats
+
+![Alt](https://repobeats.axiom.co/api/embed/48814fec53572bf75ac4de9d4f447d2c978b26ee.svg "Repobeats analytics image")
