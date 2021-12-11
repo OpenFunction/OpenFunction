@@ -76,14 +76,16 @@ type EventSourceStatus struct {
 	Conditions []Condition `json:"conditions,omitempty" description:"List of auditable conditions of EventSource"`
 }
 
+//+genclient
+//+genclient:noStatus
 //+kubebuilder:object:root=true
 //+kubebuilder:resource:shortName=es
 //+kubebuilder:subresource:status
-
-// EventSource is the Schema for the eventsources API
 //+kubebuilder:printcolumn:name="EventBus",type=string,JSONPath=`.spec.eventBus`
 //+kubebuilder:printcolumn:name="Sink",type=string,JSONPath=`.spec.sink.ref.name`
 //+kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[-1].type"
+
+// EventSource is the Schema for the eventsources API
 type EventSource struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

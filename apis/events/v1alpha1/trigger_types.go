@@ -64,12 +64,14 @@ type TriggerStatus struct {
 	Conditions []Condition `json:"conditions,omitempty" description:"List of auditable conditions of Trigger"`
 }
 
+//+genclient
+//+genclient:noStatus
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-
-// Trigger is the Schema for the triggers API
 //+kubebuilder:printcolumn:name="EventBus",type=string,JSONPath=`.spec.eventBus`
 //+kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[-1].type"
+
+// Trigger is the Schema for the triggers API
 type Trigger struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

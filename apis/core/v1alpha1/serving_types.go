@@ -161,6 +161,8 @@ type ServingStatus struct {
 	ResourceRef map[string]string `json:"resourceRef,omitempty"`
 }
 
+//+genclient
+//+genclient:noStatus
 //+kubebuilder:object:root=true
 //+kubebuilder:resource:shortName=fs
 //+kubebuilder:subresource:status

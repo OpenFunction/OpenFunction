@@ -155,6 +155,8 @@ type ServingStatus struct {
 	Service string `json:"url,omitempty"`
 }
 
+//+genclient
+//+genclient:noStatus
 //+kubebuilder:object:root=true
 //+kubebuilder:storageversion
 //+kubebuilder:subresource:status

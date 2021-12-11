@@ -149,6 +149,8 @@ type FunctionStatus struct {
 	Serving *Condition `json:"serving,omitempty"`
 }
 
+//+genclient
+//+genclient:noStatus
 //+kubebuilder:object:root=true
 //+kubebuilder:resource:shortName=fn
 //+kubebuilder:subresource:status
