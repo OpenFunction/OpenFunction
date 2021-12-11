@@ -68,6 +68,8 @@ type BuilderStatus struct {
 	ResourceRef map[string]string `json:"resourceRef,omitempty"`
 }
 
+//+genclient
+//+genclient:noStatus
 //+kubebuilder:object:root=true
 //+kubebuilder:resource:shortName=fb
 //+kubebuilder:subresource:status
