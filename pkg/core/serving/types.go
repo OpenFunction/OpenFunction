@@ -11,5 +11,6 @@ func Registry() []client.Object {
 	var objs []client.Object
 	objs = append(objs, knative.Registry()...)
 	objs = append(objs, openfuncasync.Registry()...)
+
 	return objs
 }

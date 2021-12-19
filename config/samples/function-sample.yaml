@@ -9,7 +9,9 @@ spec:
     name: push-secret
   #port: 8080 # default to 8080
   build:
-    timeout: 5m
+    successfulBuildsHistoryLimit: 2
+    failedBuildsHistoryLimit: 3
+    timeout: 10m
     builder: openfunction/builder:v1
     env:
       FUNC_NAME: "HelloWorld"
@@ -19,7 +21,7 @@ spec:
       url: "https://github.com/OpenFunction/samples.git"
       sourceSubPath: "latest/functions/Knative/hello-world-go"
   serving:
-    timeout: 1m
+    timeout: 5m
     runtime: Knative
     template:
       containers:

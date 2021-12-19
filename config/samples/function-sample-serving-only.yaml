@@ -1,7 +1,7 @@
 apiVersion: core.openfunction.io/v1alpha2
 kind: Function
 metadata:
-  name: function-sample
+  name: function-sample-serving-only
 spec:
   version: "v1.0.0"
   image: "openfunctiondev/sample-go-func:latest"
