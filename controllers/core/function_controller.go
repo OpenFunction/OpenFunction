@@ -143,7 +143,7 @@ func (r *FunctionReconciler) createBuilder(fn *openfunction.Function) error {
 		return nil
 	}
 
-	if err := r.deleteOldBuilder(fn); err != nil {
+	if err := r.pruneBuilder(fn); err != nil {
 		log.Error(err, "Failed to clean builder")
 		return err
 	}
@@ -246,7 +246,7 @@ func (r *FunctionReconciler) updateFuncWithBuilderStatus(fn *openfunction.Functi
 		}
 	}
 
-	return r.deleteOldBuilder(fn)
+	return r.pruneBuilder(fn)
 }
 
 // Only one builder can run at the same time, cancel old builders.
@@ -265,7 +265,7 @@ func (r *FunctionReconciler) cancelOldBuilder(fn *openfunction.Function) (bool, 
 		if !builder.Status.IsCompleted() {
 			log.V(1).Info("Builder is still running, cancel it", "builder", builder.Name)
 
-			builder.Spec.State = openfunction.BuilderStateCancel
+			builder.Spec.State = openfunction.BuilderStateCancelled
 			if err := r.Update(r.ctx, &builder); err != nil {
 				return false, err
 			}
@@ -278,8 +278,8 @@ func (r *FunctionReconciler) cancelOldBuilder(fn *openfunction.Function) (bool, 
 }
 
 // Delete old builders which created by function.
-func (r *FunctionReconciler) deleteOldBuilder(fn *openfunction.Function) error {
-	log := r.Log.WithName("DeleteOldBuilder").
+func (r *FunctionReconciler) pruneBuilder(fn *openfunction.Function) error {
+	log := r.Log.WithName("PruneBuilder").
 		WithValues("Function", fmt.Sprintf("%s/%s", fn.Namespace, fn.Name))
 
 	builders := &openfunction.BuilderList{}

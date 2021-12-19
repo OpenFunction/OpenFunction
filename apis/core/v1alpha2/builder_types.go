@@ -24,14 +24,13 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// BuilderRequestedState defines the builder state the user can provide to override whatever is
-// the current state.
-type BuilderRequestedState string
+// BuilderState defines builder's states that a user can set to overwrite a builder's current state
+type BuilderState string
 
 const (
-	// BuilderStateCancel indicates that the user wants to cancel the Builder,
-	// if not already canceled or terminated
-	BuilderStateCancel = "Canceled"
+	// BuilderStateCancelled indicates a user's intent to stop the build process if not
+	// already canceled or terminated
+	BuilderStateCancelled = "Cancelled"
 )
 
 // BuilderSpec defines the desired state of Builder
@@ -74,10 +73,10 @@ type BuilderSpec struct {
 	Timeout *metav1.Duration `json:"timeout,omitempty"`
 	// State is used for canceling a buildrun (and maybe more later on).
 	// +optional
-	State BuilderRequestedState `json:"state,omitempty"`
+	State BuilderState `json:"state,omitempty"`
 }
 
-// Output holds the results emitted from the output step (build-and-push)
+// Output holds the results from the output step (build-and-push)
 type Output struct {
 	// Digest holds the digest of output image
 	Digest string `json:"digest,omitempty"`

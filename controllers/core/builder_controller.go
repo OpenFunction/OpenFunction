@@ -84,7 +84,7 @@ func (r *BuilderReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	builderRun := r.createBuilderRun()
 
-	if builder.Spec.State == openfunction.BuilderStateCancel {
+	if builder.Spec.State == openfunction.BuilderStateCancelled {
 		if err := builderRun.Cancel(builder); err != nil {
 			log.Error(err, "Failed to cancel builder")
 			return ctrl.Result{}, err

@@ -7371,8 +7371,8 @@ spec:
                         type: string
                     type: object
                   builderMaxAge:
-                    description: The maximum time to retain completed builder, default
-                      is 0, means ever.
+                    description: The duration to retain a completed builder, defaults
+                      to 0 (forever).
                     type: string
                   dockerfile:
                     description: Dockerfile is the path to the Dockerfile used by
@@ -7384,8 +7384,8 @@ spec:
                     description: Environment variables to pass to the builder.
                     type: object
                   failedBuildsHistoryLimit:
-                    description: The number of failed completed builders to retain,
-                      default is 1.
+                    description: The number of failed builds to retain, default is
+                      1.
                     format: int32
                     type: integer
                   params:
@@ -7450,8 +7450,8 @@ spec:
                     - url
                     type: object
                   successfulBuildsHistoryLimit:
-                    description: The number of successful completed builders to retain,
-                      default is 0.
+                    description: The number of successful builds to retain, default
+                      is 0.
                     format: int32
                     type: integer
                   timeout:
