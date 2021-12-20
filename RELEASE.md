@@ -4,13 +4,14 @@ This page describes the release process and the currently planned schedule for u
 
 ## Release schedule
 
-| release series | date  (year-month-day) | release shepherd                            |
-|----------------|--------------------------------------------|---------------------------------------------|
-| v0.1.0           | 2021-05-17                                 | Benjamin Huo (GitHub: @benjaminhuo) |
-| v0.2.0           | 2021-06-30                                 | Benjamin Huo (GitHub: @benjaminhuo) |
-| v0.3.0           | 2021-08-19                                 | Laminar (GitHub: @tpiperatgod) |
-| v0.3.1           | 2021-08-27                                 | Wanjun Lei (GitHub: @wanjunlei) |
-| v0.4.0           | 2021-10-19                                 | Wanjun Lei (GitHub: @wanjunlei) |
+| release series   | date  (year-month-day)                     | release shepherd          |
+|------------------|--------------------------------------------|---------------------------|
+| v0.1.0           | 2021-05-17                                 | Benjamin Huo @benjaminhuo |
+| v0.2.0           | 2021-06-30                                 | Benjamin Huo @benjaminhuo |
+| v0.3.0           | 2021-08-19                                 | Laminar @tpiperatgod      |
+| v0.3.1           | 2021-08-27                                 | Wanjun Lei @wanjunlei     |
+| v0.4.0           | 2021-10-19                                 | Wanjun Lei @wanjunlei     |
+| v0.5.0           | 2021-12-31                                 | Benjamin Huo @benjaminhuo |
 
 # How to cut a new release
 
@@ -32,12 +33,7 @@ Maintaining the release branches for older minor releases happens on a best effo
 
 For a new major or minor release, work from the `main` branch. For a patch release, work in the branch of the minor release you want to patch (e.g. `release-0.1` if you're releasing `v0.1.1`).
 
-Change the `Install the latest stable version` section in README.md to the new stable version:
-```bash
-kubectl apply -f https://github.com/OpenFunction/OpenFunction/releases/download/v<major>.<minor>.<patch>/bundle.yaml
-```
-
-Add an entry for the new version to the `CHANGELOG.md` file. Entries in the `CHANGELOG.md` are meant to be in this order:
+Add an entry for the new version to the `CHANGELOG.md` file. Entries in the `CHANGELOG.md` should be in this order:
 
 * `[CHANGE]`
 * `[FEATURE]`
