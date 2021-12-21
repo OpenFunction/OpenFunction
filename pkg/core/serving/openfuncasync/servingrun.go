@@ -229,11 +229,18 @@ func (r *servingRun) Result(s *openfunction.Serving) (string, error) {
 
 func (r *servingRun) generateWorkload(s *openfunction.Serving) client.Object {
 
-	labels := map[string]string{
-		openfunctionManaged: "true",
-		servingLabel:        s.Name,
-		runtimeLabel:        string(openfunction.OpenFuncAsync),
+	version := constants.DefaultFunctionVersion
+	if s.Spec.Version != nil {
+		version = *s.Spec.Version
 	}
+
+	labels := map[string]string{
+		openfunctionManaged:          "true",
+		servingLabel:                 s.Name,
+		runtimeLabel:                 string(openfunction.OpenFuncAsync),
+		constants.CommonLabelVersion: version,
+	}
+	labels = util.AppendLabels(s.Spec.Labels, labels)
 
 	selector := &metav1.LabelSelector{
 		MatchLabels: labels,
@@ -265,6 +272,8 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving) client.Object {
 	annotations[daprAPPProtocol] = "grpc"
 	// The dapr port must equal the function port.
 	annotations[daprAPPPort] = fmt.Sprintf("%d", port)
+
+	annotations = util.AppendLabels(s.Spec.Annotations, annotations)
 
 	spec := s.Spec.Template
 	if spec == nil {
@@ -325,9 +334,10 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving) client.Object {
 		Spec: *spec,
 	}
 
+	version = strings.ReplaceAll(version, ".", "")
 	deploy := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-deployment-%s-", s.Name, strings.ReplaceAll(*s.Spec.Version, ".", "")),
+			GenerateName: fmt.Sprintf("%s-deployment-%s-", s.Name, version),
 			Namespace:    s.Namespace,
 			Labels:       labels,
 		},
@@ -340,7 +350,7 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving) client.Object {
 
 	statefulset := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-statefulset-%s-", s.Name, strings.ReplaceAll(*s.Spec.Version, ".", "")),
+			GenerateName: fmt.Sprintf("%s-statefulset-%s-", s.Name, version),
 			Namespace:    s.Namespace,
 			Labels:       labels,
 		},
@@ -353,7 +363,7 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving) client.Object {
 
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-job-%s-", s.Name, strings.ReplaceAll(*s.Spec.Version, ".", "")),
+			GenerateName: fmt.Sprintf("%s-job-%s-", s.Name, version),
 			Namespace:    s.Namespace,
 			Labels:       labels,
 		},

@@ -95,7 +95,7 @@ type BuilderStatus struct {
 	// Output holds the results emitted from step definition of an output
 	//
 	// +optional
-	Output *Output `json:"output"`
+	Output *Output `json:"output,omitempty"`
 }
 
 //+genclient

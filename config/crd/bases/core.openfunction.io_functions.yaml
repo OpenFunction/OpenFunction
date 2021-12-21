@@ -7497,6 +7497,16 @@ spec:
                 description: Information needed to run a function. The serving step
                   will be skipped if `Serving` is nil.
                 properties:
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    description: Annotations that will be add to the workload.
+                    type: object
+                  labels:
+                    additionalProperties:
+                      type: string
+                    description: Labels that will be add to the workload.
+                    type: object
                   openFuncAsync:
                     description: Parameters of asyncFunc runtime, must not be nil
                       when runtime is OpenFuncAsync.

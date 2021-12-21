@@ -6972,6 +6972,11 @@ spec:
           spec:
             description: ServingSpec defines the desired state of Serving
             properties:
+              annotations:
+                additionalProperties:
+                  type: string
+                description: Annotations that will be add to the workload.
+                type: object
               image:
                 description: Function image name
                 type: string
@@ -6983,6 +6988,11 @@ spec:
                     description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                       TODO: Add other useful fields. apiVersion, kind, uid?'
                     type: string
+                type: object
+              labels:
+                additionalProperties:
+                  type: string
+                description: Labels that will be add to the workload.
                 type: object
               openFuncAsync:
                 description: Parameters of OpenFuncAsync runtime.

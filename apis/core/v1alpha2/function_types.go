@@ -131,6 +131,12 @@ type ServingImpl struct {
 	Params map[string]string `json:"params,omitempty"`
 	// Parameters of asyncFunc runtime, must not be nil when runtime is OpenFuncAsync.
 	OpenFuncAsync *OpenFuncAsyncRuntime `json:"openFuncAsync,omitempty"`
+	// Labels that will be add to the workload.
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
+	// Annotations that will be add to the workload.
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
 	// Template describes the pods that will be created.
 	// The container named `function` is the container which is used to run the image built by the builder.
 	// If it is not set, the controller will automatically add one.

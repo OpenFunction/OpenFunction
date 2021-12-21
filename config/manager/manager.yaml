@@ -12,6 +12,8 @@ metadata:
   namespace: system
   labels:
     control-plane: controller-manager
+    "app.kubernetes.io/name": "openfunction-controller-manager"
+    "app.kubernetes.io/version": latest
 spec:
   selector:
     matchLabels:
