@@ -34,7 +34,7 @@ The following versions are supported and work as we test against these versions 
 
 \****Note***: OpenFunction added the [function ingress](docs/concepts/Components.md#domain) feature after *release-0.4*, which means that:
 
-1. You have to install OpenFunction on Kuberenetes ***v1.19*** or higher if you enable this feature.
+1. You have to install OpenFunction in Kuberenetes ***v1.19*** or higher if you enable this feature.
 2. You can still use OpenFunction in Kubernetes ***v1.17~v1.20+*** without this feature enabled.
 
 ## 🚀 QuickStart
