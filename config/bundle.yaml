@@ -9031,6 +9031,16 @@ spec:
                 description: Information needed to run a function. The serving step
                   will be skipped if `Serving` is nil.
                 properties:
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    description: Annotations that will be add to the workload.
+                    type: object
+                  labels:
+                    additionalProperties:
+                      type: string
+                    description: Labels that will be add to the workload.
+                    type: object
                   openFuncAsync:
                     description: Parameters of asyncFunc runtime, must not be nil
                       when runtime is OpenFuncAsync.
@@ -23156,6 +23166,11 @@ spec:
           spec:
             description: ServingSpec defines the desired state of Serving
             properties:
+              annotations:
+                additionalProperties:
+                  type: string
+                description: Annotations that will be add to the workload.
+                type: object
               image:
                 description: Function image name
                 type: string
@@ -23167,6 +23182,11 @@ spec:
                     description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                       TODO: Add other useful fields. apiVersion, kind, uid?'
                     type: string
+                type: object
+              labels:
+                additionalProperties:
+                  type: string
+                description: Labels that will be add to the workload.
                 type: object
               openFuncAsync:
                 description: Parameters of OpenFuncAsync runtime.
@@ -30745,6 +30765,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
+    app.kubernetes.io/name: openfunction-controller-manager
+    app.kubernetes.io/version: latest
     control-plane: controller-manager
   name: openfunction-controller-manager
   namespace: openfunction

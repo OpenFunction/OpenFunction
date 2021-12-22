@@ -400,7 +400,6 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 		log.V(1).Info("Skip serving")
 		return nil
 	}
-
 	serving := &openfunction.Serving{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "serving-",
@@ -540,6 +539,8 @@ func (r *FunctionReconciler) createServingSpec(fn *openfunction.Function) openfu
 	if fn.Spec.Serving != nil {
 		spec.Params = fn.Spec.Serving.Params
 		spec.OpenFuncAsync = fn.Spec.Serving.OpenFuncAsync
+		spec.Labels = fn.Spec.Serving.Labels
+		spec.Annotations = fn.Spec.Serving.Annotations
 		spec.Template = fn.Spec.Serving.Template
 	}
 

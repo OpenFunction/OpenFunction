@@ -133,6 +133,12 @@ type ServingSpec struct {
 	// Parameters of OpenFuncAsync runtime.
 	// +optional
 	OpenFuncAsync *OpenFuncAsyncRuntime `json:"openFuncAsync,omitempty"`
+	// Labels that will be add to the workload.
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
+	// Annotations that will be add to the workload.
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
 	// Template describes the pods that will be created.
 	// The container named `function` is the container which is used to run the image built by the builder.
 	// If it is not set, the controller will automatically add one.
