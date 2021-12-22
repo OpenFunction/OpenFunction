@@ -18,81 +18,7 @@ OpenFunction features but not limited to the following:
 
 <div align=center><img src=docs/images/openfunction-overview.svg></div>
 
-### Events CRDs
-
-OpenFunction provides an event handling framework called OpenFunction events that complements the event-driven capabilities of OpenFunction as a FaaS framework.
-
-You can refer to [OpenFunction Events Framework Concepts](docs/concepts/OpenFunction-events-framework.md) for more information.
-
-### Core CRDs
-
-The core capability of OpenFunction is to enable users to develop, run and manage applications as executable function code. OpenFunction implements the following [custom resource definitions (CRDs)](https://kubernetes.io/docs/tasks/access-kubernetes-api/extend-api-custom-resource-definitions/):
-
-- **Function**, defines a function.
-- **Builder**, defines a function builder.
-- **Serving**, defines a function workload.
-- **Domain**, defines a unified entry point for sync functions.
-
-#### Function
-
-The goal of `Function` is to control the lifecycle management from user code to the final application that can respond to events through a single profile.
-
-`Function` manages and coordinates `Builder` and `Serving` resources to handle the details of the process.
-
-#### Builder
-
-The goal of `Builder` is to compile the user's function source code into an application image.
-
-It will fetch the code from the code repository, build the application image locally and publish it to the container image repository.
-
-Currently, OpenFunction Builder uses [Shipwright and Cloud Native Buildpacks](#shipwright-and-cloud-native-buildpacks) to build container images.
-
-##### Shipwright and Cloud Native Buildpacks
-
-[Shipwright](https://github.com/shipwright-io/build) is an extensible framework for building container images on Kubernetes.
-
-Cloud Native Buildpacks is an OCI standard image building framework that transforms your application source code into container images without a Dockerfile.
-
-OpenFunction Builder controls the build process of application images by [Shipwright](https://github.com/shipwright-io/build), including fetching code, building and publishing images via Cloud Native Buildpacks.
-
-#### Serving
-
-The goal of `Serving` is to run functions in a highly elastic manner (dynamically scale 0 <-> N).
-
-Currently, OpenFunction supports two serving runtimes, [Knative](#knative) and [OpenFuncAsync](#openfuncasync). At least one of these runtimes is required.
-
-##### Knative
-
-Knative Serving builds on Kubernetes to support deploying and serving serverless applications and functions. Knative Serving is easy to get started with and scales to support advanced scenarios.
-
-##### OpenFuncAsync
-
-OpenFuncAsync is an event-driven Serving runtime. It is implemented based on KEDA + Dapr.
-
-You can refer to [Prerequisites](#prerequisites) and use `--with-openFuncAsync` to install OpenFuncAsync runtime.
-
-The OpenFuncAsync functions can be triggered by various event types, such as MQ, cronjob, DB events, etc. In a Kubernetes cluster, OpenFuncAsync functions run in the form of deployments or jobs.
-
-#### Domain
-
-`Domain` defines a unified entry point for sync functions using ingress, user can use 
-
-```
-http://<domain-name>.<domain-namespace>/<function-namespace>/<function-name>
-```
-
-to access a function.
-
-Only one `Domain` can be defined in a cluster. A `Domain` requires a `Ingress Controller`. By default, we use `nginx-ingress`.
-You can refer to [Prerequisites](#prerequisites) and use `--with-ingress` to install it, or install it manually.
-If the `nginx-ingress` does not use the default namespace and name, please modify the `config/domain/default-domain.yaml`, 
-and run 
-
-```shell
-make manifests
-```
-
-to update the `config/bundle.yaml`, and use this file to deploy `openFunction`.
+OpenFunction manages resources in the form of CustomResourceDefinitions (CRD) during the lifecycle of a function. You can learn more about it by visiting [Components](docs/concepts/Components.md) or [Concepts](https://openfunction.dev/docs/concepts/).
 
 ## ✔️ Compatibility
 
@@ -100,65 +26,28 @@ to update the `config/bundle.yaml`, and use this file to deploy `openFunction`.
 
 The following versions are supported and work as we test against these versions in their respective branches. But note that other versions might work!
 
-| OpenFunction                                                              | Kubernetes 1.19 | Kubernetes 1.20 | Kubernetes 1.21 | Kubernetes 1.22 |
-|---------------------------------------------------------------------------|-----------------|-----------------|-----------------|-----------------|
-| [`release-0.3`](https://github.com/OpenFunction/OpenFunction/tree/v0.3.0) | &radic;         | &radic;         | &radic;         | &radic;         |
-| [`release-0.4`](https://github.com/OpenFunction/OpenFunction/tree/v0.4.0) | &times;         | &radic;         | &radic;         | &radic;         |
-| [`HEAD`](https://github.com/OpenFunction/OpenFunction/tree/main)          | &times;         | &radic;         | &radic;         | &radic;         |
+| OpenFunction                                                 | Kubernetes 1.17 | Kubernetes 1.18 | Kubernetes 1.19 | Kubernetes 1.20+ |
+| ------------------------------------------------------------ | --------------- | --------------- | --------------- | ---------------- |
+| [`release-0.3`](https://github.com/OpenFunction/OpenFunction/tree/v0.3.0) | &radic;         | &radic;         | &radic;         | &radic;          |
+| [`release-0.4`](https://github.com/OpenFunction/OpenFunction/tree/v0.4.0) | &radic;         | &radic;         | &radic;         | &radic;          |
+| [`HEAD`](https://github.com/OpenFunction/OpenFunction/tree/main) | &times;         | &times;         | &radic;         | &radic;          |
 
 ## 🚀 QuickStart
 
-### Prerequisites
-
-The current version of OpenFunction requires that you have a Kubernetes cluster with version ``>=1.18.6``.
-
-In addition, you need to deploy several dependencies for the OpenFunction ```Builder``` and ```Serving```.
-
-You can use the following command to setup OpenFunction ```Builder``` and ```Serving```:
-
-```shell
-sh hack/deploy.sh --all
-```
-
-This command will install dependencies of all supported ```Builder``` and ```Serving``` to your cluster.
-
-You can also customize the installation with the following parameters:
-
-|Parameter|Comment|
-|---|---|
-| --all                              | Install all supported ```Builder``` and ```Serving``` |
-| --with-shipwright                  | Install Shipwright builder |
-| --with-knative                     | Install Knative serving runtime |
-| --with-openFuncAsync               | Install OpenFuncAsync serving runtime |
-| --with-ingress                     | Install nginx-ingress |
-| --region-cn                        | Use this if you have poor network connectivity to GitHub/Googleapis |
-
 ### Install OpenFunction
 
-You can install the OpenFunction platform by the following command:
+Now you can use `ofn`, the CLI of OpenFunction, to install and uninstall OpenFunction and its dependencies. 
 
-- Install the latest stable version
+Visit [ofn release](https://github.com/OpenFunction/cli/releases) to select the `ofn` cli to deploy to your cluster.
 
-```shell
-kubectl create -f https://github.com/OpenFunction/OpenFunction/releases/download/v0.4.0/bundle.yaml
+After that you can install OpenFunction with one command:
+
+```
+ofn install --all
 ```
 
-- Install the development version
+For more information about ofn install, please refer to [ofn install docs](https://github.com/OpenFunction/cli/blob/main/docs/install.md).
 
-```shell
-kubectl create -f https://raw.githubusercontent.com/OpenFunction/OpenFunction/main/config/bundle.yaml
-```
-
-> Note: When using non-default namespaces, make sure that the ClusterRoleBinding in the namespace is adapted.
-
-### Verify the installation
-
-```bash
-kubectl get pods --namespace openfunction
-
-NAME                                               READY   STATUS    RESTARTS   AGE
-openfunction-controller-manager-6955498c9b-hjql7   2/2     Running   0         2m2s
-```
 ### Sample: Run a function.
 
 If you have already installed the OpenFunction platform, refer to [OpenFunction samples](https://github.com/OpenFunction/samples) to find more samples.
@@ -171,8 +60,8 @@ Here is an example of a sync function.
 package hello
 
 import (
-	"net/http"
 	"fmt"
+	"net/http"
 )
 
 func HelloWorld(w http.ResponseWriter, r *http.Request) {
@@ -194,26 +83,34 @@ import (
 	ofctx "github.com/OpenFunction/functions-framework-go/openfunction-context"
 )
 
-func BindingsOutput(ctx *ofctx.OpenFunctionContext, in []byte) int {
+func BindingsOutput(ctx *ofctx.OpenFunctionContext, in []byte) ofctx.RetValue {
 	log.Printf("receive greeting: %s", string(in))
-	_ := ctx.SendTo(in, "another-target")
+	_ := ctx.Send("another-target", in)
 	return 200
 }
 ```
 
+You can also use `ofn` to make a quick demo:
+
+>By default the demo environment will be deleted when the demo finishes.
+>You can keep the demo kind cluster for further exploration by `ofn demo --auto-prune=false`
+>The demo kind cluster can be deleted by `kind delete cluster --name openfunction`
+
+```shell
+ofn demo
+```
+
+For more information about ofn install, please refer to [ofn demo docs](https://github.com/OpenFunction/cli/blob/main/docs/demo.md).
+
 ### Uninstall OpenFunction
 
-- Uninstall the latest stable version
+Use `ofn` to uninstall OpenFunction and its dependencies:
 
 ```shell
-kubectl delete -f https://raw.githubusercontent.com/OpenFunction/OpenFunction/release-0.4/config/bundle.yaml
+ofn uninstall --all
 ```
 
-- Uninstall the development version
-
-```shell
-kubectl delete -f https://raw.githubusercontent.com/OpenFunction/OpenFunction/main/config/bundle.yaml
-```
+For more information about ofn install, please refer to [ofn uninstall docs](https://github.com/OpenFunction/cli/blob/main/docs/uninstall.md).
 
 ## 💻 Development
 
