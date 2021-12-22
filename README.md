@@ -30,13 +30,18 @@ The following versions are supported and work as we test against these versions 
 | ------------------------------------------------------------ | --------------- | --------------- | --------------- | ---------------- |
 | [`release-0.3`](https://github.com/OpenFunction/OpenFunction/tree/v0.3.0) | &radic;         | &radic;         | &radic;         | &radic;          |
 | [`release-0.4`](https://github.com/OpenFunction/OpenFunction/tree/v0.4.0) | &radic;         | &radic;         | &radic;         | &radic;          |
-| [`HEAD`](https://github.com/OpenFunction/OpenFunction/tree/main) | &times;         | &times;         | &radic;         | &radic;          |
+| [`HEAD`](https://github.com/OpenFunction/OpenFunction/tree/main) | &radic; *         | &radic; *         | &radic;         | &radic;          |
+
+\****Note***: OpenFunction added the [function ingress](docs/concepts/Components.md#domain) feature after *release-0.4*, which means that:
+
+1. You must be running OpenFunction with a Kuberenetes cluster no less than version ***v1.19*** when you enable this feature.
+2. You can still use OpenFunction in Kubernetes clusters in ***v1.17~v1.20+*** versions without this feature enabled.
 
 ## 🚀 QuickStart
 
 ### Install OpenFunction
 
-Now you can use `ofn`, the CLI of OpenFunction, to install and uninstall OpenFunction and its dependencies. 
+Now you can use `ofn`, the CLI of OpenFunction, to install and uninstall OpenFunction and its dependencies.
 
 Visit [ofn release](https://github.com/OpenFunction/cli/releases) to select the `ofn` cli to deploy to your cluster.
 
@@ -124,7 +129,7 @@ You can get help on developing this project by visiting [Development Guide](docs
 
 ### Community Call
 
-Meeting Info: [Zoom](https://us02web.zoom.us/j/89684762679?pwd=U1JNWVdzbElScVFMSEdQQnV0YnR4UT09) 
+Meeting Info: [Zoom](https://us02web.zoom.us/j/89684762679?pwd=U1JNWVdzbElScVFMSEdQQnV0YnR4UT09)
 
 Meeting Time: Wednesday at 15:30~16:30 Beijing Time (biweekly, starting from June 23rd, 2021) [Meeting Calendar](https://kubesphere.io/contribution/)
 
