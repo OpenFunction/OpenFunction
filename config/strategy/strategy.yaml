@@ -184,13 +184,13 @@ spec:
           memory: 65Mi
   parameters:
     - description: The registries for searching short name images such as `golang:latest`, separated by commas.
-      name: REGISTRIES_SEARCH
+      name: registry-search
       default: docker.io,quay.io
     - description: The fully-qualified name of insecure registries. An insecure registry is one that does not have a valid SSL certificate or only does HTTP.
-      name: REGISTRIES_INSECURE
+      name: registry-insecure
       default: ""
     - description: The registries that need to block pull access.
-      name: REGISTRIES_BLOCK
+      name: registry-block
       default: ""
 ---
 apiVersion: shipwright.io/v1alpha1

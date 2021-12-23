@@ -1,25 +1,37 @@
 #! /bin/bash
 
-cat config/samples/function-sample-serving-only.yaml | kubectl apply -f -
+kubectl apply -f config/samples/function-sample-serving-only.yaml
+kubectl apply -f config/samples/function-pubsub-sample-serving-only.yaml
+kubectl proxy &
 
-NODE_IP=$(kubectl get nodes -o jsonpath={.items[0].status.addresses[0].address})
-kubectl patch svc -n kourier-system kourier -p "{\"spec\": {\"type\": \"LoadBalancer\", \"externalIPs\": [\"${NODE_IP}\"]}}"
-kubectl patch configmap/config-domain -n knative-serving  --type merge --patch "{\"data\":{\"${NODE_IP}.sslip.io\":\"\"}}"
-
-sleep 10
-
-status=`kubectl get ksvc -o jsonpath={.items}`
-  if [ "$status" = "[]" ]; then
-    echo "Cannot find function serving, exit..."
-    exit 1
+while /bin/true; do
+  url=$(kubectl get fn function-sample-serving-only -o jsonpath='{.status.url}')
+  if [ -z "$url" ]; then
+    sleep 1
+    continue
+  else
+    echo "Function function-sample-serving-only is running"
+    break
   fi
-server_url=`kubectl get ksvc -o jsonpath={.items[0].status.url}`
-echo "Function now is serving on ${server_url}"
-curl ${server_url}
-res=$?
-if test "$res" != "0"; then
-  echo "the curl command failed with: $res"
-  exit 1
-fi
+done
 
-cat config/samples/function-pubsub-sample-serving-only.yaml | kubectl apply -f -
+url="http://localhost:8001/api/v1/namespaces/ingress-nginx/services/ingress-nginx-controller:http/proxy/default/function-sample-serving-only"
+while /bin/true; do
+  res=$(curl -I -m 10 -o /dev/null -s -w %{http_code}"\n" $url)
+  if test "$res" = "200"; then
+    curl $url
+    break
+  fi
+  sleep 1
+done
+
+while /bin/true; do
+  state=$(kubectl get fn autoscaling-producer -o jsonpath='{.status.serving.state}')
+  if test "$state" != "Running"; then
+    sleep 1
+    continue
+  else
+    echo "Function autoscaling-producer is running"
+    break
+  fi
+done

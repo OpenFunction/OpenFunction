@@ -120,7 +120,11 @@ jobs:
           kubectl rollout status -n openfunction deployment openfunction-controller-manager --timeout=1m
           sleep 10
 
+#      - name: Setup tmate session
+#        uses: mxschmitt/action-tmate@v1
+
       - name: Test
+        timeout-minutes: 10
         run: |
           chmod +x "${GITHUB_WORKSPACE}/.github/workflows/e2e-test.sh"
           bash "${GITHUB_WORKSPACE}"/.github/workflows/e2e-test.sh
