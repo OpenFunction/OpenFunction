@@ -2,7 +2,7 @@
 
 ## 👀 Overview
 
-**OpenFunction** is a cloud-native open source FaaS (Function as a Service) platform aiming to enable users to focus on their business logic without worrying about the underlying runtime environment and infrastructure. Users only need to submit business-related source code in the form of functions.
+[OpenFunction](https://openfunction.dev/) is a cloud-native open source FaaS (Function as a Service) platform aiming to enable users to focus on their business logic without worrying about the underlying runtime environment and infrastructure. Users only need to submit business-related source code in the form of functions.
 
 <div align=center><img src=docs/images/function-lifecycle.svg></div>
 
@@ -41,9 +41,19 @@ The following versions are supported and work as we test against these versions 
 
 ### Install OpenFunction
 
-Now you can use `ofn`, the CLI of OpenFunction, to install and uninstall OpenFunction and its dependencies.
+You can use `ofn`, the CLI of OpenFunction, to install and uninstall OpenFunction and its dependencies.
 
-Visit [ofn release](https://github.com/OpenFunction/cli/releases) to select the `ofn` cli to deploy to your cluster.
+Visit [ofn release](https://github.com/OpenFunction/cli/releases) to dowload the latest version of CLI and deploy it to your Kubernetes cluster.
+
+```
+wget -c  https://github.com/OpenFunction/cli/releases/download/v0.5.1/ofn_linux_amd64.tar.gz -O - | tar -xz
+```
+
+Make `ofn` executable and move it to `/usr/local/bin/`:
+
+```
+chmod +x ofn && mv ofn /usr/local/bin/
+```
 
 After that you can install OpenFunction with one command:
 
@@ -137,8 +147,10 @@ Meeting Time: Wednesday at 15:30~16:30 Beijing Time (biweekly, starting from Jun
 
 ### Contact Us
 
-- Slack [#sig-serverless](https://kubesphere.slack.com/archives/C021XAR3CG3)
+OpenFunction is sponsored and open-sourced by the [KubeSphere](http://kubesphere.io/) Team and maintained by the OpenFunction community.
 
+- Slack [#sig-serverless](https://kubesphere.slack.com/archives/C021XAR3CG3)
+- Wechat Group: You can join the OpenFunction user group by following the KubeSphere WeChat Subscription
 ## 📊 Stats
 
 ![Alt](https://repobeats.axiom.co/api/embed/48814fec53572bf75ac4de9d4f447d2c978b26ee.svg "Repobeats analytics image")
