@@ -24,6 +24,15 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+// BuilderState defines builder's states that a user can set to overwrite a builder's current state
+type BuilderState string
+
+const (
+	// BuilderStateCancelled indicates a user's intent to stop the build process if not
+	// already canceled or terminated
+	BuilderStateCancelled = "Cancelled"
+)
+
 // BuilderSpec defines the desired state of Builder
 type BuilderSpec struct {
 	// Params is a list of key/value that could be used to set strategy parameters.
@@ -62,22 +71,42 @@ type BuilderSpec struct {
 	//
 	// +optional
 	Timeout *metav1.Duration `json:"timeout,omitempty"`
+	// State is used for canceling a buildrun (and maybe more later on).
+	// +optional
+	State BuilderState `json:"state,omitempty"`
+}
+
+// Output holds the results from the output step (build-and-push)
+type Output struct {
+	// Digest holds the digest of output image
+	Digest string `json:"digest,omitempty"`
+
+	// Size holds the compressed size of output image
+	Size int64 `json:"size,omitempty"`
 }
 
 // BuilderStatus defines the observed state of Builder
 type BuilderStatus struct {
-	Phase string `json:"phase,omitempty"`
-	State string `json:"state,omitempty"`
+	Phase  string `json:"phase,omitempty"`
+	State  string `json:"state,omitempty"`
+	Reason string `json:"reason,omitempty"`
 	// Associate resources.
 	ResourceRef map[string]string `json:"resourceRef,omitempty"`
+	// Output holds the results emitted from step definition of an output
+	//
+	// +optional
+	Output *Output `json:"output,omitempty"`
 }
 
+//+genclient
+//+genclient:noStatus
 //+kubebuilder:object:root=true
 //+kubebuilder:storageversion
 //+kubebuilder:resource:shortName=fb
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 //+kubebuilder:printcolumn:name="State",type=string,JSONPath=`.status.state`
+//+kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.reason`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // Builder is the Schema for the builders API
@@ -104,4 +133,8 @@ func init() {
 
 func (s *BuilderStatus) IsCompleted() bool {
 	return s.State != "" && s.State != Building
+}
+
+func (s *BuilderStatus) IsSucceeded() bool {
+	return s.State == Succeeded
 }

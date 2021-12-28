@@ -15,6 +15,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/openfunction/pkg/constants"
+
 	openfunction "github.com/openfunction/apis/core/v1alpha2"
 	"github.com/openfunction/pkg/core"
 	"github.com/openfunction/pkg/util"
@@ -24,8 +26,6 @@ const (
 	servingLabel = "openfunction.io/serving"
 
 	knativeService = "serving.knative.dev/service"
-
-	defaultVersion = "latest"
 )
 
 type servingRun struct {
@@ -76,6 +76,7 @@ func (r *servingRun) Run(s *openfunction.Serving) error {
 	}
 
 	s.Status.ResourceRef[knativeService] = service.Name
+	s.Status.Service = service.Name
 
 	return nil
 }
@@ -112,9 +113,9 @@ func (r *servingRun) Result(s *openfunction.Serving) (string, error) {
 		},
 	}
 
-	if err := r.Get(r.ctx, client.ObjectKeyFromObject(service), service); util.IgnoreNotFound(err) != nil {
+	if err := r.Get(r.ctx, client.ObjectKeyFromObject(service), service); err != nil {
 		log.Error(err, "Failed to get Service", "Service", service.Name)
-		return "", util.IgnoreNotFound(err)
+		return "", err
 	}
 
 	if service.IsReady() {
@@ -174,14 +175,19 @@ func (r *servingRun) createService(s *openfunction.Serving) *kservingv1.Service 
 		template.Containers = append(template.Containers, *container)
 	}
 
+	version := constants.DefaultFunctionVersion
+	if s.Spec.Version != nil {
+		version = *s.Spec.Version
+	}
+	labels := map[string]string{
+		constants.CommonLabelVersion: version,
+	}
+	labels = util.AppendLabels(s.Spec.Labels, labels)
+
 	rand.Seed(time.Now().UnixNano())
 	serviceName := fmt.Sprintf("%s-ksvc-%s", s.Name, rand.String(5))
 	workloadName := serviceName
-	version := defaultVersion
-	if s.Spec.Version != nil {
-		version = strings.ReplaceAll(*s.Spec.Version, ".", "")
-	}
-	workloadName = fmt.Sprintf("%s-%s", workloadName, version)
+	workloadName = fmt.Sprintf("%s-%s", workloadName, strings.ReplaceAll(version, ".", ""))
 
 	service := kservingv1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -199,8 +205,10 @@ func (r *servingRun) createService(s *openfunction.Serving) *kservingv1.Service 
 			ConfigurationSpec: kservingv1.ConfigurationSpec{
 				Template: kservingv1.RevisionTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      workloadName,
-						Namespace: s.Namespace,
+						Name:        workloadName,
+						Namespace:   s.Namespace,
+						Labels:      labels,
+						Annotations: s.Spec.Annotations,
 					},
 					Spec: kservingv1.RevisionSpec{
 						PodSpec: *template,

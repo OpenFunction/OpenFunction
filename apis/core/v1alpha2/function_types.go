@@ -56,10 +56,10 @@ const (
 	Failed                 = "Failed"
 	Skipped                = "Skipped"
 	Timeout                = "Timeout"
+	Canceled               = "Canceled"
 	UnknownRuntime         = "UnknownRuntime"
 	Knative        Runtime = "Knative"
 	OpenFuncAsync  Runtime = "OpenFuncAsync"
-	Shipwright             = "Shipwright"
 )
 
 type Strategy struct {
@@ -109,6 +109,17 @@ type BuildImpl struct {
 	//
 	// +optional
 	Timeout *metav1.Duration `json:"timeout,omitempty"`
+
+	// The number of successful builds to retain, default is 0.
+	// +optional
+	SuccessfulBuildsHistoryLimit *int32 `json:"successfulBuildsHistoryLimit,omitempty"`
+
+	// The number of failed builds to retain, default is 1.
+	// +optional
+	FailedBuildsHistoryLimit *int32 `json:"failedBuildsHistoryLimit,omitempty"`
+	// The duration to retain a completed builder, defaults to 0 (forever).
+	// +optional
+	BuilderMaxAge *metav1.Duration `json:"builderMaxAge,omitempty"`
 }
 
 type ServingImpl struct {
@@ -120,6 +131,12 @@ type ServingImpl struct {
 	Params map[string]string `json:"params,omitempty"`
 	// Parameters of asyncFunc runtime, must not be nil when runtime is OpenFuncAsync.
 	OpenFuncAsync *OpenFuncAsyncRuntime `json:"openFuncAsync,omitempty"`
+	// Labels that will be add to the workload.
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
+	// Annotations that will be add to the workload.
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
 	// Template describes the pods that will be created.
 	// The container named `function` is the container which is used to run the image built by the builder.
 	// If it is not set, the controller will automatically add one.
@@ -129,6 +146,19 @@ type ServingImpl struct {
 	//
 	// +optional
 	Timeout *metav1.Duration `json:"timeout,omitempty"`
+}
+
+type ServiceImpl struct {
+	// Annotations for Ingress. Take effect when `UseStandaloneIngress` is true.
+	//
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
+	// UseStandaloneIngress determines whether to create a standalone ingress for the function.
+	// If it is true, an ingress will be created for this function,
+	// else it will use the default ingress under the current namespace.
+	//
+	// +optional
+	UseStandaloneIngress bool `json:"UseStandaloneIngress,omitempty"`
 }
 
 // FunctionSpec defines the desired state of Function
@@ -148,6 +178,10 @@ type FunctionSpec struct {
 	Build *BuildImpl `json:"build,omitempty"`
 	// Information needed to run a function. The serving step will be skipped if `Serving` is nil.
 	Serving *ServingImpl `json:"serving,omitempty"`
+	// Information needed to create an access entry for function.
+	//
+	// +optional
+	Service *ServiceImpl `json:"service,omitempty"`
 }
 
 type Condition struct {
@@ -155,14 +189,21 @@ type Condition struct {
 	ResourceRef               string `json:"resourceRef,omitempty"`
 	LastSuccessfulResourceRef string `json:"lastSuccessfulResourceRef,omitempty"`
 	ResourceHash              string `json:"resourceHash,omitempty"`
+	Service                   string `json:"service,omitempty"`
 }
 
 // FunctionStatus defines the observed state of Function
 type FunctionStatus struct {
 	Build   *Condition `json:"build,omitempty"`
 	Serving *Condition `json:"serving,omitempty"`
+	// URL holds the url that used to access the Function.
+	// It generally has the form http://{domain-name}.{domain-namespace}:{domain-port}/{function-namespace}/{function-name}
+	// +optional
+	URL string `json:"url,omitempty"`
 }
 
+//+genclient
+//+genclient:noStatus
 //+kubebuilder:object:root=true
 //+kubebuilder:storageversion
 //+kubebuilder:resource:shortName=fn
@@ -171,6 +212,7 @@ type FunctionStatus struct {
 //+kubebuilder:printcolumn:name="ServingState",type=string,JSONPath=`.status.serving.state`
 //+kubebuilder:printcolumn:name="Builder",type=string,JSONPath=`.status.build.resourceRef`
 //+kubebuilder:printcolumn:name="Serving",type=string,JSONPath=`.status.serving.resourceRef`
+//+kubebuilder:printcolumn:name="URL",type=string,JSONPath=`.status.url`
 //+kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Function is the Schema for the functions API

@@ -171,6 +171,9 @@ spec:
     - jsonPath: .status.state
       name: State
       type: string
+    - jsonPath: .status.reason
+      name: Reason
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -288,6 +291,10 @@ spec:
                 required:
                 - url
                 type: object
+              state:
+                description: State is used for canceling a buildrun (and maybe more
+                  later on).
+                type: string
               timeout:
                 description: Timeout defines the maximum amount of time the Build
                   should take to execute.
@@ -299,7 +306,21 @@ spec:
           status:
             description: BuilderStatus defines the observed state of Builder
             properties:
+              output:
+                description: Output holds the results emitted from step definition
+                  of an output
+                properties:
+                  digest:
+                    description: Digest holds the digest of output image
+                    type: string
+                  size:
+                    description: Size holds the compressed size of output image
+                    format: int64
+                    type: integer
+                type: object
               phase:
+                type: string
+              reason:
                 type: string
               resourceRef:
                 additionalProperties:

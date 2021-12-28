@@ -6972,6 +6972,11 @@ spec:
           spec:
             description: ServingSpec defines the desired state of Serving
             properties:
+              annotations:
+                additionalProperties:
+                  type: string
+                description: Annotations that will be add to the workload.
+                type: object
               image:
                 description: Function image name
                 type: string
@@ -6983,6 +6988,11 @@ spec:
                     description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                       TODO: Add other useful fields. apiVersion, kind, uid?'
                     type: string
+                type: object
+              labels:
+                additionalProperties:
+                  type: string
+                description: Labels that will be add to the workload.
                 type: object
               openFuncAsync:
                 description: Parameters of OpenFuncAsync runtime.
@@ -7133,7 +7143,7 @@ spec:
                             type: integer
                           restartPolicy:
                             description: Restart policy for all containers within
-                              the pod. One of OnFailure, Never. Default to Never.
+                              the pod. One of 'OnFailure', 'Never'. Default to 'Never'.
                             type: string
                           scalingStrategy:
                             description: ScalingStrategy defines the strategy of Scaling
@@ -13832,6 +13842,9 @@ spec:
                 description: Associate resources.
                 type: object
               state:
+                type: string
+              url:
+                description: Service holds the service name used to access the serving.
                 type: string
             type: object
         type: object

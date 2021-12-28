@@ -175,6 +175,9 @@ spec:
     - jsonPath: .status.state
       name: State
       type: string
+    - jsonPath: .status.reason
+      name: Reason
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -292,6 +295,10 @@ spec:
                 required:
                 - url
                 type: object
+              state:
+                description: State is used for canceling a buildrun (and maybe more
+                  later on).
+                type: string
               timeout:
                 description: Timeout defines the maximum amount of time the Build
                   should take to execute.
@@ -303,7 +310,21 @@ spec:
           status:
             description: BuilderStatus defines the observed state of Builder
             properties:
+              output:
+                description: Output holds the results emitted from step definition
+                  of an output
+                properties:
+                  digest:
+                    description: Digest holds the digest of output image
+                    type: string
+                  size:
+                    description: Size holds the compressed size of output image
+                    format: int64
+                    type: integer
+                type: object
               phase:
+                type: string
+              reason:
                 type: string
               resourceRef:
                 additionalProperties:
@@ -594,6 +615,95 @@ spec:
         type: object
     served: true
     storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  name: domains.core.openfunction.io
+spec:
+  group: core.openfunction.io
+  names:
+    kind: Domain
+    listKind: DomainList
+    plural: domains
+    singular: domain
+  scope: Namespaced
+  versions:
+  - name: v1alpha2
+    schema:
+      openAPIV3Schema:
+        description: Domain define a unified entry for function, user can access function
+          through it.
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: DomainSpec defines the desired state of a Domain
+            properties:
+              ingress:
+                description: Ingress configuration.
+                properties:
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    description: Annotations for Ingress.
+                    type: object
+                  ingressClassName:
+                    description: IngressClassName is the name of the IngressClass
+                      cluster resource. The associated IngressClass defines which
+                      controller will implement the resource.
+                    type: string
+                  service:
+                    description: Ingress controller service.
+                    properties:
+                      name:
+                        description: Name of the Ingress controller service.
+                        type: string
+                      namespace:
+                        description: Namespace of the Ingress controller service.
+                        type: string
+                      port:
+                        description: Port of the Ingress controller service, default
+                          is 80.
+                        format: int32
+                        type: integer
+                    required:
+                    - name
+                    - namespace
+                    type: object
+                required:
+                - ingressClassName
+                - service
+                type: object
+            required:
+            - ingress
+            type: object
+          status:
+            description: DomainStatus defines the observed state of Domain
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
 status:
   acceptedNames:
     kind: ""
@@ -8751,6 +8861,9 @@ spec:
     - jsonPath: .status.serving.resourceRef
       name: Serving
       type: string
+    - jsonPath: .status.url
+      name: URL
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -8791,6 +8904,10 @@ spec:
                           TODO: Add other useful fields. apiVersion, kind, uid?'
                         type: string
                     type: object
+                  builderMaxAge:
+                    description: The duration to retain a completed builder, defaults
+                      to 0 (forever).
+                    type: string
                   dockerfile:
                     description: Dockerfile is the path to the Dockerfile used by
                       build strategies that rely on the Dockerfile to build an image.
@@ -8800,6 +8917,11 @@ spec:
                       type: string
                     description: Environment variables to pass to the builder.
                     type: object
+                  failedBuildsHistoryLimit:
+                    description: The number of failed builds to retain, default is
+                      1.
+                    format: int32
+                    type: integer
                   params:
                     additionalProperties:
                       type: string
@@ -8861,6 +8983,11 @@ spec:
                     required:
                     - url
                     type: object
+                  successfulBuildsHistoryLimit:
+                    description: The number of successful builds to retain, default
+                      is 0.
+                    format: int32
+                    type: integer
                   timeout:
                     description: Timeout defines the maximum amount of time the Build
                       should take to execute.
@@ -8884,10 +9011,36 @@ spec:
                 description: The port on which the function will be invoked
                 format: int32
                 type: integer
+              service:
+                description: Information needed to create an access entry for function.
+                properties:
+                  UseStandaloneIngress:
+                    description: UseStandaloneIngress determines whether to create
+                      a standalone ingress for the function. If it is true, an ingress
+                      will be created for this function, else it will use the default
+                      ingress under the current namespace.
+                    type: boolean
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    description: Annotations for Ingress. Take effect when `UseStandaloneIngress`
+                      is true.
+                    type: object
+                type: object
               serving:
                 description: Information needed to run a function. The serving step
                   will be skipped if `Serving` is nil.
                 properties:
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    description: Annotations that will be add to the workload.
+                    type: object
+                  labels:
+                    additionalProperties:
+                      type: string
+                    description: Labels that will be add to the workload.
+                    type: object
                   openFuncAsync:
                     description: Parameters of asyncFunc runtime, must not be nil
                       when runtime is OpenFuncAsync.
@@ -9038,7 +9191,8 @@ spec:
                                 type: integer
                               restartPolicy:
                                 description: Restart policy for all containers within
-                                  the pod. One of OnFailure, Never. Default to Never.
+                                  the pod. One of 'OnFailure', 'Never'. Default to
+                                  'Never'.
                                 type: string
                               scalingStrategy:
                                 description: ScalingStrategy defines the strategy
@@ -15995,6 +16149,8 @@ spec:
                     type: string
                   resourceRef:
                     type: string
+                  service:
+                    type: string
                   state:
                     type: string
                 type: object
@@ -16006,9 +16162,15 @@ spec:
                     type: string
                   resourceRef:
                     type: string
+                  service:
+                    type: string
                   state:
                     type: string
                 type: object
+              url:
+                description: URL holds the url that used to access the Function. It
+                  generally has the form http://{domain-name}.{domain-namespace}:{domain-port}/{function-namespace}/{function-name}
+                type: string
             type: object
         type: object
     served: true
@@ -23004,6 +23166,11 @@ spec:
           spec:
             description: ServingSpec defines the desired state of Serving
             properties:
+              annotations:
+                additionalProperties:
+                  type: string
+                description: Annotations that will be add to the workload.
+                type: object
               image:
                 description: Function image name
                 type: string
@@ -23015,6 +23182,11 @@ spec:
                     description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                       TODO: Add other useful fields. apiVersion, kind, uid?'
                     type: string
+                type: object
+              labels:
+                additionalProperties:
+                  type: string
+                description: Labels that will be add to the workload.
                 type: object
               openFuncAsync:
                 description: Parameters of OpenFuncAsync runtime.
@@ -23165,7 +23337,7 @@ spec:
                             type: integer
                           restartPolicy:
                             description: Restart policy for all containers within
-                              the pod. One of OnFailure, Never. Default to Never.
+                              the pod. One of 'OnFailure', 'Never'. Default to 'Never'.
                             type: string
                           scalingStrategy:
                             description: ScalingStrategy defines the strategy of Scaling
@@ -29865,6 +30037,9 @@ spec:
                 type: object
               state:
                 type: string
+              url:
+                description: Service holds the service name used to access the serving.
+                type: string
             type: object
         type: object
     served: true
@@ -30235,6 +30410,26 @@ rules:
 - apiGroups:
   - core.openfunction.io
   resources:
+  - domains
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - core.openfunction.io
+  resources:
+  - domains/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - core.openfunction.io
+  resources:
   - functions
   verbs:
   - create
@@ -30415,6 +30610,18 @@ rules:
   - update
   - watch
 - apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - serving.knative.dev
   resources:
   - services
@@ -30558,6 +30765,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
+    app.kubernetes.io/name: openfunction-controller-manager
+    app.kubernetes.io/version: latest
     control-plane: controller-manager
   name: openfunction-controller-manager
   namespace: openfunction
@@ -30707,9 +30916,9 @@ spec:
         - -report=/layers/report.toml
         - -process-type=$(params.PROCESS_TYPE)
         - -skip-restore=$(params.SKIP_RESTORE)
-        - -previous-image=$(params.APP_IMAGE)
+        - -previous-image=$(params.shp-output-image)
         - -run-image=$(params.RUN_IMAGE)
-        - $(params.APP_IMAGE)
+        - $(params.shp-output-image)
       command:
         - /cnb/lifecycle/creator
       image: $(params.BUILDER_IMAGE)
@@ -30739,11 +30948,6 @@ spec:
         - mountPath: /layers
           name: layers-dir
   parameters:
-    - description: The name of where to store the app image.
-      name: APP_IMAGE
-    - default: ""
-      description: A subpath within the source input where the source to build is located.
-      name: SOURCE_SUBPATH
     - default: web
       description: The default process type to set on the image.
       name: PROCESS_TYPE
@@ -30770,3 +30974,319 @@ spec:
       description: Environment variables to set during _build-time_. The formate is
         `key1=value1,key2=value2`.
       name: ENV_VARS
+---
+apiVersion: shipwright.io/v1alpha1
+kind: ClusterBuildStrategy
+metadata:
+  name: buildah
+spec:
+  buildSteps:
+    - name: build-and-push
+      image: $(params.BUILDER_IMAGE)
+      workingDir: $(params.shp-source-root)
+      securityContext:
+        privileged: true
+      command:
+        - /bin/bash
+      args:
+        - -c
+        - |
+          set -eo pipefail
+
+          echo "[INFO] Creating registries config file..."
+
+          format(){
+              array=(`echo $1 | tr ',' ' '`)
+              str=""
+              for m in "${array[@]}"; do
+                  str=$str"'${m}', "
+              done
+
+              echo ${str%??}
+          }
+
+          cat <<EOF >/tmp/registries.conf
+          [registries.search]
+          registries = [$(format "$(params.registry-search)")]
+
+          [registries.insecure]
+          registries = [$(format "$(params.registry-insecure)")]
+
+          [registries.block]
+          registries = [$(format "$(params.registry-block)")]
+
+          EOF
+
+          # Building the image
+          echo '[INFO] Building image $(params.shp-output-image)'
+          buildah bud \
+            --registries-conf='/tmp/registries.conf' \
+            --tag='$(params.shp-output-image)' \
+            --file='$(build.dockerfile)' \
+            '$(params.shp-source-context)'
+
+          # Push the image
+          echo '[INFO] Pushing image $(params.shp-output-image)'
+          buildah push \
+            --tls-verify=false \
+            '$(params.shp-output-image)' \
+            'docker://$(params.shp-output-image)'
+
+          # Store the digest result
+          buildah images \
+            --format='{{.Digest}}' \
+            '$(params.shp-output-image)' | tr -d "\n" > '$(results.shp-image-digest.path)'
+      resources:
+        limits:
+          cpu: 500m
+          memory: 1Gi
+        requests:
+          cpu: 250m
+          memory: 65Mi
+  parameters:
+    - description: The registries for searching short name images such as `golang:latest`, separated by commas.
+      name: REGISTRIES_SEARCH
+      default: docker.io,quay.io
+    - description: The fully-qualified name of insecure registries. An insecure registry is one that does not have a valid SSL certificate or only does HTTP.
+      name: REGISTRIES_INSECURE
+      default: ""
+    - description: The registries that need to block pull access.
+      name: REGISTRIES_BLOCK
+      default: ""
+---
+apiVersion: shipwright.io/v1alpha1
+kind: ClusterBuildStrategy
+metadata:
+  name: kaniko
+spec:
+  buildSteps:
+    - name: build-and-push
+      image: $(params.BUILDER_IMAGE)
+      workingDir: $(params.shp-source-root)
+      securityContext:
+        runAsUser: 0
+        capabilities:
+          add:
+            - CHOWN
+            - DAC_OVERRIDE
+            - FOWNER
+            - SETGID
+            - SETUID
+            - SETFCAP
+            - KILL
+      env:
+        - name: HOME
+          value: /tekton/home
+        - name: DOCKER_CONFIG
+          value: /tekton/home/.docker
+        - name: AWS_ACCESS_KEY_ID
+          value: NOT_SET
+        - name: AWS_SECRET_KEY
+          value: NOT_SET
+      command:
+        - /kaniko/executor
+      args:
+        - --skip-tls-verify=true
+        - --dockerfile=$(build.dockerfile)
+        - --context=$(params.shp-source-context)
+        - --destination=$(params.shp-output-image)
+        - --oci-layout-path=/kaniko/oci-image-layout
+        - --snapshotMode=redo
+        - --push-retry=3
+      resources:
+        limits:
+          cpu: 1
+          memory: 1Gi
+        requests:
+          cpu: 250m
+          memory: 65Mi
+      volumeMounts:
+        - name: layout
+          mountPath: /kaniko/oci-image-layout
+    - name: results
+      image: golang:latest
+      command:
+        - /bin/bash
+      args:
+        - -c
+        - |
+          set -euo pipefail
+
+          # Store the image digest
+          grep digest /kaniko/oci-image-layout/index.json | sed -E 's/.*sha256([^"]*).*/sha256\1/' | tr -d '\n' > "$(results.shp-image-digest.path)"
+
+          # Store the image size
+          du -b -c /kaniko/oci-image-layout/blobs/sha256/* | tail -1 | sed 's/\s*total//' | tr -d '\n' > "$(results.shp-image-size.path)"
+      resources:
+        limits:
+          cpu: 100m
+          memory: 128Mi
+        requests:
+          cpu: 100m
+          memory: 128Mi
+      volumeMounts:
+        - name: layout
+          mountPath: /kaniko/oci-image-layout
+---
+apiVersion: shipwright.io/v1alpha1
+kind: ClusterBuildStrategy
+metadata:
+  name: ko
+spec:
+  parameters:
+    - name: go-flags
+      description: "Value for the GOFLAGS environment variable."
+      default: ""
+    - name: ko-version
+      description: "Version of ko, must be either 'latest', or a release name from https://github.com/google/ko/releases"
+      default: latest
+    - name: package-directory
+      description: "The directory inside the context directory containing the main package."
+      default: "."
+    - name: target-platform
+      description: "Target platform to be built. For example: 'linux/arm64'. Multiple platforms can be provided separated by comma, for example: 'linux/arm64,linux/amd64'. The value 'all' will build all platforms supported by the base image. The value 'current' will build the platform on which the build runs."
+      default: current
+  buildSteps:
+    - name: prepare
+      image: $(params.BUILDER_IMAGE)
+      imagePullPolicy: Always
+      securityContext:
+        runAsUser: 0
+        capabilities:
+          add:
+            - CHOWN
+      command:
+        - chown
+      args:
+        - -R
+        - "1000:1000"
+        - /tekton/home
+      resources:
+        limits:
+          cpu: 100m
+          memory: 128Mi
+        requests:
+          cpu: 100m
+          memory: 128Mi
+    - name: build-and-push
+      image: $(params.BUILDER_IMAGE)
+      imagePullPolicy: Always
+      workingDir: $(params.shp-source-root)
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+      env:
+        - name: DOCKER_CONFIG
+          value: /tekton/home/.docker
+        - name: HOME
+          value: /tekton/home
+        - name: GOFLAGS
+          value: $(params.go-flags)
+      command:
+        - /bin/bash
+      args:
+        - -c
+        - |
+          set -euo pipefail
+
+          # Parse image URL to extract repository and tag, must work with
+          # - a URL without a tag and a port: registry/image
+          # - a URL without a tag but a port: registry:port/image
+          # - a URL with a tag but without a port: registry/image:tag
+          # - a URL with both a tag and a port: registry:port/image:tag
+
+          IMAGE=$(params.shp-output-image)
+
+          REPO=
+          TAG=
+
+          IFS=':' read -ra PARTS <<< "${IMAGE}"
+          for PART in "${PARTS[@]}"; do
+            if [ "${REPO}" == "" ]; then
+              REPO="${PART}"
+          	elif [[ "${PART}" == *"/"* ]]; then
+              REPO="${REPO}:${PART}"
+            elif [ "${TAG}" == "" ]; then
+              TAG="${PART}"
+            else
+              REPO="${REPO}:${TAG}"
+              TAG="${PART}"
+            fi
+          done
+
+          # Determine the ko version
+          KO_VERSION='$(params.ko-version)'
+          if [ "${KO_VERSION}" == "latest" ]; then
+            KO_VERSION=$(curl --silent "https://api.github.com/repos/google/ko/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+          fi
+
+          # Create one variable with v-suffix and one without as we need both for the download URL
+          if [[ ${KO_VERSION} = v* ]]; then
+            KO_VERSION_WITH_V=${KO_VERSION}
+            KO_VERSION_WITHOUT_V=${KO_VERSION:1}
+          else
+            KO_VERSION_WITH_V=v${KO_VERSION}
+            KO_VERSION_WITHOUT_V=${KO_VERSION}
+          fi
+
+          # Download ko to the temp directory
+          curl -f -s -L "https://github.com/google/ko/releases/download/${KO_VERSION_WITH_V}/ko_${KO_VERSION_WITHOUT_V}_$(uname)_$(uname -m | sed 's/aarch64/arm64/').tar.gz" | tar xzf - -C /tmp ko
+
+          # Determine the platform
+          PLATFORM='$(params.target-platform)'
+          if [ "${PLATFORM}" == "current" ]; then
+            PLATFORM="$(uname | tr '[:upper:]' '[:lower:]')/$(uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/')"
+          fi
+
+          # Print version information
+          go version
+          echo "ko version $(/tmp/ko version)"
+
+          # Run ko
+
+          export GOROOT=$(go env GOROOT)
+          export KO_DOCKER_REPO="${REPO}"
+
+          pushd '$(params.shp-source-context)' > /dev/null
+            if [ "${TAG}" == "" ]; then
+              /tmp/ko publish '$(params.package-directory)' --bare --oci-layout-path=/tmp/layout --platform="${PLATFORM}"
+            else
+              /tmp/ko publish '$(params.package-directory)' --bare --oci-layout-path=/tmp/layout --platform="${PLATFORM}" --tags="${TAG}"
+            fi
+          popd > /dev/null
+
+          # Store the image digest
+          grep digest /tmp/layout/index.json | sed -E 's/.*sha256([^"]*).*/sha256\1/' | tr -d '\n' > '$(results.shp-image-digest.path)'
+
+          # Store the image size
+          du -b -c /tmp/layout/blobs/sha256/* | tail -1 | sed 's/\s*total//' | tr -d '\n' > '$(results.shp-image-size.path)'
+      resources:
+        limits:
+          cpu: 500m
+          memory: 1Gi
+        requests:
+          cpu: 250m
+          memory: 65Mi
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    control-plane: controller-manager
+  name: io
+
+---
+apiVersion: core.openfunction.io/v1alpha2
+kind: Domain
+metadata:
+  name: openfunction
+  namespace: io
+spec:
+  ingress:
+    annotations:
+      nginx.ingress.kubernetes.io/upstream-vhost: $service_name.$namespace
+      nginx.ingress.kubernetes.io/rewrite-target: /$2
+    service:
+      name: ingress-nginx-controller
+      namespace: ingress-nginx
+    ingressClassName: nginx

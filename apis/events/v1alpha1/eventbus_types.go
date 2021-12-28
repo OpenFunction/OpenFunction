@@ -36,6 +36,8 @@ type EventBusSpec struct {
 	NatsStreaming *NatsStreamingSpec `json:"natsStreaming,omitempty"`
 }
 
+//+genclient
+//+genclient:noStatus
 //+kubebuilder:object:root=true
 //+kubebuilder:resource:shortName=eb
 

@@ -42,8 +42,8 @@ type KedaScaledObject struct {
 
 type KedaScaledJob struct {
 	// Restart policy for all containers within the pod.
-	// One of OnFailure, Never.
-	// Default to Never.
+	// One of 'OnFailure', 'Never'.
+	// Default to 'Never'.
 	// +optional
 	RestartPolicy *v1.RestartPolicy `json:"restartPolicy,omitempty"`
 	// +optional
@@ -133,6 +133,12 @@ type ServingSpec struct {
 	// Parameters of OpenFuncAsync runtime.
 	// +optional
 	OpenFuncAsync *OpenFuncAsyncRuntime `json:"openFuncAsync,omitempty"`
+	// Labels that will be add to the workload.
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
+	// Annotations that will be add to the workload.
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
 	// Template describes the pods that will be created.
 	// The container named `function` is the container which is used to run the image built by the builder.
 	// If it is not set, the controller will automatically add one.
@@ -150,8 +156,13 @@ type ServingStatus struct {
 	State string `json:"state,omitempty"`
 	// Associate resources.
 	ResourceRef map[string]string `json:"resourceRef,omitempty"`
+	// Service holds the service name used to access the serving.
+	// +optional
+	Service string `json:"url,omitempty"`
 }
 
+//+genclient
+//+genclient:noStatus
 //+kubebuilder:object:root=true
 //+kubebuilder:storageversion
 //+kubebuilder:subresource:status

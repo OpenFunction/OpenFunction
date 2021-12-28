@@ -19,6 +19,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -81,6 +82,15 @@ func (r *BuilderReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, util.IgnoreNotFound(err)
 	}
 
+	builderRun := r.createBuilderRun()
+
+	if builder.Spec.State == openfunction.BuilderStateCancelled {
+		if err := builderRun.Cancel(builder); err != nil {
+			log.Error(err, "Failed to cancel builder")
+			return ctrl.Result{}, err
+		}
+	}
+
 	if builder.Status.IsCompleted() {
 		log.V(1).Info("Build had completed")
 		return ctrl.Result{}, nil
@@ -91,6 +101,7 @@ func (r *BuilderReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	if builder.Spec.Timeout != nil &&
 		time.Since(builder.CreationTimestamp.Time) > builder.Spec.Timeout.Duration {
 		builder.Status.State = openfunction.Timeout
+		builder.Status.Reason = openfunction.Timeout
 		if err := r.Status().Update(r.ctx, builder); err != nil {
 			log.Error(err, "Failed to update builder status")
 			return ctrl.Result{}, err
@@ -101,8 +112,6 @@ func (r *BuilderReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// Start timer if build is not completed.
 	r.startTimer(builder)
-
-	builderRun := r.createBuilderRun()
 
 	// If Builder had created, Update the status of the builder according to the result of the build.
 	if builder.Status.Phase != "" && builder.Status.State != "" {
@@ -147,7 +156,7 @@ func (r *BuilderReconciler) getBuilderResult(builder *openfunction.Builder, buil
 	log := r.Log.WithName("GetBuilderResult").
 		WithValues("Builder", fmt.Sprintf("%s/%s", builder.Namespace, builder.Name))
 
-	res, err := builderRun.Result(builder)
+	res, reason, err := builderRun.Result(builder)
 	if err != nil {
 		log.Error(err, "Get build result error")
 		return err
@@ -160,6 +169,7 @@ func (r *BuilderReconciler) getBuilderResult(builder *openfunction.Builder, buil
 
 	if res != builder.Status.State {
 		builder.Status.State = res
+		builder.Status.Reason = reason
 		if err := r.Status().Update(r.ctx, builder); err != nil {
 			return err
 		}
@@ -189,34 +199,54 @@ func (r *BuilderReconciler) startTimer(builder *openfunction.Builder) {
 	t = time.NewTimer(builder.Spec.Timeout.Duration - time.Since(builder.CreationTimestamp.Time))
 	r.timers[namespacedName] = t
 
-	go func() {
-
-		defer r.stopTimer(namespacedName)
-
-		select {
-		case <-t.C:
-			b := &openfunction.Builder{}
-			if err := r.Get(r.ctx, client.ObjectKeyFromObject(builder), b); err != nil {
-				if util.IsNotFound(err) {
-					log.Info("Builder had delete")
-					return
-				}
-
-				log.Error(err, "Failed to get Builder")
-				return
-			}
-
-			if !b.Status.IsCompleted() {
-				log.Error(nil, "Build timeout")
-				builder.Status.State = openfunction.Timeout
-				if err := r.Status().Update(r.ctx, builder); err != nil {
-					log.Error(err, "Failed to update builder status")
-				}
-			}
-		}
-	}()
+	go r.waitBuildTimeout(builder, t, 0)
 
 	log.V(1).Info("Timer started")
+}
+
+func (r *BuilderReconciler) waitBuildTimeout(builder *openfunction.Builder, t *time.Timer, retries int) {
+	namespacedName := fmt.Sprintf("%s/%s", builder.Namespace, builder.Name)
+	log := r.Log.WithName("BuildTimeout").WithValues("Builder", namespacedName)
+
+	select {
+	case <-t.C:
+		log.V(1).Info("Build timeout", "Retries", retries)
+		if err := r.buildTimeout(builder); err != nil {
+			log.Error(err, "Failed to update builder status")
+			// Reset the timer, the time of the timer is 2 to the power of retries times,
+			// and the maximum is 5 minutes.
+			if retries <= 8 {
+				t.Reset(time.Second * time.Duration(math.Pow(2, float64(retries))))
+			} else {
+				t.Reset(5 * time.Minute)
+			}
+			retries++
+			go r.waitBuildTimeout(builder, t, retries)
+			log.V(1).Info("Retry to update builder status", "Retries", retries)
+			return
+		}
+
+		r.stopTimer(namespacedName)
+	}
+}
+
+func (r *BuilderReconciler) buildTimeout(builder *openfunction.Builder) error {
+	b := &openfunction.Builder{}
+	if err := r.Get(r.ctx, client.ObjectKeyFromObject(builder), b); err != nil {
+		if util.IsNotFound(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	if !b.Status.IsCompleted() {
+		b.Status.State = openfunction.Timeout
+		b.Status.Reason = openfunction.Timeout
+		return r.Status().Update(r.ctx, b)
+	}
+
+	return nil
 }
 
 func (r *BuilderReconciler) stopTimer(key string) {

@@ -1,0 +1,408 @@
+---
+apiVersion: shipwright.io/v1alpha1
+kind: ClusterBuildStrategy
+metadata:
+  name: openfunction
+spec:
+  buildSteps:
+    - args:
+        - -c
+        - |
+          #!/usr/bin/env bash
+          set -e
+
+          for path in "/cache" "/tekton/home" "/layers" "/workspace/source"; do
+            echo "> Setting permissions on '$path'..."
+            chown -R "$(params.USER_ID):$(params.GROUP_ID)" "$path"
+          done
+
+          echo "> Processing any environment variables..."
+          ENV_DIR="/platform/env"
+
+          echo "--> Creating 'env' directory: $ENV_DIR"
+          mkdir -p "$ENV_DIR"
+
+          envs=(`echo $(params.ENV_VARS) | tr '#' ' '`)
+
+          for env in "${envs[@]}"; do
+              IFS='=' read -r key value string <<< "$env"
+              if [[ "$key" != "" && "$value" != "" ]]; then
+                  path="${ENV_DIR}/${key}"
+                  echo "--> Writing ${path}..."
+                  echo -n "$value" > "$path"
+              fi
+          done
+      command:
+        - /usr/local/bin/bash
+      image: docker.io/library/bash:5.1.4@sha256:b208215a4655538be652b2769d82e576bc4d0a2bb132144c060efc5be8c3f5d6
+      name: prepare
+      securityContext:
+        privileged: true
+      volumeMounts:
+        - mountPath: /cache
+          name: cache
+        - mountPath: /layers
+          name: layers-dir
+        - mountPath: /platform
+          name: $(params.PLATFORM_DIR)
+    - args:
+        - -app=/workspace/source/$(params.CONTEXT_DIR)
+        - -cache-dir=/cache
+        - -uid=$(params.USER_ID)
+        - -gid=$(params.GROUP_ID)
+        - -layers=/layers
+        - -platform=/platform
+        - -report=/layers/report.toml
+        - -process-type=$(params.PROCESS_TYPE)
+        - -skip-restore=$(params.SKIP_RESTORE)
+        - -previous-image=$(params.shp-output-image)
+        - -run-image=$(params.RUN_IMAGE)
+        - $(params.shp-output-image)
+      command:
+        - /cnb/lifecycle/creator
+      image: $(params.BUILDER_IMAGE)
+      imagePullPolicy: Always
+      name: create
+      securityContext:
+        runAsGroup: 1000
+        runAsUser: 1000
+      volumeMounts:
+        - mountPath: /cache
+          name: cache
+        - mountPath: /layers
+          name: layers-dir
+        - mountPath: /platform
+          name: $(params.PLATFORM_DIR)
+    - args:
+        - -c
+        - |
+          #!/usr/bin/env bash
+          set -e
+          cat /layers/report.toml | grep "digest" | cut -d'"' -f2 | cut -d'"' -f2 | tr -d '\n' | tee $(results.shp-image-digest.path)
+      command:
+        - /bin/sh
+      image: docker.io/library/bash:5.1.4@sha256:b208215a4655538be652b2769d82e576bc4d0a2bb132144c060efc5be8c3f5d6
+      name: results
+      volumeMounts:
+        - mountPath: /layers
+          name: layers-dir
+  parameters:
+    - default: web
+      description: The default process type to set on the image.
+      name: PROCESS_TYPE
+    - default: ""
+      description: Reference to a run image to use.
+      name: RUN_IMAGE
+    - default: ""
+      description: The name of the persistent app cache image (if no cache workspace
+        is provided).
+      name: CACHE_IMAGE
+    - default: "false"
+      description: Do not write layer metadata or restore cached layers.
+      name: SKIP_RESTORE
+    - default: "1000"
+      description: The user ID of the builder image user.
+      name: USER_ID
+    - default: "1000"
+      description: The group ID of the builder image user.
+      name: GROUP_ID
+    - default: empty-dir
+      description: The name of the platform directory.
+      name: PLATFORM_DIR
+    - default: ""
+      description: Environment variables to set during _build-time_. The formate is
+        `key1=value1,key2=value2`.
+      name: ENV_VARS
+---
+apiVersion: shipwright.io/v1alpha1
+kind: ClusterBuildStrategy
+metadata:
+  name: buildah
+spec:
+  buildSteps:
+    - name: build-and-push
+      image: $(params.BUILDER_IMAGE)
+      workingDir: $(params.shp-source-root)
+      securityContext:
+        privileged: true
+      command:
+        - /bin/bash
+      args:
+        - -c
+        - |
+          set -eo pipefail
+
+          echo "[INFO] Creating registries config file..."
+
+          format(){
+              array=(`echo $1 | tr ',' ' '`)
+              str=""
+              for m in "${array[@]}"; do
+                  str=$str"'${m}', "
+              done
+
+              echo ${str%??}
+          }
+
+          cat <<EOF >/tmp/registries.conf
+          [registries.search]
+          registries = [$(format "$(params.registry-search)")]
+
+          [registries.insecure]
+          registries = [$(format "$(params.registry-insecure)")]
+
+          [registries.block]
+          registries = [$(format "$(params.registry-block)")]
+
+          EOF
+
+          # Building the image
+          echo '[INFO] Building image $(params.shp-output-image)'
+          buildah bud \
+            --registries-conf='/tmp/registries.conf' \
+            --tag='$(params.shp-output-image)' \
+            --file='$(build.dockerfile)' \
+            '$(params.shp-source-context)'
+
+          # Push the image
+          echo '[INFO] Pushing image $(params.shp-output-image)'
+          buildah push \
+            --tls-verify=false \
+            '$(params.shp-output-image)' \
+            'docker://$(params.shp-output-image)'
+
+          # Store the digest result
+          buildah images \
+            --format='{{.Digest}}' \
+            '$(params.shp-output-image)' | tr -d "\n" > '$(results.shp-image-digest.path)'
+      resources:
+        limits:
+          cpu: 500m
+          memory: 1Gi
+        requests:
+          cpu: 250m
+          memory: 65Mi
+  parameters:
+    - description: The registries for searching short name images such as `golang:latest`, separated by commas.
+      name: registry-search
+      default: docker.io,quay.io
+    - description: The fully-qualified name of insecure registries. An insecure registry is one that does not have a valid SSL certificate or only does HTTP.
+      name: registry-insecure
+      default: ""
+    - description: The registries that need to block pull access.
+      name: registry-block
+      default: ""
+---
+apiVersion: shipwright.io/v1alpha1
+kind: ClusterBuildStrategy
+metadata:
+  name: kaniko
+spec:
+  buildSteps:
+    - name: build-and-push
+      image: $(params.BUILDER_IMAGE)
+      workingDir: $(params.shp-source-root)
+      securityContext:
+        runAsUser: 0
+        capabilities:
+          add:
+            - CHOWN
+            - DAC_OVERRIDE
+            - FOWNER
+            - SETGID
+            - SETUID
+            - SETFCAP
+            - KILL
+      env:
+        - name: HOME
+          value: /tekton/home
+        - name: DOCKER_CONFIG
+          value: /tekton/home/.docker
+        - name: AWS_ACCESS_KEY_ID
+          value: NOT_SET
+        - name: AWS_SECRET_KEY
+          value: NOT_SET
+      command:
+        - /kaniko/executor
+      args:
+        - --skip-tls-verify=true
+        - --dockerfile=$(build.dockerfile)
+        - --context=$(params.shp-source-context)
+        - --destination=$(params.shp-output-image)
+        - --oci-layout-path=/kaniko/oci-image-layout
+        - --snapshotMode=redo
+        - --push-retry=3
+      resources:
+        limits:
+          cpu: 1
+          memory: 1Gi
+        requests:
+          cpu: 250m
+          memory: 65Mi
+      volumeMounts:
+        - name: layout
+          mountPath: /kaniko/oci-image-layout
+    - name: results
+      image: golang:latest
+      command:
+        - /bin/bash
+      args:
+        - -c
+        - |
+          set -euo pipefail
+
+          # Store the image digest
+          grep digest /kaniko/oci-image-layout/index.json | sed -E 's/.*sha256([^"]*).*/sha256\1/' | tr -d '\n' > "$(results.shp-image-digest.path)"
+
+          # Store the image size
+          du -b -c /kaniko/oci-image-layout/blobs/sha256/* | tail -1 | sed 's/\s*total//' | tr -d '\n' > "$(results.shp-image-size.path)"
+      resources:
+        limits:
+          cpu: 100m
+          memory: 128Mi
+        requests:
+          cpu: 100m
+          memory: 128Mi
+      volumeMounts:
+        - name: layout
+          mountPath: /kaniko/oci-image-layout
+---
+apiVersion: shipwright.io/v1alpha1
+kind: ClusterBuildStrategy
+metadata:
+  name: ko
+spec:
+  parameters:
+    - name: go-flags
+      description: "Value for the GOFLAGS environment variable."
+      default: ""
+    - name: ko-version
+      description: "Version of ko, must be either 'latest', or a release name from https://github.com/google/ko/releases"
+      default: latest
+    - name: package-directory
+      description: "The directory inside the context directory containing the main package."
+      default: "."
+    - name: target-platform
+      description: "Target platform to be built. For example: 'linux/arm64'. Multiple platforms can be provided separated by comma, for example: 'linux/arm64,linux/amd64'. The value 'all' will build all platforms supported by the base image. The value 'current' will build the platform on which the build runs."
+      default: current
+  buildSteps:
+    - name: prepare
+      image: $(params.BUILDER_IMAGE)
+      imagePullPolicy: Always
+      securityContext:
+        runAsUser: 0
+        capabilities:
+          add:
+            - CHOWN
+      command:
+        - chown
+      args:
+        - -R
+        - "1000:1000"
+        - /tekton/home
+      resources:
+        limits:
+          cpu: 100m
+          memory: 128Mi
+        requests:
+          cpu: 100m
+          memory: 128Mi
+    - name: build-and-push
+      image: $(params.BUILDER_IMAGE)
+      imagePullPolicy: Always
+      workingDir: $(params.shp-source-root)
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+      env:
+        - name: DOCKER_CONFIG
+          value: /tekton/home/.docker
+        - name: HOME
+          value: /tekton/home
+        - name: GOFLAGS
+          value: $(params.go-flags)
+      command:
+        - /bin/bash
+      args:
+        - -c
+        - |
+          set -euo pipefail
+
+          # Parse image URL to extract repository and tag, must work with
+          # - a URL without a tag and a port: registry/image
+          # - a URL without a tag but a port: registry:port/image
+          # - a URL with a tag but without a port: registry/image:tag
+          # - a URL with both a tag and a port: registry:port/image:tag
+
+          IMAGE=$(params.shp-output-image)
+
+          REPO=
+          TAG=
+
+          IFS=':' read -ra PARTS <<< "${IMAGE}"
+          for PART in "${PARTS[@]}"; do
+            if [ "${REPO}" == "" ]; then
+              REPO="${PART}"
+          	elif [[ "${PART}" == *"/"* ]]; then
+              REPO="${REPO}:${PART}"
+            elif [ "${TAG}" == "" ]; then
+              TAG="${PART}"
+            else
+              REPO="${REPO}:${TAG}"
+              TAG="${PART}"
+            fi
+          done
+
+          # Determine the ko version
+          KO_VERSION='$(params.ko-version)'
+          if [ "${KO_VERSION}" == "latest" ]; then
+            KO_VERSION=$(curl --silent "https://api.github.com/repos/google/ko/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+          fi
+
+          # Create one variable with v-suffix and one without as we need both for the download URL
+          if [[ ${KO_VERSION} = v* ]]; then
+            KO_VERSION_WITH_V=${KO_VERSION}
+            KO_VERSION_WITHOUT_V=${KO_VERSION:1}
+          else
+            KO_VERSION_WITH_V=v${KO_VERSION}
+            KO_VERSION_WITHOUT_V=${KO_VERSION}
+          fi
+
+          # Download ko to the temp directory
+          curl -f -s -L "https://github.com/google/ko/releases/download/${KO_VERSION_WITH_V}/ko_${KO_VERSION_WITHOUT_V}_$(uname)_$(uname -m | sed 's/aarch64/arm64/').tar.gz" | tar xzf - -C /tmp ko
+
+          # Determine the platform
+          PLATFORM='$(params.target-platform)'
+          if [ "${PLATFORM}" == "current" ]; then
+            PLATFORM="$(uname | tr '[:upper:]' '[:lower:]')/$(uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/')"
+          fi
+
+          # Print version information
+          go version
+          echo "ko version $(/tmp/ko version)"
+
+          # Run ko
+
+          export GOROOT=$(go env GOROOT)
+          export KO_DOCKER_REPO="${REPO}"
+
+          pushd '$(params.shp-source-context)' > /dev/null
+            if [ "${TAG}" == "" ]; then
+              /tmp/ko publish '$(params.package-directory)' --bare --oci-layout-path=/tmp/layout --platform="${PLATFORM}"
+            else
+              /tmp/ko publish '$(params.package-directory)' --bare --oci-layout-path=/tmp/layout --platform="${PLATFORM}" --tags="${TAG}"
+            fi
+          popd > /dev/null
+
+          # Store the image digest
+          grep digest /tmp/layout/index.json | sed -E 's/.*sha256([^"]*).*/sha256\1/' | tr -d '\n' > '$(results.shp-image-digest.path)'
+
+          # Store the image size
+          du -b -c /tmp/layout/blobs/sha256/* | tail -1 | sed 's/\s*total//' | tr -d '\n' > '$(results.shp-image-size.path)'
+      resources:
+        limits:
+          cpu: 500m
+          memory: 1Gi
+        requests:
+          cpu: 250m
+          memory: 65Mi
