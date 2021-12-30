@@ -58,7 +58,7 @@ chmod +x ofn && mv ofn /usr/local/bin/
 After that you can install OpenFunction with one command:
 
 ```
-ofn install --all
+ofn install --all --version v0.5.0
 ```
 
 For more information about ofn install, please refer to [ofn install docs](https://github.com/OpenFunction/cli/blob/main/docs/install.md).

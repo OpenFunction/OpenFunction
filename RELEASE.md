@@ -51,8 +51,8 @@ Bump the version in the `VERSION` file in the root of the repository.
 Build and push the container image:
 
 ```bash
-make build
-make push
+make docker-build
+make docker-push
 ```
 > We'll add a CI pipeline in the future which will automatically push the container images to [docker hub](https://hub.docker.com/repository/docker/openfunction).
 
