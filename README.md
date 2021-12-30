@@ -58,7 +58,7 @@ chmod +x ofn && mv ofn /usr/local/bin/
 After that you can install OpenFunction with one command:
 
 ```
-ofn install --all
+ofn install --all --version v0.5.0
 ```
 
 For more information about ofn install, please refer to [ofn install docs](https://github.com/OpenFunction/cli/blob/main/docs/install.md).
@@ -67,7 +67,7 @@ For more information about ofn install, please refer to [ofn install docs](https
 
 If you have already installed the OpenFunction platform, refer to [OpenFunction samples](https://github.com/OpenFunction/samples) to find more samples.
 
-Here is an example of a sync function.
+Here is an example of a sync function:
 
 > This function will write "Hello, World!" to the HTTP response.
 
@@ -84,7 +84,13 @@ func HelloWorld(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-And an async function example.
+[Function ingress](docs/concepts/Components.md#domain) defines an unified entry point for a sync function with which you can use to access a sync function without [configuring LB for knative](https://github.com/OpenFunction/samples/tree/main/functions/Knative/hello-world-go) like below:
+
+```bash
+curl http://<domain-name>.<domain-namespace>/<function-namespace>/<function-name>
+```
+
+And an async function example:
 
 > This function will receive a greeting message and then send it to "another-target".
 

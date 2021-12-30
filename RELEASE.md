@@ -48,11 +48,20 @@ For new minor and major releases, create the `release-<major>.<minor>` branch st
 From now on, all work happens on the `release-<major>.<minor>` branch.
 
 Bump the version in the `VERSION` file in the root of the repository.
+
+Regenerate bundle.yaml based on latest code and then commit the changed bundle.yaml to the `release-<major>.<minor>` branch:
+```bash
+make manifests
+git add ./
+git commit -s -m "regenerate bundle.yaml"
+git push
+```
+
 Build and push the container image:
 
 ```bash
-make build
-make push
+make docker-build
+make docker-push
 ```
 > We'll add a CI pipeline in the future which will automatically push the container images to [docker hub](https://hub.docker.com/repository/docker/openfunction).
 

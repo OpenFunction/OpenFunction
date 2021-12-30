@@ -94,7 +94,7 @@ The core v1alpha1 API is deprecated and will be removed in the next release.
 - Depreciate the old install/uninstall scripts in favor of the cli tool [ofn](https://github.com/OpenFunction/cli/releases), now users can use [ofn](https://github.com/OpenFunction/cli/releases) to install/uninstall/demo OpenFunction
 - Now OpenFunction is compatible with K8s 1.17 ~ 1.20+, thanks to [ofn](https://github.com/OpenFunction/cli/releases)
 - Optimized Function status to reflect serving workload status more accurately [151](https://github.com/OpenFunction/OpenFunction/pull/151)
-- Adjust samples repo to move samples to each version's release branch
+- Adjust samples repo to move samples to each version's release branch [33](https://github.com/OpenFunction/samples/pull/33)
 
 ### Docs
 
