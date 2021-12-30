@@ -4,6 +4,7 @@
   * [0.3.0 / 2021-08-19](#030--2021-08-19)
   * [0.3.1 / 2021-08-27](#031--2021-08-27)
   * [0.4.0 / 2021-10-19](#040--2021-10-19)
+  * [0.5.0 / 2021-12-31](#050--2021-12-31)
 - [OpenFunction/samples](#openfunctionsamples)
 - [OpenFunction/website](#openfunctionwebsite)
 - [OpenFunction/builder](#openfunctionbuilder)
@@ -74,9 +75,31 @@
 
 - Use installation script to deploy OpenFunction and deprecate the installation guide. [#122](https://github.com/OpenFunction/OpenFunction/pull/122)
 
+## 0.5.0 / 2021-12-31
+
+The core v1alpha1 API is deprecated and will be removed in the next release.
+### Features
+
+- Add github action CI workflow [#140](https://github.com/OpenFunction/OpenFunction/pull/140) [179](https://github.com/OpenFunction/OpenFunction/pull/179)
+- Add build and serving timeout [#147](https://github.com/OpenFunction/OpenFunction/pull/147)
+- Add MQTT EventSource to OpenFunction Events [#149](https://github.com/OpenFunction/OpenFunction/pull/149)
+- Add Domain CRD to define the entry point of a sync function [#158](https://github.com/OpenFunction/OpenFunction/pull/158)
+- Add buildah, kaniko, ko support, user can build apps with Dockerfile using buildah or kaniko, and build go application with ko now [#170](https://github.com/OpenFunction/OpenFunction/pull/170) [#171](https://github.com/OpenFunction/OpenFunction/pull/171)
+- Add OpenFunction ClientSet [#176](https://github.com/OpenFunction/OpenFunction/pull/176)
+- Support to keep build history [#179](https://github.com/OpenFunction/OpenFunction/pull/179)
+- Support to add labels and annotations to function workloads [#181](https://github.com/OpenFunction/OpenFunction/pull/181)
+
+### Enhancement
+
+- Depreciate the old install/uninstall scripts in favor of the cli tool [ofn](https://github.com/OpenFunction/cli/releases), now users can use [ofn](https://github.com/OpenFunction/cli/releases) to install/uninstall/demo OpenFunction
+- Now OpenFunction is compatible with K8s 1.17 ~ 1.20+, thanks to [ofn](https://github.com/OpenFunction/cli/releases)
+- Optimized Function status to reflect serving workload status more accurately [151](https://github.com/OpenFunction/OpenFunction/pull/151)
+- Adjust samples repo to move samples to each version's release branch
+
+### Docs
 
 
-The following repos' release schedule is based on OpenFunction/OpenFunction
+The following repos' release schedule is the same as OpenFunction/OpenFunction
 
 # OpenFunction/samples
 
