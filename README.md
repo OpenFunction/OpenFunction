@@ -2,29 +2,29 @@
 
 ## 👀 Overview
 
-[OpenFunction](https://openfunction.dev/) is a cloud-native open source FaaS (Function as a Service) platform aiming to enable users to focus on their business logic without worrying about the underlying runtime environment and infrastructure. Users only need to submit business-related source code in the form of functions.
+[OpenFunction](https://openfunction.dev/) is a cloud-native open source FaaS (Function as a Service) platform aiming to let you focus on your business logic without having to maintain the underlying runtime environment and infrastructure. You only need to submit business-related source code in the form of functions.
 
 <div align=center><img src=docs/images/function-lifecycle.svg></div>
 
-OpenFunction features but not limited to the following:
+OpenFunction features include:
 
-- Convert business-related function source code to runnable application source code.
-- Generate a deployable container image from the converted application source code.
-- Deploy the generated container image to the underlying runtime environment such as K8s, and automatically scale up and down according to business traffic, and scale to 0 when there is no traffic.
-- Provide event management functions for trigger functions.
-- Provide additional functions to manage function versions, ingress management etc.
+- Converting business-related function source code to application source code.
+- Generating ready-to-run container images from the converted application source code.
+- Deploying generated container images to any underlying runtime environments such as Kubernetes, and automatically scaling up and down from 0 to N according to business traffic.
+- Providing event management functions for trigger functions.
+- Providing additional functions for function version management, ingress management, etc.
 
-## ☸ CustomResourceDefinitions
+## ☸ Custom Resource Definitions
 
 <div align=center><img src=docs/images/openfunction-overview.svg></div>
 
-OpenFunction manages resources in the form of CustomResourceDefinitions (CRD) during the lifecycle of a function. You can learn more about it by visiting [Components](docs/concepts/Components.md) or [Concepts](https://openfunction.dev/docs/concepts/).
+OpenFunction manages resources in the form of Custom Resource Definitions (CRD) throughout the lifecycle of a function. To learn more about it, visit [Components](docs/concepts/Components.md) or [Concepts](https://openfunction.dev/docs/concepts/).
 
 ## ✔️ Compatibility
 
 ### Kubernetes compatibility matrix
 
-The following versions are supported and work as we test against these versions in their respective branches. But note that other versions might work!
+The following Kubernetes versions are supported as we tested against these versions in their respective branches. Besides, OpenFunction might also work well with other Kubernetes versions!
 
 | OpenFunction                                                 | Kubernetes 1.17 | Kubernetes 1.18 | Kubernetes 1.19 | Kubernetes 1.20+ |
 | ------------------------------------------------------------ | --------------- | --------------- | --------------- | ---------------- |
@@ -32,44 +32,46 @@ The following versions are supported and work as we test against these versions 
 | [`release-0.4`](https://github.com/OpenFunction/OpenFunction/tree/v0.4.0) | &radic;         | &radic;         | &radic;         | &radic;          |
 | [`HEAD`](https://github.com/OpenFunction/OpenFunction/tree/main) | &radic; *         | &radic; *         | &radic;         | &radic;          |
 
-\****Note***: OpenFunction added the [function ingress](docs/concepts/Components.md#domain) feature after *release-0.4*, which means that:
+\****Note***: OpenFunction has added the [function ingress](docs/concepts/Components.md#domain) feature since *release-0.4*, which means that:
 
-1. You have to install OpenFunction in Kuberenetes ***v1.19*** or higher if you enable this feature.
-2. You can still use OpenFunction in Kubernetes ***v1.17~v1.20+*** without this feature enabled.
+- You have to install OpenFunction in Kuberenetes ***v1.19*** or later if you enable this feature.
+- You can still use OpenFunction in Kubernetes ***v1.17—v1.20+*** without this feature enabled.
 
 ## 🚀 QuickStart
 
 ### Install OpenFunction
 
-You can use `ofn`, the CLI of OpenFunction, to install and uninstall OpenFunction and its dependencies.
+Visit [ofn releases page](https://github.com/OpenFunction/cli/releases) to dowload the latest version of `ofn`, the CLI of OpenFunction, to install OpenFunction and its dependencies on your Kubernetes cluster.
 
-Visit [ofn release](https://github.com/OpenFunction/cli/releases) to dowload the latest version of CLI and deploy it to your Kubernetes cluster.
+Besides, you can perform the following steps to install the latest version of OpenFunction.
 
-```
-wget -c  https://github.com/OpenFunction/cli/releases/download/v0.5.1/ofn_linux_amd64.tar.gz -O - | tar -xz
-```
+1. Run the following command to download `ofn`.
 
-Make `ofn` executable and move it to `/usr/local/bin/`:
+   ```
+   wget -c  https://github.com/OpenFunction/cli/releases/download/v0.5.1/ofn_linux_amd64.tar.gz -O - | tar -xz
+   ```
 
-```
-chmod +x ofn && mv ofn /usr/local/bin/
-```
+2. Run the following commands to make `ofn` executable and move it to `/usr/local/bin/`.
 
-After that you can install OpenFunction with one command:
+   ```
+   chmod +x ofn && mv ofn /usr/local/bin/
+   ```
 
-```
-ofn install --all --version v0.5.0
-```
+3. Run the following command to install OpenFunction.
 
-For more information about ofn install, please refer to [ofn install docs](https://github.com/OpenFunction/cli/blob/main/docs/install.md).
+   ```
+   ofn install --all --version v0.5.0
+   ```
 
-### Sample: Run a function.
+For more information about how to use the `ofn install` command, refer to [ofn install document](https://github.com/OpenFunction/cli/blob/main/docs/install.md).
 
-If you have already installed the OpenFunction platform, refer to [OpenFunction samples](https://github.com/OpenFunction/samples) to find more samples.
+### Run a function sample
 
-Here is an example of a sync function:
+After you install OpenFunction, refer to [OpenFunction samples](https://github.com/OpenFunction/samples) to learn more about function samples.
 
-> This function will write "Hello, World!" to the HTTP response.
+Here is an example of a synchronous function:
+
+> This function writes "Hello, World!" to the HTTP response.
 
 ```go
 package hello
@@ -84,15 +86,15 @@ func HelloWorld(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-[Function ingress](docs/concepts/Components.md#domain) defines an unified entry point for a sync function with which you can use to access a sync function without [configuring LB for knative](https://github.com/OpenFunction/samples/tree/main/functions/Knative/hello-world-go) like below:
+[Function ingress](docs/concepts/Components.md#domain) defines a unified entry point for a synchronous function. You can use it as in below format to access a synchronous function without [configuring LB for Knative](https://github.com/OpenFunction/samples/tree/main/functions/Knative/hello-world-go).
 
 ```bash
 curl http://<domain-name>.<domain-namespace>/<function-namespace>/<function-name>
 ```
 
-And an async function example:
+Here is an example of asynchronous function:
 
-> This function will receive a greeting message and then send it to "another-target".
+> This function receives a greeting message and then send it to "another-target".
 
 ```go
 package bindings
@@ -111,52 +113,52 @@ func BindingsOutput(ctx *ofctx.OpenFunctionContext, in []byte) ofctx.RetValue {
 }
 ```
 
-You can also use `ofn` to make a quick demo:
-
->By default the demo environment will be deleted when the demo finishes.
->You can keep the demo kind cluster for further exploration by `ofn demo --auto-prune=false`
->The demo kind cluster can be deleted by `kind delete cluster --name openfunction`
+You can also run the following command to make a quick demo:
 
 ```shell
 ofn demo
 ```
 
-For more information about ofn install, please refer to [ofn demo docs](https://github.com/OpenFunction/cli/blob/main/docs/demo.md).
+>By default, a demo environment will be deleted when a demo finishes.
+>You can keep the demo kind cluster for further exploration by running `ofn demo --auto-prune=false`.
+>The demo kind cluster can be deleted by running `kind delete cluster --name openfunction`.
+
+For more information about how to use the `ofn demo` command, refer to [ofn demo document](https://github.com/OpenFunction/cli/blob/main/docs/demo.md).
 
 ### Uninstall OpenFunction
 
-Use `ofn` to uninstall OpenFunction and its dependencies:
+Run the following command to uninstall OpenFunction and its dependencies.
 
 ```shell
 ofn uninstall --all
 ```
 
-For more information about ofn install, please refer to [ofn uninstall docs](https://github.com/OpenFunction/cli/blob/main/docs/uninstall.md).
+For more information about how to use the `ofn uninstall` command, refer to [ofn uninstall document](https://github.com/OpenFunction/cli/blob/main/docs/uninstall.md).
 
 ## 💻 Development
 
-You can get help on developing this project by visiting [Development Guide](docs/development/README.md).
+See the [Development Guide](docs/development/README.md) to get started with developing this project.
 
 ## 🛣️ Roadmap
 
-[Here](docs/roadmap.md) you can find OpenFunction's roadmap.
+Learn more about OpenFunction [roadmap](docs/roadmap.md).
 
 ## 🏘️ Community
 
 ### Community Call
 
-Meeting Info: [Zoom](https://us02web.zoom.us/j/89684762679?pwd=U1JNWVdzbElScVFMSEdQQnV0YnR4UT09)
+Meeting venue: [Zoom](https://us02web.zoom.us/j/89684762679?pwd=U1JNWVdzbElScVFMSEdQQnV0YnR4UT09)
 
-Meeting Time: Wednesday at 15:30~16:30 Beijing Time (biweekly, starting from June 23rd, 2021) [Meeting Calendar](https://kubesphere.io/contribution/)
+Meeting schedule: Wednesday at 15:30—16:30 Beijing Time (biweekly, starting from June 23rd, 2021)
 
-[Meeting notes](https://docs.google.com/document/d/1bh5-kVPegjNlIjjq_e37mS3ZhyXWhmmUaysFgeI9_-o/edit?usp=sharing)
+Check out the [meeting calendar](https://kubesphere.io/contribution/) and [meeting notes](https://docs.google.com/document/d/1bh5-kVPegjNlIjjq_e37mS3ZhyXWhmmUaysFgeI9_-o/edit?usp=sharing).
 
 ### Contact Us
 
 OpenFunction is sponsored and open-sourced by the [KubeSphere](http://kubesphere.io/) Team and maintained by the OpenFunction community.
 
-- Slack [#sig-serverless](https://kubesphere.slack.com/archives/C021XAR3CG3)
-- Wechat Group: You can join the OpenFunction user group by following the KubeSphere WeChat Subscription
-## 📊 Stats
+- Slack: [#sig-serverless](https://kubesphere.slack.com/archives/C021XAR3CG3)
+- Wechat: join the OpenFunction user group by following the KubeSphere WeChat subscription
+## 📊 Status
 
 ![Alt](https://repobeats.axiom.co/api/embed/48814fec53572bf75ac4de9d4f447d2c978b26ee.svg "Repobeats analytics image")
