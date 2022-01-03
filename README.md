@@ -48,7 +48,7 @@ Besides, you can perform the following steps to install the latest version of Op
 1. Run the following command to download `ofn`.
 
    ```
-   wget -c  https://github.com/OpenFunction/cli/releases/download/v0.5.1/ofn_linux_amd64.tar.gz -O - | tar -xz
+   wget -c  https://github.com/OpenFunction/cli/releases/latest/download/ofn_linux_amd64.tar.gz -O - | tar -xz
    ```
 
 2. Run the following commands to make `ofn` executable and move it to `/usr/local/bin/`.
@@ -60,7 +60,7 @@ Besides, you can perform the following steps to install the latest version of Op
 3. Run the following command to install OpenFunction.
 
    ```
-   ofn install --all --version v0.5.0
+   ofn install --all
    ```
 
 For more information about how to use the `ofn install` command, refer to [ofn install document](https://github.com/OpenFunction/cli/blob/main/docs/install.md).
