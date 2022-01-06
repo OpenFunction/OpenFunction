@@ -159,6 +159,17 @@ OpenFunction is sponsored and open-sourced by the [KubeSphere](http://kubesphere
 
 - Slack: [#sig-serverless](https://kubesphere.slack.com/archives/C021XAR3CG3)
 - Wechat: join the OpenFunction user group by following the KubeSphere WeChat subscription
+
+## Landscape
+
+<p align="center">
+<br/><br/>
+<img src="https://landscape.cncf.io/images/left-logo.svg" width="150"/>&nbsp;&nbsp;<img src="https://landscape.cncf.io/images/right-logo.svg" width="200"/>&nbsp;&nbsp;
+<br/><br/>
+OpenFunction enriches the <a href="https://landscape.cncf.io/serverless?license=apache-license-2-0">CNCF Cloud Native Landscape.
+</a>
+</p>
+
 ## 📊 Status
 
 ![Alt](https://repobeats.axiom.co/api/embed/48814fec53572bf75ac4de9d4f447d2c978b26ee.svg "Repobeats analytics image")
