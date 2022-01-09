@@ -18,7 +18,7 @@ metadata:
   namespace: openfunction
 data:
   plugins.tracing: |
-    # Switch to tracing, default to false
+    # Switch for tracing, default to false
     enabled: true
     # Provider name can be set to "skywalking", "opentelemetry"
     # A valid provider must be set if tracing is enabled.
@@ -49,7 +49,7 @@ metadata:
   name: function-with-tracing
   annotations:
     plugins.tracing: |
-      # Switch to tracing, default to false
+      # Switch for tracing, default to false
       enabled: true
       # Provider name can be set to "skywalking", "opentelemetry"
       # A valid provider must be set if tracing is enabled.
@@ -85,8 +85,8 @@ spec:
   "inputs": {},
   "outputs": {},
   "runtime": "OpenFuncAsync",
-  "state": ""
-  "tracing": {
+  "state": "",
+  "plugins.tracing": {
     "enabled": true,
     "provider": {
       "name": "skywalking",
