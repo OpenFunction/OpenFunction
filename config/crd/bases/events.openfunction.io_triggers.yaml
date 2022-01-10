@@ -76,8 +76,9 @@ spec:
                       description: Condition for judging events
                       type: string
                     deadLetterSink:
-                      description: SinkSpec describes an event source for the Kafka,
-                        priority Uri > Reference.
+                      description: SinkSpec specifies the receiver of the events an
+                        EventSource received, sinks in the Uri format have higher
+                        priority than sinks in Reference format.
                       properties:
                         ref:
                           properties:
