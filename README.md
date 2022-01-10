@@ -30,9 +30,10 @@ The following Kubernetes versions are supported as we tested against these versi
 | ------------------------------------------------------------ | --------------- | --------------- | --------------- | ---------------- |
 | [`release-0.3`](https://github.com/OpenFunction/OpenFunction/tree/v0.3.0) | &radic;         | &radic;         | &radic;         | &radic;          |
 | [`release-0.4`](https://github.com/OpenFunction/OpenFunction/tree/v0.4.0) | &radic;         | &radic;         | &radic;         | &radic;          |
+| [`release-0.5`](https://github.com/OpenFunction/OpenFunction/tree/v0.5.0) | &radic; *         | &radic; *         | &radic;         | &radic;          |
 | [`HEAD`](https://github.com/OpenFunction/OpenFunction/tree/main) | &radic; *         | &radic; *         | &radic;         | &radic;          |
 
-\****Note***: OpenFunction has added the [function ingress](docs/concepts/Components.md#domain) feature since *release-0.4*, which means that:
+\****Note***: OpenFunction has added the [function ingress](docs/concepts/Components.md#domain) feature in *release-0.5*, which means that:
 
 - You have to install OpenFunction in Kuberenetes ***v1.19*** or later if you enable this feature.
 - You can still use OpenFunction in Kubernetes ***v1.17—v1.20+*** without this feature enabled.
