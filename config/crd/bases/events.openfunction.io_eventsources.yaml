@@ -470,6 +470,8 @@ spec:
                     - kind
                     - name
                     type: object
+                  uri:
+                    type: string
                 type: object
             type: object
           status:

@@ -76,7 +76,8 @@ spec:
                       description: Condition for judging events
                       type: string
                     deadLetterSink:
-                      description: SinkSpec describes an event source for the Kafka.
+                      description: SinkSpec describes an event source for the Kafka,
+                        priority Uri > Reference.
                       properties:
                         ref:
                           properties:
@@ -97,6 +98,8 @@ spec:
                           - kind
                           - name
                           type: object
+                        uri:
+                          type: string
                       type: object
                     deadLetterTopic:
                       type: string
@@ -123,6 +126,8 @@ spec:
                           - kind
                           - name
                           type: object
+                        uri:
+                          type: string
                       type: object
                     topic:
                       description: Topic and DeadLetterTopic are used to handle subscribers

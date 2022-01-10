@@ -1456,6 +1456,8 @@ spec:
                     - kind
                     - name
                     type: object
+                  uri:
+                    type: string
                 type: object
             type: object
           status:
@@ -30128,7 +30130,8 @@ spec:
                       description: Condition for judging events
                       type: string
                     deadLetterSink:
-                      description: SinkSpec describes an event source for the Kafka.
+                      description: SinkSpec describes an event source for the Kafka,
+                        priority Uri > Reference.
                       properties:
                         ref:
                           properties:
@@ -30149,6 +30152,8 @@ spec:
                           - kind
                           - name
                           type: object
+                        uri:
+                          type: string
                       type: object
                     deadLetterTopic:
                       type: string
@@ -30175,6 +30180,8 @@ spec:
                           - kind
                           - name
                           type: object
+                        uri:
+                          type: string
                       type: object
                     topic:
                       description: Topic and DeadLetterTopic are used to handle subscribers
@@ -30251,55 +30258,6 @@ status:
     plural: ""
   conditions: []
   storedVersions: []
----
-apiVersion: admissionregistration.k8s.io/v1
-kind: MutatingWebhookConfiguration
-metadata:
-  annotations:
-    cert-manager.io/inject-ca-from: openfunction/openfunction-serving-cert
-  name: openfunction-mutating-webhook-configuration
-  namespace: openfunction
-webhooks:
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: openfunction-webhook-service
-      namespace: openfunction
-      path: /mutate-core-openfunction-io-v1alpha2-function
-  failurePolicy: Fail
-  name: mfunctions.of.io
-  rules:
-  - apiGroups:
-    - core.openfunction.io
-    apiVersions:
-    - v1alpha2
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - functions
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: openfunction-webhook-service
-      namespace: openfunction
-      path: /mutate-core-openfunction-io-v1alpha2-serving
-  failurePolicy: Fail
-  name: mservings.of.io
-  rules:
-  - apiGroups:
-    - core.openfunction.io
-    apiVersions:
-    - v1alpha2
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - servings
-  sideEffects: None
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -30782,16 +30740,6 @@ spec:
     spec:
       containers:
       - args:
-        - --secure-listen-address=0.0.0.0:8443
-        - --upstream=http://127.0.0.1:8080/
-        - --logtostderr=true
-        - --v=10
-        image: openfunction/kube-rbac-proxy:v0.8.0
-        name: kube-rbac-proxy
-        ports:
-        - containerPort: 8443
-          name: https
-      - args:
         - --health-probe-bind-address=:8081
         - --metrics-bind-address=127.0.0.1:8080
         - --leader-elect
@@ -30828,6 +30776,16 @@ spec:
         - mountPath: /tmp/k8s-webhook-server/serving-certs
           name: cert
           readOnly: true
+      - args:
+        - --secure-listen-address=0.0.0.0:8443
+        - --upstream=http://127.0.0.1:8080/
+        - --logtostderr=true
+        - --v=10
+        image: openfunction/kube-rbac-proxy:v0.8.0
+        name: kube-rbac-proxy
+        ports:
+        - containerPort: 8443
+          name: https
       securityContext:
         runAsNonRoot: true
       serviceAccountName: openfunction-controller-manager
@@ -30859,6 +30817,54 @@ metadata:
   namespace: openfunction
 spec:
   selfSigned: {}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: openfunction/openfunction-serving-cert
+  name: openfunction-mutating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: openfunction-webhook-service
+      namespace: openfunction
+      path: /mutate-core-openfunction-io-v1alpha2-function
+  failurePolicy: Fail
+  name: mfunctions.of.io
+  rules:
+  - apiGroups:
+    - core.openfunction.io
+    apiVersions:
+    - v1alpha2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - functions
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: openfunction-webhook-service
+      namespace: openfunction
+      path: /mutate-core-openfunction-io-v1alpha2-serving
+  failurePolicy: Fail
+  name: mservings.of.io
+  rules:
+  - apiGroups:
+    - core.openfunction.io
+    apiVersions:
+    - v1alpha2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - servings
+  sideEffects: None
 ---
 apiVersion: shipwright.io/v1alpha1
 kind: ClusterBuildStrategy
