@@ -52,9 +52,10 @@ type EventSourceSpec struct {
 	Build *openfunction.BuildImpl `json:"build,omitempty"`
 }
 
-// SinkSpec describes an event source for the Kafka.
+// SinkSpec specifies the receiver of the events an EventSource received, sinks in the Uri format have higher priority than sinks in Reference format.
 type SinkSpec struct {
 	Ref *Reference `json:"ref,omitempty"`
+	Uri *string    `json:"uri,omitempty"`
 }
 
 type Reference struct {

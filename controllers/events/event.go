@@ -172,25 +172,38 @@ func newSinkComponentSpec(c client.Client, log logr.Logger, ref *ofevent.Referen
 }
 
 func createSinkComponent(ctx context.Context, c client.Client, log logr.Logger, resource client.Object, sink *ofevent.SinkSpec) (*componentsv1alpha1.Component, error) {
+	if sink.Uri == nil && sink.Ref == nil {
+		return nil, errors.New("at least one uri or ref must be set in sink")
+	}
+
+	var namespace, url string
+	if sink.Uri != nil {
+		url = *sink.Uri
+		// when setting the Uri, use resource.GetNamespace()
+		namespace = resource.GetNamespace()
+	} else {
+		var ksvc kservingv1.Service
+		if err := c.Get(ctx, types.NamespacedName{Namespace: sink.Ref.Namespace, Name: sink.Ref.Name}, &ksvc); err != nil {
+			log.Error(err, "Failed to find Knative Service", "namespace", sink.Ref.Namespace, "name", sink.Ref.Name)
+			return nil, err
+		}
+		url = ksvc.Status.URL.String()
+		namespace = sink.Ref.Namespace
+	}
+
 	component := &componentsv1alpha1.Component{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf(SinkComponentNameTmpl, resource.GetName(), sink.Ref.Namespace),
+			Name:      fmt.Sprintf(SinkComponentNameTmpl, resource.GetName(), namespace),
 			Namespace: resource.GetNamespace(),
 		},
 	}
 
-	// We use Knative serving for handling the Sink by default.
-	var ksvc kservingv1.Service
-	if err := c.Get(ctx, types.NamespacedName{Namespace: sink.Ref.Namespace, Name: sink.Ref.Name}, &ksvc); err != nil {
-		log.Error(err, "Failed to find Knative Service", "namespace", sink.Ref.Namespace, "name", sink.Ref.Name)
-		return nil, err
-	}
 	var spec componentsv1alpha1.ComponentSpec
 	specMap := map[string]interface{}{
 		"version": "v1",
 		"type":    "bindings.http",
 		"metadata": []map[string]string{
-			{"name": "url", "value": ksvc.Status.URL.String()},
+			{"name": "url", "value": url},
 		},
 	}
 	specBytes, err := json.Marshal(specMap)
