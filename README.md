@@ -14,7 +14,7 @@ OpenFunction features include:
 - Providing event management functions for trigger functions.
 - Providing additional functions for function version management, ingress management, etc.
 
-## ☸ Kubernetes-native architecture
+## ☸ Architecture
 
 ![OpenFunction Architecture](docs/images/openfunction-0.5-architecture.png)
 
