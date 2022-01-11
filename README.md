@@ -20,6 +20,9 @@ OpenFunction features include:
 
 OpenFunction manages resources in the form of Custom Resource Definitions (CRD) throughout the lifecycle of a function. To learn more about it, visit [Components](docs/concepts/Components.md) or [Concepts](https://openfunction.dev/docs/concepts/).
 
+<div align=center><img src=docs/images/OpenFunction-events-architecture.svg></div>
+
+OpenFunction Events is OpenFunction's events framework, you can refer to [OpenFunction Events](https://github.com/OpenFunction/OpenFunction/blob/main/docs/concepts/OpenFunction-events-framework.md) for more infomation.
 ## ✔️ Compatibility
 
 ### Kubernetes compatibility matrix
@@ -42,7 +45,7 @@ The following Kubernetes versions are supported as we tested against these versi
 
 ### Install OpenFunction
 
-Visit [ofn releases page](https://github.com/OpenFunction/cli/releases) to dowload the latest version of `ofn`, the CLI of OpenFunction, to install OpenFunction and its dependencies on your Kubernetes cluster.
+Visit [ofn releases page](https://github.com/OpenFunction/cli/releases) to download the latest version of `ofn`, the CLI of OpenFunction, to install OpenFunction and its dependencies on your Kubernetes cluster.
 
 Besides, you can perform the following steps to install the latest version of OpenFunction.
 
@@ -64,7 +67,7 @@ Besides, you can perform the following steps to install the latest version of Op
    ofn install --all
    ```
 
-For more information about how to use the `ofn install` command, refer to [ofn install document](https://github.com/OpenFunction/cli/blob/main/docs/install.md).
+You can refer to [ofn install document](https://github.com/OpenFunction/cli/blob/main/docs/install.md) for more information about the `ofn install` command.
 
 ### Run a function sample
 
