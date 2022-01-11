@@ -14,9 +14,9 @@ OpenFunction features include:
 - Providing event management functions for trigger functions.
 - Providing additional functions for function version management, ingress management, etc.
 
-## ☸ Custom Resource Definitions
+## ☸ Kubernetes-native architecture
 
-<div align=center><img src=docs/images/openfunction-overview.svg></div>
+![OpenFunction Architecture](docs/images/openfunction-0.5-architecture.png)
 
 OpenFunction manages resources in the form of Custom Resource Definitions (CRD) throughout the lifecycle of a function. To learn more about it, visit [Components](docs/concepts/Components.md) or [Concepts](https://openfunction.dev/docs/concepts/).
 
