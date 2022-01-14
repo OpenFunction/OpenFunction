@@ -40,6 +40,7 @@ const (
 	shipwrightBuildRunName = "shipwright.io/buildRun"
 	builderLabel           = "openfunction.io/builder"
 	defaultStrategy        = "openfunction"
+	shipwrightGenerateSA   = true
 
 	waitBuildInterval = time.Second
 	waitBuildTimeout  = time.Minute
@@ -343,6 +344,10 @@ func (r *builderRun) createShipwrightBuildRun(builder *openfunction.Builder, nam
 		Spec: shipwrightv1alpha1.BuildRunSpec{
 			BuildRef: &shipwrightv1alpha1.BuildRef{
 				Name: name,
+			},
+			// Generate a temporal service account for each buildrun to avoid build failed when previous used secret was deleted
+			ServiceAccount: &shipwrightv1alpha1.ServiceAccount{
+				Generate: shipwrightGenerateSA,
 			},
 		},
 	}
