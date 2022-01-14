@@ -23,6 +23,7 @@ import (
 
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	"github.com/go-logr/logr"
+	ofcore "github.com/openfunction/apis/core/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/json"
@@ -100,6 +101,15 @@ func Test_createSinkComponent(t *testing.T) {
 		return scheme
 	}
 
+	newOfScheme := func(t *testing.T) *runtime.Scheme {
+		scheme := runtime.NewScheme()
+		err := ofcore.AddToScheme(scheme)
+		if err != nil {
+			t.Error(err)
+		}
+		return scheme
+	}
+
 	tests := []struct {
 		name    string
 		args    args
@@ -129,15 +139,15 @@ func Test_createSinkComponent(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Use ref",
+			name: "Ref knative",
 			args: args{
 				ctx: context.Background(),
 				c: fake.NewClientBuilder().WithScheme(newKnativeScheme(t)).WithRuntimeObjects(&kservingv1.Service{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test",
+						Name:      "service",
 						Namespace: "test",
 					},
-					Status: *newServiceStatusFunc(t, "http://test-ref"),
+					Status: *newServiceStatusFunc(t, "http://test-service"),
 				}).Build(),
 				log: &log.TestLogger{
 					T: t,
@@ -146,9 +156,9 @@ func Test_createSinkComponent(t *testing.T) {
 				sink: &ofevent.SinkSpec{
 					Ref: &ofevent.Reference{
 						Kind:       "Service",
-						APIVersion: "serving.knative.dev/v1",
+						APIVersion: kservingv1.SchemeGroupVersion.String(),
 						Namespace:  "test",
-						Name:       "test",
+						Name:       "service",
 					},
 				},
 			},
@@ -157,7 +167,42 @@ func Test_createSinkComponent(t *testing.T) {
 					Name:      "ts-test-test",
 					Namespace: "test",
 				},
-				Spec: *newSinkSpecFunc(t, "http://test-ref"),
+				Spec: *newSinkSpecFunc(t, "http://test-service"),
+			},
+			wantErr: false,
+		},
+		{
+			name: "ref openfunction",
+			args: args{
+				ctx: context.Background(),
+				c: fake.NewClientBuilder().WithScheme(newOfScheme(t)).WithRuntimeObjects(&ofcore.Function{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "function",
+						Namespace: "test",
+					},
+					Status: ofcore.FunctionStatus{
+						URL: "http://test-of",
+					},
+				}).Build(),
+				log: &log.TestLogger{
+					T: t,
+				},
+				resource: resource,
+				sink: &ofevent.SinkSpec{
+					Ref: &ofevent.Reference{
+						Kind:       "Function",
+						APIVersion: ofcore.SchemeGroupVersion.String(),
+						Namespace:  "test",
+						Name:       "function",
+					},
+				},
+			},
+			want: &componentsv1alpha1.Component{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ts-test-test",
+					Namespace: "test",
+				},
+				Spec: *newSinkSpecFunc(t, "http://test-of"),
 			},
 			wantErr: false,
 		},
@@ -216,6 +261,54 @@ func Test_createSinkComponent(t *testing.T) {
 						APIVersion: "serving.knative.dev/v1",
 						Namespace:  "test",
 						Name:       "test-not-found",
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Failed to find OpenFunction",
+			args: args{
+				ctx: context.Background(),
+				c: fake.NewClientBuilder().WithScheme(newOfScheme(t)).WithRuntimeObjects(&ofcore.Function{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "function",
+						Namespace: "test",
+					},
+					Status: ofcore.FunctionStatus{
+						URL: "http://test-of",
+					},
+				}).Build(),
+				log: &log.TestLogger{
+					T: t,
+				},
+				resource: resource,
+				sink: &ofevent.SinkSpec{
+					Ref: &ofevent.Reference{
+						Kind:       "Function",
+						APIVersion: ofcore.SchemeGroupVersion.String(),
+						Namespace:  "test",
+						Name:       "test-not-found",
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "unsupported reference",
+			args: args{
+				ctx: context.Background(),
+				c:   nil,
+				log: &log.TestLogger{
+					T: t,
+				},
+				resource: resource,
+				sink: &ofevent.SinkSpec{
+					Ref: &ofevent.Reference{
+						Kind:       "Function",
+						APIVersion: "core.openfunction.io/test",
+						Namespace:  "test",
+						Name:       "test",
 					},
 				},
 			},
