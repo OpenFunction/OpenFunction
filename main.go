@@ -21,6 +21,8 @@ import (
 	"os"
 	"time"
 
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	kedav1alpha1 "github.com/kedacore/keda/v2/api/v1alpha1"
 	shipwrightv1alpha1 "github.com/shipwright-io/build/pkg/apis/build/v1alpha1"
@@ -33,8 +35,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	corev1alpha1 "github.com/openfunction/apis/core/v1alpha1"
 	corev1alpha2 "github.com/openfunction/apis/core/v1alpha2"
+	corev1beta1 "github.com/openfunction/apis/core/v1beta1"
 	openfunctionevent "github.com/openfunction/apis/events/v1alpha1"
 	"github.com/openfunction/controllers/core"
 	eventcontrollers "github.com/openfunction/controllers/events"
@@ -51,12 +53,12 @@ var (
 func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = knserving.AddToScheme(scheme)
-	_ = corev1alpha1.AddToScheme(scheme)
 	_ = corev1alpha2.AddToScheme(scheme)
 	_ = componentsv1alpha1.AddToScheme(scheme)
 	_ = kedav1alpha1.AddToScheme(scheme)
 	_ = openfunctionevent.AddToScheme(scheme)
 	_ = shipwrightv1alpha1.AddToScheme(scheme)
+	utilruntime.Must(corev1beta1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 

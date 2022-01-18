@@ -27,7 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	openfunction "github.com/openfunction/apis/core/v1alpha2"
+	openfunction "github.com/openfunction/apis/core/v1beta1"
 	"github.com/openfunction/pkg/core"
 	"github.com/openfunction/pkg/core/serving/knative"
 	"github.com/openfunction/pkg/core/serving/openfuncasync"
@@ -89,7 +89,7 @@ func (r *ServingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	servingRun := r.getServingRun(&s)
 	if util.InterfaceIsNil(servingRun) {
-		log.Error(nil, "Unknown runtime", "runtime", *s.Spec.Runtime)
+		log.Error(nil, "Unknown runtime", "runtime", s.Spec.Runtime)
 		s.Status.Phase = openfunction.ServingPhase
 		s.Status.State = openfunction.UnknownRuntime
 		if err := r.Status().Update(r.ctx, &s); err != nil {
@@ -170,8 +170,8 @@ func (r *ServingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 func (r *ServingReconciler) getServingRun(s *openfunction.Serving) core.ServingRun {
 
-	switch *s.Spec.Runtime {
-	case openfunction.OpenFuncAsync:
+	switch s.Spec.Runtime {
+	case openfunction.Async:
 		return openfuncasync.NewServingRun(r.ctx, r.Client, r.Scheme, r.Log)
 	case openfunction.Knative:
 		return knative.NewServingRun(r.ctx, r.Client, r.Scheme, r.Log)

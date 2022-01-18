@@ -31,10 +31,13 @@ spec:
     - jsonPath: .status.serving.resourceRef
       name: Serving
       type: string
+    - jsonPath: .status.url
+      name: URL
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
-    name: v1alpha1
+    name: v1alpha2
     schema:
       openAPIV3Schema:
         description: Function is the Schema for the functions API
@@ -71,6 +74,10 @@ spec:
                           TODO: Add other useful fields. apiVersion, kind, uid?'
                         type: string
                     type: object
+                  builderMaxAge:
+                    description: The duration to retain a completed builder, defaults
+                      to 0 (forever).
+                    type: string
                   dockerfile:
                     description: Dockerfile is the path to the Dockerfile used by
                       build strategies that rely on the Dockerfile to build an image.
@@ -80,6 +87,11 @@ spec:
                       type: string
                     description: Environment variables to pass to the builder.
                     type: object
+                  failedBuildsHistoryLimit:
+                    description: The number of failed builds to retain, default is
+                      1.
+                    format: int32
+                    type: integer
                   params:
                     additionalProperties:
                       type: string
@@ -141,6 +153,15 @@ spec:
                     required:
                     - url
                     type: object
+                  successfulBuildsHistoryLimit:
+                    description: The number of successful builds to retain, default
+                      is 0.
+                    format: int32
+                    type: integer
+                  timeout:
+                    description: Timeout defines the maximum amount of time the Build
+                      should take to execute.
+                    type: string
                 required:
                 - srcRepo
                 type: object
@@ -160,10 +181,36 @@ spec:
                 description: The port on which the function will be invoked
                 format: int32
                 type: integer
+              service:
+                description: Information needed to create an access entry for function.
+                properties:
+                  UseStandaloneIngress:
+                    description: UseStandaloneIngress determines whether to create
+                      a standalone ingress for the function. If it is true, an ingress
+                      will be created for this function, else it will use the default
+                      ingress under the current namespace.
+                    type: boolean
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    description: Annotations for Ingress. Take effect when `UseStandaloneIngress`
+                      is true.
+                    type: object
+                type: object
               serving:
                 description: Information needed to run a function. The serving step
                   will be skipped if `Serving` is nil.
                 properties:
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    description: Annotations that will be add to the workload.
+                    type: object
+                  labels:
+                    additionalProperties:
+                      type: string
+                    description: Labels that will be add to the workload.
+                    type: object
                   openFuncAsync:
                     description: Parameters of asyncFunc runtime, must not be nil
                       when runtime is OpenFuncAsync.
@@ -177,8 +224,8 @@ spec:
                             description: Annotations for dapr
                             type: object
                           components:
-                            description: Components of dapr.
-                            items:
+                            additionalProperties:
+                              description: ComponentSpec is the spec for a component.
                               properties:
                                 ignoreErrors:
                                   type: boolean
@@ -214,33 +261,32 @@ spec:
                                     - name
                                     type: object
                                   type: array
-                                name:
-                                  type: string
                                 type:
                                   type: string
                                 version:
                                   type: string
                               required:
                               - metadata
-                              - name
                               - type
                               - version
                               type: object
-                            type: array
+                            description: Components of dapr.
+                            type: object
                           inputs:
                             description: Function inputs from Dapr components including
                               binding, pubsub, and service invocation
                             items:
                               properties:
-                                methodName:
-                                  description: Method name of dapr service invocation,
-                                    required when type is invoke.
+                                component:
+                                  description: Component indicates the name of components
+                                    in Dapr
                                   type: string
                                 name:
-                                  description: The name of Dapr component, subscriptions,
-                                    service invocation. Component and subscription
-                                    must be created in k8s cluster, or defined in
-                                    the `components` or `subscriptions`.
+                                  description: The name of DaprIO.
+                                  type: string
+                                operation:
+                                  description: Operation field tells the Dapr component
+                                    which operation it should perform.
                                   type: string
                                 params:
                                   additionalProperties:
@@ -253,15 +299,13 @@ spec:
                                   type: string
                                 type:
                                   description: 'Input type, known values are bindings,
-                                    pubsub, invoke. bindings: Indicates that the input
-                                    is the Dapr bindings component. pubsub: Indicates
-                                    that the input is the Dapr pubsub component or
-                                    subscription. invoke: Indicates that the input
-                                    is the Dapr service invocation.'
+                                    pubsub. bindings: Indicates that the input is
+                                    the Dapr bindings component. pubsub: Indicates
+                                    that the input is the Dapr pubsub component.'
                                   type: string
                               required:
+                              - component
                               - name
-                              - type
                               type: object
                             type: array
                           outputs:
@@ -269,15 +313,16 @@ spec:
                               binding, pubsub, and service invocation
                             items:
                               properties:
-                                methodName:
-                                  description: Method name of dapr service invocation,
-                                    required when type is invoke.
+                                component:
+                                  description: Component indicates the name of components
+                                    in Dapr
                                   type: string
                                 name:
-                                  description: The name of Dapr component, subscriptions,
-                                    service invocation. Component and subscription
-                                    must be created in k8s cluster, or defined in
-                                    the `components` or `subscriptions`.
+                                  description: The name of DaprIO.
+                                  type: string
+                                operation:
+                                  description: Operation field tells the Dapr component
+                                    which operation it should perform.
                                   type: string
                                 params:
                                   additionalProperties:
@@ -290,42 +335,13 @@ spec:
                                   type: string
                                 type:
                                   description: 'Input type, known values are bindings,
-                                    pubsub, invoke. bindings: Indicates that the input
-                                    is the Dapr bindings component. pubsub: Indicates
-                                    that the input is the Dapr pubsub component or
-                                    subscription. invoke: Indicates that the input
-                                    is the Dapr service invocation.'
+                                    pubsub. bindings: Indicates that the input is
+                                    the Dapr bindings component. pubsub: Indicates
+                                    that the input is the Dapr pubsub component.'
                                   type: string
                               required:
+                              - component
                               - name
-                              - type
-                              type: object
-                            type: array
-                          subscriptions:
-                            description: Subscriptions of dapr.
-                            items:
-                              properties:
-                                metadata:
-                                  additionalProperties:
-                                    type: string
-                                  type: object
-                                name:
-                                  type: string
-                                pubsubname:
-                                  type: string
-                                route:
-                                  type: string
-                                scopes:
-                                  items:
-                                    type: string
-                                  type: array
-                                topic:
-                                  type: string
-                              required:
-                              - name
-                              - pubsubname
-                              - route
-                              - topic
                               type: object
                             type: array
                         type: object
@@ -345,7 +361,8 @@ spec:
                                 type: integer
                               restartPolicy:
                                 description: Restart policy for all containers within
-                                  the pod. One of OnFailure, Never. Default to Never.
+                                  the pod. One of 'OnFailure', 'Never'. Default to
+                                  'Never'.
                                 type: string
                               scalingStrategy:
                                 description: ScalingStrategy defines the strategy
@@ -7278,6 +7295,10 @@ spec:
                     required:
                     - containers
                     type: object
+                  timeout:
+                    description: Timeout defines the maximum amount of time the Serving
+                      should take to execute before the Serving is running.
+                    type: string
                 required:
                 - runtime
                 type: object
@@ -7292,22 +7313,34 @@ spec:
             properties:
               build:
                 properties:
+                  lastSuccessfulResourceRef:
+                    type: string
                   resourceHash:
                     type: string
                   resourceRef:
+                    type: string
+                  service:
                     type: string
                   state:
                     type: string
                 type: object
               serving:
                 properties:
+                  lastSuccessfulResourceRef:
+                    type: string
                   resourceHash:
                     type: string
                   resourceRef:
                     type: string
+                  service:
+                    type: string
                   state:
                     type: string
                 type: object
+              url:
+                description: URL holds the url that used to access the Function. It
+                  generally has the form http://{domain-name}.{domain-namespace}:{domain-port}/{function-namespace}/{function-name}
+                type: string
             type: object
         type: object
     served: true
@@ -7333,7 +7366,7 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
-    name: v1alpha2
+    name: v1beta1
     schema:
       openAPIV3Schema:
         description: Function is the Schema for the functions API
@@ -7500,149 +7533,197 @@ spec:
                   annotations:
                     additionalProperties:
                       type: string
-                    description: Annotations that will be add to the workload.
+                    description: Annotations that will be added to the workload.
                     type: object
+                  bindings:
+                    additionalProperties:
+                      description: ComponentSpec is the spec for a component.
+                      properties:
+                        ignoreErrors:
+                          type: boolean
+                        initTimeout:
+                          type: string
+                        metadata:
+                          items:
+                            description: MetadataItem is a name/value pair for a metadata.
+                            properties:
+                              name:
+                                type: string
+                              secretKeyRef:
+                                description: SecretKeyRef is a reference to a secret
+                                  holding the value for the metadata item. Name is
+                                  the secret name, and key is the field in the secret.
+                                properties:
+                                  key:
+                                    type: string
+                                  name:
+                                    type: string
+                                required:
+                                - key
+                                - name
+                                type: object
+                              value:
+                                description: DynamicValue is a dynamic value struct
+                                  for the component.metadata pair value.
+                                type: object
+                                x-kubernetes-preserve-unknown-fields: true
+                            required:
+                            - name
+                            type: object
+                          type: array
+                        type:
+                          type: string
+                        version:
+                          type: string
+                      required:
+                      - metadata
+                      - type
+                      - version
+                      type: object
+                    description: Configurations of dapr bindings components.
+                    type: object
+                  inputs:
+                    description: Function inputs from Dapr components including binding,
+                      pubsub Available for Async Runtime only.
+                    items:
+                      properties:
+                        component:
+                          description: Component indicates the name of components
+                            in Dapr
+                          type: string
+                        name:
+                          description: The name of DaprIO.
+                          type: string
+                        operation:
+                          description: Operation field tells the Dapr component which
+                            operation it should perform.
+                          type: string
+                        params:
+                          additionalProperties:
+                            type: string
+                          description: Parameters for dapr input/output.
+                          type: object
+                        topic:
+                          description: Topic name of mq, required when type is pubsub
+                          type: string
+                        type:
+                          description: 'Input type, known values are bindings, pubsub.
+                            bindings: Indicates that the input is the Dapr bindings
+                            component. pubsub: Indicates that the input is the Dapr
+                            pubsub component.'
+                          type: string
+                      required:
+                      - component
+                      - name
+                      type: object
+                    type: array
                   labels:
                     additionalProperties:
                       type: string
-                    description: Labels that will be add to the workload.
-                    type: object
-                  openFuncAsync:
                     description: Parameters of asyncFunc runtime, must not be nil
                       when runtime is OpenFuncAsync.
+                    type: object
+                  outputs:
+                    description: Function outputs from Dapr components including binding,
+                      pubsub
+                    items:
+                      properties:
+                        component:
+                          description: Component indicates the name of components
+                            in Dapr
+                          type: string
+                        name:
+                          description: The name of DaprIO.
+                          type: string
+                        operation:
+                          description: Operation field tells the Dapr component which
+                            operation it should perform.
+                          type: string
+                        params:
+                          additionalProperties:
+                            type: string
+                          description: Parameters for dapr input/output.
+                          type: object
+                        topic:
+                          description: Topic name of mq, required when type is pubsub
+                          type: string
+                        type:
+                          description: 'Input type, known values are bindings, pubsub.
+                            bindings: Indicates that the input is the Dapr bindings
+                            component. pubsub: Indicates that the input is the Dapr
+                            pubsub component.'
+                          type: string
+                      required:
+                      - component
+                      - name
+                      type: object
+                    type: array
+                  params:
+                    additionalProperties:
+                      type: string
+                    description: Parameters to pass to the serving. All parameters
+                      will be injected into the pod as environment variables. Function
+                      code can use these parameters by getting environment variables
+                    type: object
+                  pubsub:
+                    additionalProperties:
+                      description: ComponentSpec is the spec for a component.
+                      properties:
+                        ignoreErrors:
+                          type: boolean
+                        initTimeout:
+                          type: string
+                        metadata:
+                          items:
+                            description: MetadataItem is a name/value pair for a metadata.
+                            properties:
+                              name:
+                                type: string
+                              secretKeyRef:
+                                description: SecretKeyRef is a reference to a secret
+                                  holding the value for the metadata item. Name is
+                                  the secret name, and key is the field in the secret.
+                                properties:
+                                  key:
+                                    type: string
+                                  name:
+                                    type: string
+                                required:
+                                - key
+                                - name
+                                type: object
+                              value:
+                                description: DynamicValue is a dynamic value struct
+                                  for the component.metadata pair value.
+                                type: object
+                                x-kubernetes-preserve-unknown-fields: true
+                            required:
+                            - name
+                            type: object
+                          type: array
+                        type:
+                          type: string
+                        version:
+                          type: string
+                      required:
+                      - metadata
+                      - type
+                      - version
+                      type: object
+                    description: Configurations of dapr pubsub components.
+                    type: object
+                  runtime:
+                    description: The configuration of the backend runtime for running
+                      function.
+                    enum:
+                    - Knative
+                    - Async
+                    type: string
+                  scaleOptions:
+                    description: The ScaleOptions will help us to set up guidelines
+                      for the autoscaling of function workloads.
                     properties:
-                      dapr:
-                        description: Configurations of dapr.
-                        properties:
-                          annotations:
-                            additionalProperties:
-                              type: string
-                            description: Annotations for dapr
-                            type: object
-                          components:
-                            additionalProperties:
-                              description: ComponentSpec is the spec for a component.
-                              properties:
-                                ignoreErrors:
-                                  type: boolean
-                                initTimeout:
-                                  type: string
-                                metadata:
-                                  items:
-                                    description: MetadataItem is a name/value pair
-                                      for a metadata.
-                                    properties:
-                                      name:
-                                        type: string
-                                      secretKeyRef:
-                                        description: SecretKeyRef is a reference to
-                                          a secret holding the value for the metadata
-                                          item. Name is the secret name, and key is
-                                          the field in the secret.
-                                        properties:
-                                          key:
-                                            type: string
-                                          name:
-                                            type: string
-                                        required:
-                                        - key
-                                        - name
-                                        type: object
-                                      value:
-                                        description: DynamicValue is a dynamic value
-                                          struct for the component.metadata pair value.
-                                        type: object
-                                        x-kubernetes-preserve-unknown-fields: true
-                                    required:
-                                    - name
-                                    type: object
-                                  type: array
-                                type:
-                                  type: string
-                                version:
-                                  type: string
-                              required:
-                              - metadata
-                              - type
-                              - version
-                              type: object
-                            description: Components of dapr.
-                            type: object
-                          inputs:
-                            description: Function inputs from Dapr components including
-                              binding, pubsub, and service invocation
-                            items:
-                              properties:
-                                component:
-                                  description: Component indicates the name of components
-                                    in Dapr
-                                  type: string
-                                name:
-                                  description: The name of DaprIO.
-                                  type: string
-                                operation:
-                                  description: Operation field tells the Dapr component
-                                    which operation it should perform.
-                                  type: string
-                                params:
-                                  additionalProperties:
-                                    type: string
-                                  description: Parameters for dapr input/output.
-                                  type: object
-                                topic:
-                                  description: Topic name of mq, required when type
-                                    is pubsub
-                                  type: string
-                                type:
-                                  description: 'Input type, known values are bindings,
-                                    pubsub. bindings: Indicates that the input is
-                                    the Dapr bindings component. pubsub: Indicates
-                                    that the input is the Dapr pubsub component.'
-                                  type: string
-                              required:
-                              - component
-                              - name
-                              type: object
-                            type: array
-                          outputs:
-                            description: Function outputs from Dapr components including
-                              binding, pubsub, and service invocation
-                            items:
-                              properties:
-                                component:
-                                  description: Component indicates the name of components
-                                    in Dapr
-                                  type: string
-                                name:
-                                  description: The name of DaprIO.
-                                  type: string
-                                operation:
-                                  description: Operation field tells the Dapr component
-                                    which operation it should perform.
-                                  type: string
-                                params:
-                                  additionalProperties:
-                                    type: string
-                                  description: Parameters for dapr input/output.
-                                  type: object
-                                topic:
-                                  description: Topic name of mq, required when type
-                                    is pubsub
-                                  type: string
-                                type:
-                                  description: 'Input type, known values are bindings,
-                                    pubsub. bindings: Indicates that the input is
-                                    the Dapr bindings component. pubsub: Indicates
-                                    that the input is the Dapr pubsub component.'
-                                  type: string
-                              required:
-                              - component
-                              - name
-                              type: object
-                            type: array
-                        type: object
                       keda:
-                        description: Configurations of keda.
                         properties:
                           scaledJob:
                             properties:
@@ -7931,17 +8012,19 @@ spec:
                             - triggers
                             type: object
                         type: object
+                      knative:
+                        additionalProperties:
+                          type: string
+                        description: Refer to https://knative.dev/docs/serving/autoscaling/
+                          to learn more about the autoscaling options of Knative Serving.
+                        type: object
+                      maxCount:
+                        format: int32
+                        type: integer
+                      minCount:
+                        format: int32
+                        type: integer
                     type: object
-                  params:
-                    additionalProperties:
-                      type: string
-                    description: Parameters to pass to the serving. All parameters
-                      will be injected into the pod as environment variables. Function
-                      code can use these parameters by getting environment variables
-                    type: object
-                  runtime:
-                    description: Function runtime such as Knative or OpenFuncAsync.
-                    type: string
                   template:
                     description: Template describes the pods that will be created.
                       The container named `function` is the container which is used

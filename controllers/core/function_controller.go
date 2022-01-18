@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	openfunction "github.com/openfunction/apis/core/v1alpha2"
+	openfunction "github.com/openfunction/apis/core/v1beta1"
 	"github.com/openfunction/pkg/constants"
 	"github.com/openfunction/pkg/util"
 )
@@ -537,18 +537,16 @@ func (r *FunctionReconciler) createServingSpec(fn *openfunction.Function) openfu
 	}
 
 	if fn.Spec.Serving != nil {
+		spec.Runtime = fn.Spec.Serving.Runtime
+		spec.ScaleOptions = fn.Spec.Serving.ScaleOptions
+		spec.Bindings = fn.Spec.Serving.Bindings
+		spec.Pubsub = fn.Spec.Serving.Pubsub
+		spec.Inputs = fn.Spec.Serving.Inputs
+		spec.Outputs = fn.Spec.Serving.Outputs
 		spec.Params = fn.Spec.Serving.Params
-		spec.OpenFuncAsync = fn.Spec.Serving.OpenFuncAsync
 		spec.Labels = fn.Spec.Serving.Labels
 		spec.Annotations = fn.Spec.Serving.Annotations
 		spec.Template = fn.Spec.Serving.Template
-	}
-
-	if fn.Spec.Serving != nil && fn.Spec.Serving.Runtime != nil {
-		spec.Runtime = fn.Spec.Serving.Runtime
-	} else {
-		runt := openfunction.Knative
-		spec.Runtime = &runt
 	}
 
 	return spec

@@ -19,9 +19,11 @@ package knative
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
+	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,17 +33,18 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	openfunction "github.com/openfunction/apis/core/v1beta1"
 	"github.com/openfunction/pkg/constants"
-
-	openfunction "github.com/openfunction/apis/core/v1alpha2"
 	"github.com/openfunction/pkg/core"
+	"github.com/openfunction/pkg/core/serving/common"
 	"github.com/openfunction/pkg/util"
 )
 
 const (
-	servingLabel = "openfunction.io/serving"
-
-	knativeService = "serving.knative.dev/service"
+	servingLabel             = "openfunction.io/serving"
+	knativeService           = "serving.knative.dev/service"
+	componentName            = "Knative/component"
+	knativeAutoscalingPrefix = "autoscaling.knative.dev"
 )
 
 type servingRun struct {
@@ -73,7 +76,24 @@ func (r *servingRun) Run(s *openfunction.Serving) error {
 		return err
 	}
 
-	service := r.createService(s)
+	pendingComponents, err := common.GetPendingCreateComponents(s)
+	if err != nil {
+		log.Error(err, "Failed to get pending create components")
+		return err
+	}
+
+	if err := common.CheckComponentSpecExist(s, pendingComponents); err != nil {
+		log.Error(err, "Some Components does not exist")
+		return err
+	}
+
+	s.Status.ResourceRef = make(map[string]string)
+	if err := common.CreateComponents(r.ctx, r.log, r.Client, r.scheme, s, pendingComponents, componentName); err != nil {
+		log.Error(err, "Failed to create Dapr Components")
+		return err
+	}
+
+	service := r.createService(s, pendingComponents)
 	service.SetOwnerReferences(nil)
 	if err := ctrl.SetControllerReference(s, service, r.scheme); err != nil {
 		log.Error(err, "Failed to SetControllerReference for Service", "Service", service.Name)
@@ -143,7 +163,7 @@ func (r *servingRun) Result(s *openfunction.Serving) (string, error) {
 	}
 }
 
-func (r *servingRun) createService(s *openfunction.Serving) *kservingv1.Service {
+func (r *servingRun) createService(s *openfunction.Serving, components map[string]*componentsv1alpha1.ComponentSpec) *kservingv1.Service {
 
 	template := s.Spec.Template
 	if template == nil {
@@ -172,11 +192,18 @@ func (r *servingRun) createService(s *openfunction.Serving) *kservingv1.Service 
 
 	container.Image = s.Spec.Image
 
+	var appPort int32 = 8080
 	port := corev1.ContainerPort{}
 	if s.Spec.Port != nil {
+		appPort = *s.Spec.Port
 		port.ContainerPort = *s.Spec.Port
 		container.Ports = append(container.Ports, port)
 	}
+
+	container.Env = append(container.Env, corev1.EnvVar{
+		Name:  common.FUNCCONTEXT,
+		Value: common.GenOpenFunctionContext(s, components, getFunctionName(s), componentName),
+	})
 
 	if s.Spec.Params != nil {
 		for k, v := range s.Spec.Params {
@@ -199,6 +226,66 @@ func (r *servingRun) createService(s *openfunction.Serving) *kservingv1.Service 
 		constants.CommonLabelVersion: version,
 	}
 	labels = util.AppendLabels(s.Spec.Labels, labels)
+
+	// Handle the scale options, which have the following priority relationship:
+	// Annotations["autoscaling.knative.dev/max-scale" ("autoscaling.knative.dev/min-scale")] >
+	// ScaleOptions.Knative["max-scale" ("min-scale")] >
+	// ScaleOptions.maxScale (minScale) >
+	// And in Knative Serving v1.1, the scale bounds' name were changed from "maxScale" ("minScale") to "max-scale" ("min-scale"),
+	// we need to support both of these layouts.
+	if s.Spec.ScaleOptions != nil {
+		maxScale := ""
+		minScale := ""
+		if s.Spec.ScaleOptions.MaxCount != nil {
+			maxScale = strconv.Itoa(int(*s.Spec.ScaleOptions.MaxCount))
+		}
+		if s.Spec.ScaleOptions.MinCount != nil {
+			minScale = strconv.Itoa(int(*s.Spec.ScaleOptions.MinCount))
+		}
+		if s.Spec.ScaleOptions.Knative != nil {
+			for k, v := range *s.Spec.ScaleOptions.Knative {
+				switch k {
+				case "max-scale", "maxScale":
+					maxScale = v
+				case "min-scale", "minScale":
+					minScale = v
+				}
+				if _, exist := s.Spec.Annotations[fmt.Sprintf("%s/%s", knativeAutoscalingPrefix, k)]; !exist {
+					s.Spec.Annotations[k] = v
+				}
+			}
+		}
+		maxScaleAnnotationOld := fmt.Sprintf("%s/%s", knativeAutoscalingPrefix, "maxScale")
+		maxScaleAnnotation := fmt.Sprintf("%s/%s", knativeAutoscalingPrefix, "max-scale")
+		minScaleAnnotationOld := fmt.Sprintf("%s/%s", knativeAutoscalingPrefix, "minScale")
+		minScaleAnnotation := fmt.Sprintf("%s/%s", knativeAutoscalingPrefix, "min-scale")
+		if s.Spec.Annotations == nil {
+			s.Spec.Annotations = map[string]string{}
+		}
+		if _, exist := s.Spec.Annotations[maxScaleAnnotation]; !exist && maxScale != "" {
+			s.Spec.Annotations[maxScaleAnnotationOld] = maxScale
+			s.Spec.Annotations[maxScaleAnnotation] = maxScale
+		}
+		if _, exist := s.Spec.Annotations[minScaleAnnotation]; !exist && minScale != "" {
+			s.Spec.Annotations[minScaleAnnotationOld] = minScale
+			s.Spec.Annotations[minScaleAnnotation] = minScale
+		}
+	}
+
+	if s.Spec.Outputs != nil {
+		if s.Spec.Annotations != nil {
+			s.Spec.Annotations = map[string]string{}
+		}
+		s.Spec.Annotations[common.DaprEnabled] = "true"
+		s.Spec.Annotations[common.DaprAPPID] = fmt.Sprintf("%s-%s", getFunctionName(s), s.Namespace)
+		s.Spec.Annotations[common.DaprLogAsJSON] = "true"
+
+		// The dapr protocol must equal to the protocol of function framework.
+		s.Spec.Annotations[common.DaprAPPProtocol] = "grpc"
+		// The dapr port must equal the function port.
+		s.Spec.Annotations[common.DaprAPPPort] = fmt.Sprintf("%d", appPort)
+		s.Spec.Annotations[common.DaprMetricsPort] = "19090"
+	}
 
 	rand.Seed(time.Now().UnixNano())
 	serviceName := fmt.Sprintf("%s-ksvc-%s", s.Name, rand.String(5))
@@ -234,7 +321,16 @@ func (r *servingRun) createService(s *openfunction.Serving) *kservingv1.Service 
 		},
 	}
 
+	if s.Spec.Outputs != nil {
+
+	}
+
 	return &service
+}
+
+func getFunctionName(s *openfunction.Serving) string {
+
+	return s.Labels[constants.FunctionLabel]
 }
 
 func getName(s *openfunction.Serving, key string) string {

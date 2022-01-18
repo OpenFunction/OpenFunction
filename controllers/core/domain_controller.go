@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	openfunction "github.com/openfunction/apis/core/v1alpha2"
+	openfunction "github.com/openfunction/apis/core/v1beta1"
 	"github.com/openfunction/pkg/util"
 )
 

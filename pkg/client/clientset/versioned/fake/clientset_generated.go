@@ -25,10 +25,10 @@ import (
 	"k8s.io/client-go/testing"
 
 	clientset "github.com/openfunction/pkg/client/clientset/versioned"
-	corev1alpha1 "github.com/openfunction/pkg/client/clientset/versioned/typed/core/v1alpha1"
-	fakecorev1alpha1 "github.com/openfunction/pkg/client/clientset/versioned/typed/core/v1alpha1/fake"
 	corev1alpha2 "github.com/openfunction/pkg/client/clientset/versioned/typed/core/v1alpha2"
 	fakecorev1alpha2 "github.com/openfunction/pkg/client/clientset/versioned/typed/core/v1alpha2/fake"
+	corev1beta1 "github.com/openfunction/pkg/client/clientset/versioned/typed/core/v1beta1"
+	fakecorev1beta1 "github.com/openfunction/pkg/client/clientset/versioned/typed/core/v1beta1/fake"
 	eventsv1alpha1 "github.com/openfunction/pkg/client/clientset/versioned/typed/events/v1alpha1"
 	fakeeventsv1alpha1 "github.com/openfunction/pkg/client/clientset/versioned/typed/events/v1alpha1/fake"
 )
@@ -80,14 +80,14 @@ func (c *Clientset) Tracker() testing.ObjectTracker {
 
 var _ clientset.Interface = &Clientset{}
 
-// CoreV1alpha1 retrieves the CoreV1alpha1Client
-func (c *Clientset) CoreV1alpha1() corev1alpha1.CoreV1alpha1Interface {
-	return &fakecorev1alpha1.FakeCoreV1alpha1{Fake: &c.Fake}
-}
-
 // CoreV1alpha2 retrieves the CoreV1alpha2Client
 func (c *Clientset) CoreV1alpha2() corev1alpha2.CoreV1alpha2Interface {
 	return &fakecorev1alpha2.FakeCoreV1alpha2{Fake: &c.Fake}
+}
+
+// CoreV1alpha1 retrieves the CoreV1beta1Client
+func (c *Clientset) CoreV1beta1() corev1beta1.CoreV1beta1Interface {
+	return &fakecorev1beta1.FakeCoreV1beta1{Fake: &c.Fake}
 }
 
 // EventsV1alpha1 retrieves the EventsV1alpha1Client

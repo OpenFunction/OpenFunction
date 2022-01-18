@@ -27,34 +27,34 @@ import (
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
 
-	v1alpha1 "github.com/openfunction/apis/core/v1alpha1"
+	v1beta1 "github.com/openfunction/apis/core/v1beta1"
 )
 
 // FakeBuilders implements BuilderInterface
 type FakeBuilders struct {
-	Fake *FakeCoreV1alpha1
+	Fake *FakeCoreV1beta1
 	ns   string
 }
 
-var buildersResource = schema.GroupVersionResource{Group: "core.openfunction.io", Version: "v1alpha1", Resource: "builders"}
+var buildersResource = schema.GroupVersionResource{Group: "core.openfunction.io", Version: "v1beta1", Resource: "builders"}
 
-var buildersKind = schema.GroupVersionKind{Group: "core.openfunction.io", Version: "v1alpha1", Kind: "Builder"}
+var buildersKind = schema.GroupVersionKind{Group: "core.openfunction.io", Version: "v1beta1", Kind: "Builder"}
 
 // Get takes name of the builder, and returns the corresponding builder object, and an error if there is any.
-func (c *FakeBuilders) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.Builder, err error) {
+func (c *FakeBuilders) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.Builder, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(buildersResource, c.ns, name), &v1alpha1.Builder{})
+		Invokes(testing.NewGetAction(buildersResource, c.ns, name), &v1beta1.Builder{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.Builder), err
+	return obj.(*v1beta1.Builder), err
 }
 
 // List takes label and field selectors, and returns the list of Builders that match those selectors.
-func (c *FakeBuilders) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.BuilderList, err error) {
+func (c *FakeBuilders) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.BuilderList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(buildersResource, buildersKind, c.ns, opts), &v1alpha1.BuilderList{})
+		Invokes(testing.NewListAction(buildersResource, buildersKind, c.ns, opts), &v1beta1.BuilderList{})
 
 	if obj == nil {
 		return nil, err
@@ -64,8 +64,8 @@ func (c *FakeBuilders) List(ctx context.Context, opts v1.ListOptions) (result *v
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &v1alpha1.BuilderList{ListMeta: obj.(*v1alpha1.BuilderList).ListMeta}
-	for _, item := range obj.(*v1alpha1.BuilderList).Items {
+	list := &v1beta1.BuilderList{ListMeta: obj.(*v1beta1.BuilderList).ListMeta}
+	for _, item := range obj.(*v1beta1.BuilderList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -81,31 +81,31 @@ func (c *FakeBuilders) Watch(ctx context.Context, opts v1.ListOptions) (watch.In
 }
 
 // Create takes the representation of a builder and creates it.  Returns the server's representation of the builder, and an error, if there is any.
-func (c *FakeBuilders) Create(ctx context.Context, builder *v1alpha1.Builder, opts v1.CreateOptions) (result *v1alpha1.Builder, err error) {
+func (c *FakeBuilders) Create(ctx context.Context, builder *v1beta1.Builder, opts v1.CreateOptions) (result *v1beta1.Builder, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(buildersResource, c.ns, builder), &v1alpha1.Builder{})
+		Invokes(testing.NewCreateAction(buildersResource, c.ns, builder), &v1beta1.Builder{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.Builder), err
+	return obj.(*v1beta1.Builder), err
 }
 
 // Update takes the representation of a builder and updates it. Returns the server's representation of the builder, and an error, if there is any.
-func (c *FakeBuilders) Update(ctx context.Context, builder *v1alpha1.Builder, opts v1.UpdateOptions) (result *v1alpha1.Builder, err error) {
+func (c *FakeBuilders) Update(ctx context.Context, builder *v1beta1.Builder, opts v1.UpdateOptions) (result *v1beta1.Builder, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(buildersResource, c.ns, builder), &v1alpha1.Builder{})
+		Invokes(testing.NewUpdateAction(buildersResource, c.ns, builder), &v1beta1.Builder{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.Builder), err
+	return obj.(*v1beta1.Builder), err
 }
 
 // Delete takes name of the builder and deletes it. Returns an error if one occurs.
 func (c *FakeBuilders) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(buildersResource, c.ns, name), &v1alpha1.Builder{})
+		Invokes(testing.NewDeleteAction(buildersResource, c.ns, name), &v1beta1.Builder{})
 
 	return err
 }
@@ -114,17 +114,17 @@ func (c *FakeBuilders) Delete(ctx context.Context, name string, opts v1.DeleteOp
 func (c *FakeBuilders) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	action := testing.NewDeleteCollectionAction(buildersResource, c.ns, listOpts)
 
-	_, err := c.Fake.Invokes(action, &v1alpha1.BuilderList{})
+	_, err := c.Fake.Invokes(action, &v1beta1.BuilderList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched builder.
-func (c *FakeBuilders) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.Builder, err error) {
+func (c *FakeBuilders) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.Builder, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(buildersResource, c.ns, name, pt, data, subresources...), &v1alpha1.Builder{})
+		Invokes(testing.NewPatchSubresourceAction(buildersResource, c.ns, name, pt, data, subresources...), &v1beta1.Builder{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.Builder), err
+	return obj.(*v1beta1.Builder), err
 }
