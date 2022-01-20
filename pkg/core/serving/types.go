@@ -17,16 +17,23 @@ limitations under the License.
 package serving
 
 import (
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/openfunction/pkg/core/serving/knative"
 	"github.com/openfunction/pkg/core/serving/openfuncasync"
 )
 
-func Registry() []client.Object {
+func Registry(mgr ctrl.Manager) []client.Object {
+	rm, err := apiutil.NewDiscoveryRESTMapper(mgr.GetConfig())
+	if err != nil {
+		return nil
+	}
+
 	var objs []client.Object
-	objs = append(objs, knative.Registry()...)
-	objs = append(objs, openfuncasync.Registry()...)
+	objs = append(objs, knative.Registry(rm)...)
+	objs = append(objs, openfuncasync.Registry(rm)...)
 
 	return objs
 }

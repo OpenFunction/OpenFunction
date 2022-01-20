@@ -21,13 +21,12 @@ import (
 	"os"
 	"time"
 
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	kedav1alpha1 "github.com/kedacore/keda/v2/api/v1alpha1"
 	shipwrightv1alpha1 "github.com/shipwright-io/build/pkg/apis/build/v1alpha1"
 	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	knserving "knative.dev/serving/pkg/client/clientset/versioned/scheme"
@@ -106,7 +105,7 @@ func main() {
 		setupLog.Error(err, "unable to create builder controller")
 		os.Exit(1)
 	}
-	if err = core.NewServingReconciler(mgr).SetupWithManager(mgr, serving.Registry()); err != nil {
+	if err = core.NewServingReconciler(mgr).SetupWithManager(mgr, serving.Registry(mgr)); err != nil {
 		setupLog.Error(err, "unable to create serving controller")
 		os.Exit(1)
 	}
