@@ -96,8 +96,8 @@ type DaprIO struct {
 }
 
 type ScaleOptions struct {
-	MaxCount *int32 `json:"maxCount,omitempty"`
-	MinCount *int32 `json:"minCount,omitempty"`
+	MaxReplicas *int32 `json:"maxReplicas,omitempty"`
+	MinReplicas *int32 `json:"minReplicas,omitempty"`
 	// +optional
 	Keda *KedaScaleOptions `json:"keda,omitempty"`
 	// Refer to https://knative.dev/docs/serving/autoscaling/ to

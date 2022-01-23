@@ -17,27 +17,27 @@ limitations under the License.
 package common
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"strings"
 
-	"k8s.io/apimachinery/pkg/runtime"
-
-	"github.com/go-logr/logr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
-	functioncontext "github.com/OpenFunction/functions-framework-go/context"
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
+	"github.com/go-logr/logr"
 	jsoniter "github.com/json-iterator/go"
+	yaml "gopkg.in/yaml.v2"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	openfunction "github.com/openfunction/apis/core/v1beta1"
 )
 
 const (
-	FUNCCONTEXT         = "FUNC_CONTEXT"
+	FunctionContextEnvName = "FUNC_CONTEXT"
+
 	ServingLabel        = "openfunction.io/serving"
 	OpenfunctionManaged = "openfunction.io/managed"
 
@@ -47,9 +47,18 @@ const (
 	DaprAPPProtocol = "dapr.io/app-protocol"
 	DaprAPPPort     = "dapr.io/app-port"
 	DaprMetricsPort = "dapr.io/metrics-port"
+
+	PluginsTracingAnnotation = "plugins.tracing"
+	PluginsAnnotation        = "plugins"
 )
 
-func GenOpenFunctionContext(s *openfunction.Serving, components map[string]*componentsv1alpha1.ComponentSpec, functionName string, componentName string) string {
+func GenOpenFunctionContext(
+	s *openfunction.Serving,
+	cm map[string]string,
+	components map[string]*componentsv1alpha1.ComponentSpec,
+	functionName string,
+	componentName string,
+) string {
 	var port int32 = 8080
 	if s.Spec.Port != nil {
 		port = *s.Spec.Port
@@ -60,29 +69,29 @@ func GenOpenFunctionContext(s *openfunction.Serving, components map[string]*comp
 		version = *s.Spec.Version
 	}
 
-	fc := functioncontext.Context{
+	fc := functionContext{
 		Name:    functionName,
 		Version: version,
-		Runtime: functioncontext.Runtime(s.Spec.Runtime),
+		Runtime: string(s.Spec.Runtime),
 		Port:    fmt.Sprintf("%d", port),
 	}
 
 	switch s.Spec.Runtime {
 	case openfunction.Async:
 		if s.Spec.Inputs != nil && len(s.Spec.Inputs) > 0 {
-			fc.Inputs = make(map[string]*functioncontext.Input)
+			fc.Inputs = make(map[string]*functionInput)
 
 			for _, i := range s.Spec.Inputs {
 				c, _ := components[i.Component]
 				componentType := strings.Split(c.Type, ".")[0]
 				uri := i.Topic
-				if componentType == string(functioncontext.OpenFuncBinding) {
+				if componentType == bindings {
 					uri = i.Component
 				}
-				input := functioncontext.Input{
+				input := functionInput{
 					Uri:       uri,
 					Component: getComponentName(s, i.Component, componentName),
-					Type:      functioncontext.ResourceType(componentType),
+					Type:      componentType,
 					Metadata:  i.Params,
 				}
 				fc.Inputs[i.Name] = &input
@@ -90,19 +99,19 @@ func GenOpenFunctionContext(s *openfunction.Serving, components map[string]*comp
 		}
 
 		if s.Spec.Outputs != nil && len(s.Spec.Outputs) > 0 {
-			fc.Outputs = make(map[string]*functioncontext.Output)
+			fc.Outputs = make(map[string]*functionOutput)
 
 			for _, o := range s.Spec.Outputs {
 				c, _ := components[o.Component]
 				componentType := strings.Split(c.Type, ".")[0]
 				uri := o.Topic
-				if componentType == string(functioncontext.OpenFuncBinding) {
+				if componentType == topic {
 					uri = o.Component
 				}
-				output := functioncontext.Output{
+				output := functionOutput{
 					Uri:       uri,
 					Component: getComponentName(s, o.Component, componentName),
-					Type:      functioncontext.ResourceType(componentType),
+					Type:      componentType,
 					Metadata:  o.Params,
 					Operation: o.Operation,
 				}
@@ -111,19 +120,19 @@ func GenOpenFunctionContext(s *openfunction.Serving, components map[string]*comp
 		}
 	default:
 		if s.Spec.Outputs != nil && len(s.Spec.Outputs) > 0 {
-			fc.Outputs = make(map[string]*functioncontext.Output)
+			fc.Outputs = make(map[string]*functionOutput)
 
 			for _, o := range s.Spec.Outputs {
 				c, _ := components[o.Component]
 				componentType := strings.Split(c.Type, ".")[0]
 				uri := o.Topic
-				if componentType == string(functioncontext.OpenFuncBinding) {
+				if componentType == bindings {
 					uri = o.Component
 				}
-				output := functioncontext.Output{
+				output := functionOutput{
 					Uri:       uri,
 					Component: getComponentName(s, o.Component, componentName),
-					Type:      functioncontext.ResourceType(componentType),
+					Type:      componentType,
 					Metadata:  o.Params,
 					Operation: o.Operation,
 				}
@@ -131,6 +140,9 @@ func GenOpenFunctionContext(s *openfunction.Serving, components map[string]*comp
 			}
 		}
 	}
+
+	// Handle plugins information
+	parsePluginsCfg(s, cm, &fc)
 
 	bs, _ := jsoniter.Marshal(fc)
 	return string(bs)
@@ -262,4 +274,100 @@ func CheckComponentSpecExist(s *openfunction.Serving, components map[string]*com
 		return fmt.Errorf("component %s does not exist", strings.Join(cs, ","))
 	}
 	return nil
+}
+
+// parsePluginsCfg parses the plugin configuration information from both ConfigMap and function annotations.
+// The plugin configuration information obtained from the function annotations has a higher priority.
+// The Tracing plugin is registered at the end of prePlugins and the beginning of postPlugins by default.
+func parsePluginsCfg(s *openfunction.Serving, cm map[string]string, fc *functionContext) {
+	var plgCfg = &plugins{}
+	var tcCfg = &functionPluginsTracing{}
+	var prePlugins []string
+	var postPlugins []string
+
+	pluginsRaw := ""
+	pluginsTracingRaw := ""
+
+	if raw, ok := cm[PluginsAnnotation]; ok {
+		pluginsRaw = raw
+	}
+	if raw, ok := s.Annotations[PluginsAnnotation]; ok {
+		pluginsRaw = raw
+	}
+	if pluginsRaw != "" {
+		cfg := bytes.NewBufferString(pluginsRaw)
+		if err := yaml.Unmarshal(cfg.Bytes(), plgCfg); err != nil {
+			return
+		}
+	}
+
+	if raw, ok := cm[PluginsTracingAnnotation]; ok {
+		pluginsTracingRaw = raw
+	}
+	if raw, ok := s.Annotations[PluginsTracingAnnotation]; ok {
+		pluginsTracingRaw = raw
+	}
+	if pluginsTracingRaw != "" {
+		cfg := bytes.NewBufferString(pluginsTracingRaw)
+		if err := yaml.Unmarshal(cfg.Bytes(), tcCfg); err != nil {
+			return
+		}
+	}
+
+	if plgCfg != nil {
+		if plgCfg.Order != nil {
+			prePlgs := []string{}
+			for _, plg := range plgCfg.Order {
+				prePlgs = append(prePlgs, plg)
+			}
+			prePlugins = prePlgs
+			postPlugins = reverse(prePlgs)
+		}
+
+		if plgCfg.Pre != nil {
+			prePlugins = plgCfg.Pre
+		}
+
+		if plgCfg.Post != nil {
+			postPlugins = plgCfg.Post
+		}
+	}
+
+	if tcCfg != nil {
+		prePlugins = append(prePlugins, tcCfg.Provider.Name)
+		postPlugins = append([]string{tcCfg.Provider.Name}, postPlugins...)
+	}
+
+	fc.PrePlugins = prePlugins
+	fc.PostPlugins = postPlugins
+	fc.PluginsTracing = tcCfg
+	return
+}
+
+func reverse(originSlice []string) []string {
+	reverseSlice := []string{}
+	for i := len(originSlice) - 1; i >= 0; i-- {
+		reverseSlice = append(reverseSlice, originSlice[i])
+	}
+	return reverseSlice
+}
+
+func AddPodMetadataEnv(namespace string) []v1.EnvVar {
+	podNameEnv := v1.EnvVar{
+		Name: "POD_NAME",
+		ValueFrom: &v1.EnvVarSource{
+			FieldRef: &v1.ObjectFieldSelector{
+				APIVersion: "v1",
+				FieldPath:  "metadata.name",
+			},
+		},
+	}
+	podNamespaceEnv := v1.EnvVar{
+		Name:  "POD_NAMESPACE",
+		Value: namespace,
+	}
+	return []v1.EnvVar{
+		podNameEnv,
+		podNamespaceEnv,
+	}
 }

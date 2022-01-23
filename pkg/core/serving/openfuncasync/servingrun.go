@@ -82,7 +82,7 @@ func NewServingRun(ctx context.Context, c client.Client, scheme *runtime.Scheme,
 	}
 }
 
-func (r *servingRun) Run(s *openfunction.Serving) error {
+func (r *servingRun) Run(s *openfunction.Serving, cm map[string]string) error {
 
 	log := r.log.WithName("Run").
 		WithValues("Serving", fmt.Sprintf("%s/%s", s.Namespace, s.Name))
@@ -109,7 +109,7 @@ func (r *servingRun) Run(s *openfunction.Serving) error {
 		return err
 	}
 
-	workload := r.generateWorkload(s, pendingComponents)
+	workload := r.generateWorkload(s, cm, pendingComponents)
 	if err := controllerutil.SetControllerReference(s, workload, r.scheme); err != nil {
 		log.Error(err, "Failed to SetControllerReference for workload")
 		return err
@@ -247,7 +247,7 @@ func (r *servingRun) Result(s *openfunction.Serving) (string, error) {
 	return openfunction.Running, nil
 }
 
-func (r *servingRun) generateWorkload(s *openfunction.Serving, components map[string]*componentsv1alpha1.ComponentSpec) client.Object {
+func (r *servingRun) generateWorkload(s *openfunction.Serving, cm map[string]string, components map[string]*componentsv1alpha1.ComponentSpec) client.Object {
 
 	version := constants.DefaultFunctionVersion
 	if s.Spec.Version != nil {
@@ -272,11 +272,11 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving, components map[st
 	if s.Spec.ScaleOptions != nil && s.Spec.ScaleOptions.Keda != nil {
 		keda = s.Spec.ScaleOptions.Keda
 		if keda.ScaledObject != nil {
-			if s.Spec.ScaleOptions.MaxCount != nil && keda.ScaledObject.MaxReplicaCount == nil {
-				keda.ScaledObject.MaxReplicaCount = s.Spec.ScaleOptions.MaxCount
+			if s.Spec.ScaleOptions.MaxReplicas != nil && keda.ScaledObject.MaxReplicaCount == nil {
+				keda.ScaledObject.MaxReplicaCount = s.Spec.ScaleOptions.MaxReplicas
 			}
-			if s.Spec.ScaleOptions.MinCount != nil && keda.ScaledObject.MinReplicaCount == nil {
-				keda.ScaledObject.MinReplicaCount = s.Spec.ScaleOptions.MinCount
+			if s.Spec.ScaleOptions.MinReplicas != nil && keda.ScaledObject.MinReplicaCount == nil {
+				keda.ScaledObject.MinReplicaCount = s.Spec.ScaleOptions.MinReplicas
 			}
 			if keda.ScaledObject.MinReplicaCount != nil {
 				replicas = *keda.ScaledObject.MinReplicaCount
@@ -338,8 +338,8 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving, components map[st
 	})
 
 	container.Env = append(container.Env, corev1.EnvVar{
-		Name:  common.FUNCCONTEXT,
-		Value: common.GenOpenFunctionContext(s, components, getFunctionName(s), componentName),
+		Name:  common.FunctionContextEnvName,
+		Value: common.GenOpenFunctionContext(s, cm, components, getFunctionName(s), componentName),
 	})
 
 	if s.Spec.Params != nil {
@@ -350,6 +350,7 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving, components map[st
 			})
 		}
 	}
+	container.Env = append(container.Env, common.AddPodMetadataEnv(s.Namespace)...)
 
 	if appended {
 		spec.Containers = append(spec.Containers, *container)

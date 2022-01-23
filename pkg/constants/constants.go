@@ -22,4 +22,10 @@ const (
 	CommonLabelVersion = "app.kubernetes.io/version"
 
 	DefaultFunctionVersion = "latest"
+
+	DefaultConfigMapName       = "openfunction-config"
+	DefaultControllerNamespace = "openfunction"
+
+	DefaultKnativeServingNamespace      = "knative-serving"
+	DefaultKnativeServingFeaturesCMName = "config-features"
 )

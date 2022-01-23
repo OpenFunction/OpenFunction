@@ -41,7 +41,7 @@ type BuilderRun interface {
 }
 
 type ServingRun interface {
-	Run(s *openfunction.Serving) error
+	Run(s *openfunction.Serving, cm map[string]string) error
 	// Result get the serving result.
 	// '' means serving is starting.
 	// `Running` means serving is running.

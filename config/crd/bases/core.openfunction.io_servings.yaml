@@ -7447,10 +7447,10 @@ spec:
                     description: Refer to https://knative.dev/docs/serving/autoscaling/
                       to learn more about the autoscaling options of Knative Serving.
                     type: object
-                  maxCount:
+                  maxReplicas:
                     format: int32
                     type: integer
-                  minCount:
+                  minReplicas:
                     format: int32
                     type: integer
                 type: object

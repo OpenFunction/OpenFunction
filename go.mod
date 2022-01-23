@@ -3,7 +3,7 @@ module github.com/openfunction
 go 1.16
 
 require (
-	github.com/OpenFunction/functions-framework-go v0.1.2-0.20220114080143-12cee748de15
+	github.com/OpenFunction/functions-framework-go v0.1.2-0.20220124135506-cad5f9ea685d
 	github.com/dapr/dapr v1.3.1
 	github.com/go-logr/logr v1.2.0
 	github.com/json-iterator/go v1.1.11
@@ -13,6 +13,7 @@ require (
 	github.com/onsi/gomega v1.15.0
 	github.com/shipwright-io/build v0.6.0
 	go.uber.org/zap v1.19.0
+	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.21.4
 	k8s.io/apimachinery v0.21.4
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible

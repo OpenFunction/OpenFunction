@@ -43,7 +43,6 @@ import (
 )
 
 const (
-	servingLabel             = "openfunction.io/serving"
 	knativeService           = "serving.knative.dev/service"
 	componentName            = "Knative/component"
 	knativeAutoscalingPrefix = "autoscaling.knative.dev"
@@ -72,7 +71,7 @@ func NewServingRun(ctx context.Context, c client.Client, scheme *runtime.Scheme,
 	}
 }
 
-func (r *servingRun) Run(s *openfunction.Serving) error {
+func (r *servingRun) Run(s *openfunction.Serving, cm map[string]string) error {
 	log := r.log.WithName("Run").
 		WithValues("Serving", fmt.Sprintf("%s/%s", s.Namespace, s.Name))
 
@@ -98,7 +97,7 @@ func (r *servingRun) Run(s *openfunction.Serving) error {
 		return err
 	}
 
-	service := r.createService(s, pendingComponents)
+	service := r.createService(s, cm, pendingComponents)
 	service.SetOwnerReferences(nil)
 	if err := ctrl.SetControllerReference(s, service, r.scheme); err != nil {
 		log.Error(err, "Failed to SetControllerReference for Service", "Service", service.Name)
@@ -127,7 +126,7 @@ func (r *servingRun) Clean(s *openfunction.Serving) error {
 		WithValues("Serving", fmt.Sprintf("%s/%s", s.Namespace, s.Name))
 
 	services := &kservingv1.ServiceList{}
-	if err := r.List(r.ctx, services, client.InNamespace(s.Namespace), client.MatchingLabels{servingLabel: s.Name}); err != nil {
+	if err := r.List(r.ctx, services, client.InNamespace(s.Namespace), client.MatchingLabels{common.ServingLabel: s.Name}); err != nil {
 		return err
 	}
 
@@ -168,7 +167,7 @@ func (r *servingRun) Result(s *openfunction.Serving) (string, error) {
 	}
 }
 
-func (r *servingRun) createService(s *openfunction.Serving, components map[string]*componentsv1alpha1.ComponentSpec) *kservingv1.Service {
+func (r *servingRun) createService(s *openfunction.Serving, cm map[string]string, components map[string]*componentsv1alpha1.ComponentSpec) *kservingv1.Service {
 
 	template := s.Spec.Template
 	if template == nil {
@@ -206,8 +205,8 @@ func (r *servingRun) createService(s *openfunction.Serving, components map[strin
 	}
 
 	container.Env = append(container.Env, corev1.EnvVar{
-		Name:  common.FUNCCONTEXT,
-		Value: common.GenOpenFunctionContext(s, components, getFunctionName(s), componentName),
+		Name:  common.FunctionContextEnvName,
+		Value: common.GenOpenFunctionContext(s, cm, components, getFunctionName(s), componentName),
 	})
 
 	if s.Spec.Params != nil {
@@ -218,6 +217,7 @@ func (r *servingRun) createService(s *openfunction.Serving, components map[strin
 			})
 		}
 	}
+	container.Env = append(container.Env, common.AddPodMetadataEnv(s.Namespace)...)
 
 	if appended {
 		template.Containers = append(template.Containers, *container)
@@ -228,6 +228,7 @@ func (r *servingRun) createService(s *openfunction.Serving, components map[strin
 		version = *s.Spec.Version
 	}
 	labels := map[string]string{
+		common.ServingLabel:          s.Name,
 		constants.CommonLabelVersion: version,
 	}
 	labels = util.AppendLabels(s.Spec.Labels, labels)
@@ -241,11 +242,11 @@ func (r *servingRun) createService(s *openfunction.Serving, components map[strin
 	if s.Spec.ScaleOptions != nil {
 		maxScale := ""
 		minScale := ""
-		if s.Spec.ScaleOptions.MaxCount != nil {
-			maxScale = strconv.Itoa(int(*s.Spec.ScaleOptions.MaxCount))
+		if s.Spec.ScaleOptions.MaxReplicas != nil {
+			maxScale = strconv.Itoa(int(*s.Spec.ScaleOptions.MaxReplicas))
 		}
-		if s.Spec.ScaleOptions.MinCount != nil {
-			minScale = strconv.Itoa(int(*s.Spec.ScaleOptions.MinCount))
+		if s.Spec.ScaleOptions.MinReplicas != nil {
+			minScale = strconv.Itoa(int(*s.Spec.ScaleOptions.MinReplicas))
 		}
 		if s.Spec.ScaleOptions.Knative != nil {
 			for k, v := range *s.Spec.ScaleOptions.Knative {
@@ -264,6 +265,7 @@ func (r *servingRun) createService(s *openfunction.Serving, components map[strin
 		maxScaleAnnotation := fmt.Sprintf("%s/%s", knativeAutoscalingPrefix, "max-scale")
 		minScaleAnnotationOld := fmt.Sprintf("%s/%s", knativeAutoscalingPrefix, "minScale")
 		minScaleAnnotation := fmt.Sprintf("%s/%s", knativeAutoscalingPrefix, "min-scale")
+
 		if s.Spec.Annotations == nil {
 			s.Spec.Annotations = map[string]string{}
 		}
@@ -278,7 +280,7 @@ func (r *servingRun) createService(s *openfunction.Serving, components map[strin
 	}
 
 	if s.Spec.Outputs != nil {
-		if s.Spec.Annotations != nil {
+		if s.Spec.Annotations == nil {
 			s.Spec.Annotations = map[string]string{}
 		}
 		s.Spec.Annotations[common.DaprEnabled] = "true"
@@ -306,7 +308,7 @@ func (r *servingRun) createService(s *openfunction.Serving, components map[strin
 			Name:      serviceName,
 			Namespace: s.Namespace,
 			Labels: map[string]string{
-				servingLabel: s.Name,
+				common.ServingLabel: s.Name,
 			},
 		},
 		Spec: kservingv1.ServiceSpec{

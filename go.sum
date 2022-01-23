@@ -165,8 +165,8 @@ github.com/NYTimes/gziphandler v0.0.0-20170623195520-56545f4a5d46/go.mod h1:3wb0
 github.com/NYTimes/gziphandler v1.1.1/go.mod h1:n/CVRwUEOgIxrgPvAQhUUr9oeUtvrhMomdKFjzJNB0c=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/OneOfOne/xxhash v1.2.7/go.mod h1:eZbhyaAYD41SGSSsnmcpxVoRiQ/MPUTjUdIIOT9Um7Q=
-github.com/OpenFunction/functions-framework-go v0.1.2-0.20220114080143-12cee748de15 h1:kE6k70h1ZRc/VRNCh+8+Oa3VYDU2BI0azy+Q+pxpqB8=
-github.com/OpenFunction/functions-framework-go v0.1.2-0.20220114080143-12cee748de15/go.mod h1:EaL2RvG9BnnL1nXtqZFYC0gW72wzJ5w9r6uZCm4YbHY=
+github.com/OpenFunction/functions-framework-go v0.1.2-0.20220124135506-cad5f9ea685d h1:gCB3VfzWioR/m4Cjl71uJ83gDHZcAWnood/FLH2BGAc=
+github.com/OpenFunction/functions-framework-go v0.1.2-0.20220124135506-cad5f9ea685d/go.mod h1:EaL2RvG9BnnL1nXtqZFYC0gW72wzJ5w9r6uZCm4YbHY=
 github.com/ProtonMail/go-crypto v0.0.0-20210329181949-3900d675f39b/go.mod h1:HTM9X7e9oLwn7RiqLG0UVwVRJenLs3wN+tQ0NPAfwMQ=
 github.com/PuerkitoBio/purell v1.0.0/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=
 github.com/PuerkitoBio/purell v1.1.1/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=

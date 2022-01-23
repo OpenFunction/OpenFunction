@@ -407,6 +407,7 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 			Labels: map[string]string{
 				constants.FunctionLabel: fn.Name,
 			},
+			Annotations: fn.Annotations,
 		},
 		Spec: r.createServingSpec(fn),
 	}
