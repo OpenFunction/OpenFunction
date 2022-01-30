@@ -294,13 +294,13 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving, cm map[string]str
 
 	annotations := make(map[string]string)
 	annotations[common.DaprEnabled] = "true"
-	annotations[common.DaprAPPID] = fmt.Sprintf("%s-%s", getFunctionName(s), s.Namespace)
+	annotations[common.DaprAppID] = fmt.Sprintf("%s-%s", getFunctionName(s), s.Namespace)
 	annotations[common.DaprLogAsJSON] = "true"
 
 	// The dapr protocol must equal to the protocol of function framework.
-	annotations[common.DaprAPPProtocol] = "grpc"
+	annotations[common.DaprAppProtocol] = "grpc"
 	// The dapr port must equal the function port.
-	annotations[common.DaprAPPPort] = fmt.Sprintf("%d", port)
+	annotations[common.DaprAppPort] = fmt.Sprintf("%d", port)
 
 	annotations = util.AppendLabels(s.Spec.Annotations, annotations)
 
@@ -548,7 +548,8 @@ func (r *servingRun) createComponents(s *openfunction.Serving, components map[st
 	}
 
 	value := ""
-	for name, dc := range components {
+	for name, daprComponent := range components {
+		dc := daprComponent.DeepCopy()
 		component := &componentsv1alpha1.Component{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: fmt.Sprintf("%s-component-%s-", s.Name, name),

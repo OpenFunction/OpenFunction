@@ -15,15 +15,13 @@ resources:
 patchesStrategicMerge:
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix.
 # patches here are for enabling the conversion webhook for each CRD
-#- patches/webhook_in_functions.yaml
-#- patches/webhook_in_servings.yaml
+- patches/webhook_in_functions.yaml
+- patches/webhook_in_servings.yaml
 #- patches/webhook_in_builders.yaml
 #- patches/webhook_in_eventsources.yaml
 #- patches/webhook_in_eventbus.yaml
 #- patches/webhook_in_triggers.yaml
 #- patches/webhook_in_clustereventbus.yaml
-#- patches/webhook_in_functions.yaml
-#- patches/webhook_in_servings.yaml
 #- patches/webhook_in_domains.yaml
 #+kubebuilder:scaffold:crdkustomizewebhookpatch
 

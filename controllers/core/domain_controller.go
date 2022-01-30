@@ -60,6 +60,7 @@ func NewDomainReconciler(mgr manager.Manager) *DomainReconciler {
 
 //+kubebuilder:rbac:groups=core.openfunction.io,resources=domains,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core.openfunction.io,resources=domains/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups="",resources=configmaps,verbs=list;get;watch;update;patch
 //+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to

@@ -132,11 +132,11 @@ func main() {
 	}
 
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&corev1alpha2.Serving{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&corev1beta1.Serving{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Serving")
 			os.Exit(1)
 		}
-		if err = (&corev1alpha2.Function{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&corev1beta1.Function{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Function")
 			os.Exit(1)
 		}

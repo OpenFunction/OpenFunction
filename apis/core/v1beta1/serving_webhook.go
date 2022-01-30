@@ -14,11 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha2
+package v1beta1
 
 import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 // log is for logging in this package.
@@ -31,10 +32,10 @@ func (r *Serving) SetupWebhookWithManager(mgr ctrl.Manager) error {
 }
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-////+kubebuilder:webhook:path=/mutate-core-openfunction-io-v1alpha2-serving,mutating=true,failurePolicy=fail,groups=core.openfunction.io,resources=servings,verbs=create;update,versions=v1alpha2,name=mservings.of.io,sideEffects=None,admissionReviewVersions=v1
-//var _ webhook.Defaulter = &Serving{}
-//
-//// Default implements webhook.Defaulter so a webhook will be registered for the type
-//func (r *Serving) Default() {
-//	servinglog.Info("default", "name", r.Name)
-//}
+//+kubebuilder:webhook:path=/mutate-core-openfunction-io-v1beta1-serving,mutating=true,failurePolicy=fail,groups=core.openfunction.io,resources=servings,verbs=create;update,versions=v1beta1,name=mservings.of.io,sideEffects=None,admissionReviewVersions=v1
+var _ webhook.Defaulter = &Serving{}
+
+// Default implements webhook.Defaulter so a webhook will be registered for the type
+func (r *Serving) Default() {
+	servinglog.Info("default", "name", r.Name)
+}

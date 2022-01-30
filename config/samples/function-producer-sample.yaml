@@ -1,52 +1,49 @@
-apiVersion: core.openfunction.io/v1alpha2
+apiVersion: core.openfunction.io/v1beta1
 kind: Function
 metadata:
   name: autoscaling-producer
 spec:
   version: "v1.0.0"
-  image: openfunctiondev/autoscaling-producer:latest
+  image: openfunctiondev/v1beta1-autoscaling-producer:latest
   imageCredentials:
     name: push-secret
   build:
-    builder: openfunctiondev/go115-builder:v0.3.0
+    builder: openfunctiondev/builder-go:latest
     env:
       FUNC_NAME: "Producer"
+      FUNC_CLEAR_SOURCE: "true"
     srcRepo:
       url: "https://github.com/OpenFunction/samples.git"
-      sourceSubPath: "latest/functions/OpenFuncAsync/pubsub/producer/"
+      sourceSubPath: "functions/Async/pubsub/producer"
   serving:
     template:
       containers:
         - name: function
           imagePullPolicy: Always
-    runtime: "OpenFuncAsync"
+    runtime: "Async"
     params:
-      OUTPUT_NAME: producer
-      TOPIC_NAME: metric
+      OUTPUT_NAME: subscriber
+      TOPIC_NAME: "sample-topic"
       NUMBER_OF_PUBLISHERS: "2"
       PUBLISHERS_FREQ: "100ms"
       PUBLISHERS_DELAY: "10s"
       LOG_FREQ: "3s"
       PUBLISH_TO_CONSOLE: "false"
-    openFuncAsync:
-      dapr:
-        outputs:
-          - name: producer
-            component: autoscaling-producer
-            type: pubsub
-            topic: metric
-        annotations:
-          "dapr.io/log-level": "debug"
-        components:
-          autoscaling-producer:
-            type: pubsub.kafka
-            version: v1
-            metadata:
-              - name: brokers
-                value: "kafka-pubsub-server-kafka-brokers:9092"
-              - name: authRequired
-                value: "false"
-              - name: allowedTopics
-                value: "metric"
-              - name: consumerID
-                value: "autoscaling-producer"
+    outputs:
+      - name: subscriber
+        component: kafka-server
+        type: pubsub
+        topic: "sample-topic"
+    pubsub:
+      kafka-server:
+        type: pubsub.kafka
+        version: v1
+        metadata:
+          - name: brokers
+            value: "kafka-server-kafka-brokers:9092"
+          - name: authRequired
+            value: "false"
+          - name: allowedTopics
+            value: "sample-topic"
+          - name: consumerID
+            value: "producer"

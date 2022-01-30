@@ -57,6 +57,7 @@ func NewBuilderReconciler(mgr manager.Manager) *BuilderReconciler {
 
 //+kubebuilder:rbac:groups=core.openfunction.io,resources=builders,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core.openfunction.io,resources=builders/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups="",resources=configmaps,verbs=list;get;watch;update;patch
 //+kubebuilder:rbac:groups=shipwright.io,resources=builds;buildruns,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to

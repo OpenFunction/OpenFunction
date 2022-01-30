@@ -65,6 +65,7 @@ func NewFunctionReconciler(mgr manager.Manager, interval time.Duration) *Functio
 
 //+kubebuilder:rbac:groups=core.openfunction.io,resources=functions,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core.openfunction.io,resources=functions/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups="",resources=configmaps,verbs=list;get;watch;update;patch
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to

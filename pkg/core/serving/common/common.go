@@ -42,10 +42,10 @@ const (
 	OpenfunctionManaged = "openfunction.io/managed"
 
 	DaprEnabled     = "dapr.io/enabled"
-	DaprAPPID       = "dapr.io/app-id"
+	DaprAppID       = "dapr.io/app-id"
 	DaprLogAsJSON   = "dapr.io/log-as-json"
-	DaprAPPProtocol = "dapr.io/app-protocol"
-	DaprAPPPort     = "dapr.io/app-port"
+	DaprAppProtocol = "dapr.io/app-protocol"
+	DaprAppPort     = "dapr.io/app-port"
 	DaprMetricsPort = "dapr.io/metrics-port"
 
 	PluginsTracingAnnotation = "plugins.tracing"
@@ -81,62 +81,65 @@ func GenOpenFunctionContext(
 		if s.Spec.Inputs != nil && len(s.Spec.Inputs) > 0 {
 			fc.Inputs = make(map[string]*functionInput)
 
-			for _, i := range s.Spec.Inputs {
+			for _, input := range s.Spec.Inputs {
+				i := input.DeepCopy()
 				c, _ := components[i.Component]
 				componentType := strings.Split(c.Type, ".")[0]
 				uri := i.Topic
 				if componentType == bindings {
 					uri = i.Component
 				}
-				input := functionInput{
+				fnInput := functionInput{
 					Uri:       uri,
 					Component: getComponentName(s, i.Component, componentName),
 					Type:      componentType,
 					Metadata:  i.Params,
 				}
-				fc.Inputs[i.Name] = &input
+				fc.Inputs[i.Name] = &fnInput
 			}
 		}
 
 		if s.Spec.Outputs != nil && len(s.Spec.Outputs) > 0 {
 			fc.Outputs = make(map[string]*functionOutput)
 
-			for _, o := range s.Spec.Outputs {
-				c, _ := components[o.Component]
-				componentType := strings.Split(c.Type, ".")[0]
-				uri := o.Topic
-				if componentType == topic {
-					uri = o.Component
-				}
-				output := functionOutput{
-					Uri:       uri,
-					Component: getComponentName(s, o.Component, componentName),
-					Type:      componentType,
-					Metadata:  o.Params,
-					Operation: o.Operation,
-				}
-				fc.Outputs[o.Name] = &output
-			}
-		}
-	default:
-		if s.Spec.Outputs != nil && len(s.Spec.Outputs) > 0 {
-			fc.Outputs = make(map[string]*functionOutput)
-
-			for _, o := range s.Spec.Outputs {
+			for _, output := range s.Spec.Outputs {
+				o := output.DeepCopy()
 				c, _ := components[o.Component]
 				componentType := strings.Split(c.Type, ".")[0]
 				uri := o.Topic
 				if componentType == bindings {
 					uri = o.Component
 				}
-				output := functionOutput{
+				fnOutput := functionOutput{
 					Uri:       uri,
 					Component: getComponentName(s, o.Component, componentName),
 					Type:      componentType,
 					Metadata:  o.Params,
 					Operation: o.Operation,
 				}
-				fc.Outputs[o.Name] = &output
+				fc.Outputs[o.Name] = &fnOutput
+			}
+		}
+	default:
+		if s.Spec.Outputs != nil && len(s.Spec.Outputs) > 0 {
+			fc.Outputs = make(map[string]*functionOutput)
+
+			for _, output := range s.Spec.Outputs {
+				o := output.DeepCopy()
+				c, _ := components[o.Component]
+				componentType := strings.Split(c.Type, ".")[0]
+				uri := o.Topic
+				if componentType == bindings {
+					uri = o.Component
+				}
+				fnOutput := functionOutput{
+					Uri:       uri,
+					Component: getComponentName(s, o.Component, componentName),
+					Type:      componentType,
+					Metadata:  o.Params,
+					Operation: o.Operation,
+				}
+				fc.Outputs[o.Name] = &fnOutput
 			}
 		}
 	}
@@ -167,19 +170,21 @@ func GetPendingCreateComponents(s *openfunction.Serving) (map[string]*components
 	components := map[string]*componentsv1alpha1.ComponentSpec{}
 	if s.Spec.Bindings != nil {
 		for name, component := range s.Spec.Bindings {
+			c := component.DeepCopy()
 			if _, exist := components[name]; exist {
 				return nil, fmt.Errorf("dapr component with this name already exists: %s", name)
 			}
-			components[name] = component
+			components[name] = c
 		}
 	}
 
 	if s.Spec.Pubsub != nil {
 		for name, component := range s.Spec.Pubsub {
+			c := component.DeepCopy()
 			if _, exist := components[name]; exist {
 				return nil, fmt.Errorf("dapr component with this name already exists: %s", name)
 			}
-			components[name] = component
+			components[name] = c
 		}
 	}
 
@@ -203,7 +208,8 @@ func CreateComponents(
 	}
 
 	value := ""
-	for name, dc := range components {
+	for name, daprComponent := range components {
+		dc := daprComponent.DeepCopy()
 		component := &componentsv1alpha1.Component{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: fmt.Sprintf("%s-component-%s-", s.Name, name),
@@ -246,7 +252,8 @@ func CheckComponentSpecExist(s *openfunction.Serving, components map[string]*com
 	switch s.Spec.Runtime {
 	case openfunction.Async:
 		if s.Spec.Inputs != nil && len(s.Spec.Inputs) > 0 {
-			for _, i := range s.Spec.Inputs {
+			for _, input := range s.Spec.Inputs {
+				i := input.DeepCopy()
 				if _, ok := components[i.Component]; !ok {
 					cs = append(cs, i.Component)
 				}
@@ -254,7 +261,8 @@ func CheckComponentSpecExist(s *openfunction.Serving, components map[string]*com
 		}
 
 		if s.Spec.Outputs != nil && len(s.Spec.Outputs) > 0 {
-			for _, o := range s.Spec.Outputs {
+			for _, output := range s.Spec.Outputs {
+				o := output.DeepCopy()
 				if _, ok := components[o.Component]; !ok {
 					cs = append(cs, o.Component)
 				}
@@ -262,7 +270,8 @@ func CheckComponentSpecExist(s *openfunction.Serving, components map[string]*com
 		}
 	default:
 		if s.Spec.Outputs != nil && len(s.Spec.Outputs) > 0 {
-			for _, o := range s.Spec.Outputs {
+			for _, output := range s.Spec.Outputs {
+				o := output.DeepCopy()
 				if _, ok := components[o.Component]; !ok {
 					cs = append(cs, o.Component)
 				}
@@ -333,7 +342,7 @@ func parsePluginsCfg(s *openfunction.Serving, cm map[string]string, fc *function
 		}
 	}
 
-	if tcCfg != nil {
+	if tcCfg != nil && tcCfg.Enable {
 		prePlugins = append(prePlugins, tcCfg.Provider.Name)
 		postPlugins = append([]string{tcCfg.Provider.Name}, postPlugins...)
 	}

@@ -1,43 +1,23 @@
-apiVersion: core.openfunction.io/v1alpha2
+apiVersion: core.openfunction.io/v1beta1
 kind: Function
 metadata:
   name: autoscaling-subscriber
 spec:
   version: "v1.0.0"
-  image: openfunctiondev/autoscaling-subscriber:latest
+  image: openfunctiondev/v1beta1-autoscaling-subscriber:latest
   imageCredentials:
     name: push-secret
   build:
-    builder: openfunctiondev/go115-builder:v0.3.0
+    builder: openfunctiondev/builder-go:latest
     env:
       FUNC_NAME: "Subscriber"
+      FUNC_CLEAR_SOURCE: "true"
     srcRepo:
       url: "https://github.com/OpenFunction/samples.git"
-      sourceSubPath: "latest/functions/OpenFuncAsync/pubsub/subscriber"
+      sourceSubPath: "functions/Async/pubsub/subscriber"
   serving:
-    runtime: "OpenFuncAsync"
-    openFuncAsync:
-      dapr:
-        inputs:
-          - name: subscriber
-            component: autoscaling-subscriber
-            type: pubsub
-            topic: metric
-        annotations:
-          dapr.io/log-level: "debug"
-        components:
-          autoscaling-subscriber:
-            type: pubsub.kafka
-            version: v1
-            metadata:
-              - name: brokers
-                value: "kafka-pubsub-server-kafka-brokers:9092"
-              - name: authRequired
-                value: "false"
-              - name: allowedTopics
-                value: "metric"
-              - name: consumerID
-                value: "autoscaling-subscriber"
+    runtime: "Async"
+    scaleOptions:
       keda:
         scaledObject:
           pollingInterval: 15
@@ -47,7 +27,29 @@ spec:
           triggers:
             - type: kafka
               metadata:
-                topic: metric
-                bootstrapServers: kafka-pubsub-server-kafka-brokers.default.svc.cluster.local:9092
+                topic: "sample-topic"
+                bootstrapServers: kafka-server-kafka-brokers.default.svc.cluster.local:9092
                 consumerGroup: autoscaling-subscriber
                 lagThreshold: "10"
+    template:
+      containers:
+        - name: function
+          imagePullPolicy: Always
+    inputs:
+      - name: producer
+        component: kafka-server
+        type: pubsub
+        topic: "sample-topic"
+    pubsub:
+      kafka-server:
+        type: pubsub.kafka
+        version: v1
+        metadata:
+          - name: brokers
+            value: "kafka-server-kafka-brokers:9092"
+          - name: authRequired
+            value: "false"
+          - name: allowedTopics
+            value: "sample-topic"
+          - name: consumerID
+            value: "autoscaling-subscriber"

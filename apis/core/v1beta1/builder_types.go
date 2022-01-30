@@ -101,6 +101,7 @@ type BuilderStatus struct {
 //+genclient
 //+genclient:noStatus
 //+kubebuilder:object:root=true
+//+kubebuilder:storageversion
 //+kubebuilder:resource:shortName=fb
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`

@@ -70,7 +70,7 @@ func NewServingReconciler(mgr manager.Manager) *ServingReconciler {
 //+kubebuilder:rbac:groups=keda.sh,resources=scaledjobs;scaledobjects,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=apps,resources=deployments;statefulsets,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=batch,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",resources=configmaps,verbs=list;get;watch;update;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

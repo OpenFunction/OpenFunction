@@ -284,13 +284,13 @@ func (r *servingRun) createService(s *openfunction.Serving, cm map[string]string
 			s.Spec.Annotations = map[string]string{}
 		}
 		s.Spec.Annotations[common.DaprEnabled] = "true"
-		s.Spec.Annotations[common.DaprAPPID] = fmt.Sprintf("%s-%s", getFunctionName(s), s.Namespace)
+		s.Spec.Annotations[common.DaprAppID] = fmt.Sprintf("%s-%s", getFunctionName(s), s.Namespace)
 		s.Spec.Annotations[common.DaprLogAsJSON] = "true"
 
 		// The dapr protocol must equal to the protocol of function framework.
-		s.Spec.Annotations[common.DaprAPPProtocol] = "grpc"
+		s.Spec.Annotations[common.DaprAppProtocol] = "grpc"
 		// The dapr port must equal the function port.
-		s.Spec.Annotations[common.DaprAPPPort] = fmt.Sprintf("%d", appPort)
+		s.Spec.Annotations[common.DaprAppPort] = fmt.Sprintf("%d", appPort)
 		s.Spec.Annotations[common.DaprMetricsPort] = "19090"
 	}
 
