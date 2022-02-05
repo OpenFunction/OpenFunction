@@ -23,12 +23,13 @@ import (
 
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	"github.com/go-logr/logr"
-	ofcore "github.com/openfunction/apis/core/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/json"
 	kservingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	ofcore "github.com/openfunction/apis/core/v1alpha2"
 
 	ofevent "github.com/openfunction/apis/events/v1alpha1"
 

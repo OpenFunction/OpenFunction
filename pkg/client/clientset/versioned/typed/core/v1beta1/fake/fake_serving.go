@@ -27,34 +27,34 @@ import (
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
 
-	v1alpha1 "github.com/openfunction/apis/core/v1alpha1"
+	v1beta1 "github.com/openfunction/apis/core/v1beta1"
 )
 
 // FakeServings implements ServingInterface
 type FakeServings struct {
-	Fake *FakeCoreV1alpha1
+	Fake *FakeCoreV1beta1
 	ns   string
 }
 
-var servingsResource = schema.GroupVersionResource{Group: "core.openfunction.io", Version: "v1alpha1", Resource: "servings"}
+var servingsResource = schema.GroupVersionResource{Group: "core.openfunction.io", Version: "v1beta1", Resource: "servings"}
 
-var servingsKind = schema.GroupVersionKind{Group: "core.openfunction.io", Version: "v1alpha1", Kind: "Serving"}
+var servingsKind = schema.GroupVersionKind{Group: "core.openfunction.io", Version: "v1beta1", Kind: "Serving"}
 
 // Get takes name of the serving, and returns the corresponding serving object, and an error if there is any.
-func (c *FakeServings) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.Serving, err error) {
+func (c *FakeServings) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.Serving, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(servingsResource, c.ns, name), &v1alpha1.Serving{})
+		Invokes(testing.NewGetAction(servingsResource, c.ns, name), &v1beta1.Serving{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.Serving), err
+	return obj.(*v1beta1.Serving), err
 }
 
 // List takes label and field selectors, and returns the list of Servings that match those selectors.
-func (c *FakeServings) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ServingList, err error) {
+func (c *FakeServings) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.ServingList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(servingsResource, servingsKind, c.ns, opts), &v1alpha1.ServingList{})
+		Invokes(testing.NewListAction(servingsResource, servingsKind, c.ns, opts), &v1beta1.ServingList{})
 
 	if obj == nil {
 		return nil, err
@@ -64,8 +64,8 @@ func (c *FakeServings) List(ctx context.Context, opts v1.ListOptions) (result *v
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &v1alpha1.ServingList{ListMeta: obj.(*v1alpha1.ServingList).ListMeta}
-	for _, item := range obj.(*v1alpha1.ServingList).Items {
+	list := &v1beta1.ServingList{ListMeta: obj.(*v1beta1.ServingList).ListMeta}
+	for _, item := range obj.(*v1beta1.ServingList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -81,31 +81,31 @@ func (c *FakeServings) Watch(ctx context.Context, opts v1.ListOptions) (watch.In
 }
 
 // Create takes the representation of a serving and creates it.  Returns the server's representation of the serving, and an error, if there is any.
-func (c *FakeServings) Create(ctx context.Context, serving *v1alpha1.Serving, opts v1.CreateOptions) (result *v1alpha1.Serving, err error) {
+func (c *FakeServings) Create(ctx context.Context, serving *v1beta1.Serving, opts v1.CreateOptions) (result *v1beta1.Serving, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(servingsResource, c.ns, serving), &v1alpha1.Serving{})
+		Invokes(testing.NewCreateAction(servingsResource, c.ns, serving), &v1beta1.Serving{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.Serving), err
+	return obj.(*v1beta1.Serving), err
 }
 
 // Update takes the representation of a serving and updates it. Returns the server's representation of the serving, and an error, if there is any.
-func (c *FakeServings) Update(ctx context.Context, serving *v1alpha1.Serving, opts v1.UpdateOptions) (result *v1alpha1.Serving, err error) {
+func (c *FakeServings) Update(ctx context.Context, serving *v1beta1.Serving, opts v1.UpdateOptions) (result *v1beta1.Serving, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(servingsResource, c.ns, serving), &v1alpha1.Serving{})
+		Invokes(testing.NewUpdateAction(servingsResource, c.ns, serving), &v1beta1.Serving{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.Serving), err
+	return obj.(*v1beta1.Serving), err
 }
 
 // Delete takes name of the serving and deletes it. Returns an error if one occurs.
 func (c *FakeServings) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(servingsResource, c.ns, name), &v1alpha1.Serving{})
+		Invokes(testing.NewDeleteAction(servingsResource, c.ns, name), &v1beta1.Serving{})
 
 	return err
 }
@@ -114,17 +114,17 @@ func (c *FakeServings) Delete(ctx context.Context, name string, opts v1.DeleteOp
 func (c *FakeServings) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	action := testing.NewDeleteCollectionAction(servingsResource, c.ns, listOpts)
 
-	_, err := c.Fake.Invokes(action, &v1alpha1.ServingList{})
+	_, err := c.Fake.Invokes(action, &v1beta1.ServingList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched serving.
-func (c *FakeServings) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.Serving, err error) {
+func (c *FakeServings) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.Serving, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(servingsResource, c.ns, name, pt, data, subresources...), &v1alpha1.Serving{})
+		Invokes(testing.NewPatchSubresourceAction(servingsResource, c.ns, name, pt, data, subresources...), &v1beta1.Serving{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha1.Serving), err
+	return obj.(*v1beta1.Serving), err
 }

@@ -11,7 +11,7 @@ limitations under the License.
 */
 // +kubebuilder:docs-gen:collapse=Apache License
 
-package v1alpha1
+package v1beta1
 
 /*
 Implementing the hub method is pretty easy -- we just have to add an empty
@@ -21,4 +21,4 @@ We could also just put this inline in our `cronjob_types.go` file.
 */
 
 // Hub marks this type as a conversion hub.
-func (*Function) Hub() {}
+func (*Serving) Hub() {}

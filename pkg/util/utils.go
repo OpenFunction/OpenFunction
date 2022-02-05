@@ -44,3 +44,13 @@ func AppendLabels(src, dest map[string]string) map[string]string {
 
 	return dest
 }
+
+func GetConfigOrDefault(cm map[string]string, key string, defaultVal string) string {
+	if cm == nil {
+		return defaultVal
+	}
+	if val, ok := cm[key]; ok {
+		return val
+	}
+	return defaultVal
+}

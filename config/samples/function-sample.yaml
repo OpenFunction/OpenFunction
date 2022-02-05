@@ -1,25 +1,24 @@
-apiVersion: core.openfunction.io/v1alpha2
+apiVersion: core.openfunction.io/v1beta1
 kind: Function
 metadata:
   name: function-sample
 spec:
   version: "v1.0.0"
-  image: "openfunctiondev/sample-go-func:latest"
+  image: "openfunctiondev/v1beta1-sample:latest"
   imageCredentials:
     name: push-secret
-  #port: 8080 # default to 8080
+  port: 8080 # default to 8080
   build:
     successfulBuildsHistoryLimit: 2
     failedBuildsHistoryLimit: 3
     timeout: 10m
-    builder: openfunction/builder:v1
+    builder: openfunction/builder-go:latest
     env:
       FUNC_NAME: "HelloWorld"
-      FUNC_TYPE: "http"
-      #FUNC_SRC: "main.py"
+      FUNC_CLEAR_SOURCE: "true"
     srcRepo:
       url: "https://github.com/OpenFunction/samples.git"
-      sourceSubPath: "latest/functions/Knative/hello-world-go"
+      sourceSubPath: "functions/Knative/hello-world-go"
   serving:
     timeout: 5m
     runtime: Knative
@@ -27,4 +26,3 @@ spec:
       containers:
         - name: function
           imagePullPolicy: Always
-    #runtime: "Knative" # default to Knative

@@ -24,15 +24,15 @@ import (
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
 
-	corev1alpha1 "github.com/openfunction/pkg/client/clientset/versioned/typed/core/v1alpha1"
 	corev1alpha2 "github.com/openfunction/pkg/client/clientset/versioned/typed/core/v1alpha2"
+	corev1beta1 "github.com/openfunction/pkg/client/clientset/versioned/typed/core/v1beta1"
 	eventsv1alpha1 "github.com/openfunction/pkg/client/clientset/versioned/typed/events/v1alpha1"
 )
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
-	CoreV1alpha1() corev1alpha1.CoreV1alpha1Interface
 	CoreV1alpha2() corev1alpha2.CoreV1alpha2Interface
+	CoreV1beta1() corev1beta1.CoreV1beta1Interface
 	EventsV1alpha1() eventsv1alpha1.EventsV1alpha1Interface
 }
 
@@ -40,19 +40,19 @@ type Interface interface {
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	coreV1alpha1   *corev1alpha1.CoreV1alpha1Client
 	coreV1alpha2   *corev1alpha2.CoreV1alpha2Client
+	coreV1beta1    *corev1beta1.CoreV1beta1Client
 	eventsV1alpha1 *eventsv1alpha1.EventsV1alpha1Client
-}
-
-// CoreV1alpha1 retrieves the CoreV1alpha1Client
-func (c *Clientset) CoreV1alpha1() corev1alpha1.CoreV1alpha1Interface {
-	return c.coreV1alpha1
 }
 
 // CoreV1alpha2 retrieves the CoreV1alpha2Client
 func (c *Clientset) CoreV1alpha2() corev1alpha2.CoreV1alpha2Interface {
 	return c.coreV1alpha2
+}
+
+// CoreV1beta1 retrieves the CoreV1beta1Client
+func (c *Clientset) CoreV1beta1() corev1beta1.CoreV1beta1Interface {
+	return c.coreV1beta1
 }
 
 // EventsV1alpha1 retrieves the EventsV1alpha1Client
@@ -81,11 +81,11 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	}
 	var cs Clientset
 	var err error
-	cs.coreV1alpha1, err = corev1alpha1.NewForConfig(&configShallowCopy)
+	cs.coreV1alpha2, err = corev1alpha2.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
-	cs.coreV1alpha2, err = corev1alpha2.NewForConfig(&configShallowCopy)
+	cs.coreV1beta1, err = corev1beta1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
@@ -105,8 +105,8 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 // panics if there is an error in the config.
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
-	cs.coreV1alpha1 = corev1alpha1.NewForConfigOrDie(c)
 	cs.coreV1alpha2 = corev1alpha2.NewForConfigOrDie(c)
+	cs.coreV1beta1 = corev1beta1.NewForConfigOrDie(c)
 	cs.eventsV1alpha1 = eventsv1alpha1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
@@ -116,8 +116,8 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
-	cs.coreV1alpha1 = corev1alpha1.New(c)
 	cs.coreV1alpha2 = corev1alpha2.New(c)
+	cs.coreV1beta1 = corev1beta1.New(c)
 	cs.eventsV1alpha1 = eventsv1alpha1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)

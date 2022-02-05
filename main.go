@@ -26,6 +26,7 @@ import (
 	shipwrightv1alpha1 "github.com/shipwright-io/build/pkg/apis/build/v1alpha1"
 	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	knserving "knative.dev/serving/pkg/client/clientset/versioned/scheme"
@@ -33,8 +34,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	corev1alpha1 "github.com/openfunction/apis/core/v1alpha1"
 	corev1alpha2 "github.com/openfunction/apis/core/v1alpha2"
+	corev1beta1 "github.com/openfunction/apis/core/v1beta1"
 	openfunctionevent "github.com/openfunction/apis/events/v1alpha1"
 	"github.com/openfunction/controllers/core"
 	eventcontrollers "github.com/openfunction/controllers/events"
@@ -51,12 +52,12 @@ var (
 func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = knserving.AddToScheme(scheme)
-	_ = corev1alpha1.AddToScheme(scheme)
 	_ = corev1alpha2.AddToScheme(scheme)
 	_ = componentsv1alpha1.AddToScheme(scheme)
 	_ = kedav1alpha1.AddToScheme(scheme)
 	_ = openfunctionevent.AddToScheme(scheme)
 	_ = shipwrightv1alpha1.AddToScheme(scheme)
+	utilruntime.Must(corev1beta1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -104,7 +105,7 @@ func main() {
 		setupLog.Error(err, "unable to create builder controller")
 		os.Exit(1)
 	}
-	if err = core.NewServingReconciler(mgr).SetupWithManager(mgr, serving.Registry()); err != nil {
+	if err = core.NewServingReconciler(mgr).SetupWithManager(mgr, serving.Registry(mgr)); err != nil {
 		setupLog.Error(err, "unable to create serving controller")
 		os.Exit(1)
 	}
@@ -131,11 +132,11 @@ func main() {
 	}
 
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&corev1alpha2.Serving{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&corev1beta1.Serving{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Serving")
 			os.Exit(1)
 		}
-		if err = (&corev1alpha2.Function{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&corev1beta1.Function{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Function")
 			os.Exit(1)
 		}

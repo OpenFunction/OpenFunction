@@ -1,0 +1,24 @@
+# permissions for end users to edit domains.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: domain-editor-role
+rules:
+- apiGroups:
+  - core.openfunction.io
+  resources:
+  - domains
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - core.openfunction.io
+  resources:
+  - domains/status
+  verbs:
+  - get

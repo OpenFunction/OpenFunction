@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	openfunction "github.com/openfunction/apis/core/v1alpha2"
+	openfunction "github.com/openfunction/apis/core/v1beta1"
 	"github.com/openfunction/pkg/util"
 )
 
@@ -60,6 +60,7 @@ func NewDomainReconciler(mgr manager.Manager) *DomainReconciler {
 
 //+kubebuilder:rbac:groups=core.openfunction.io,resources=domains,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core.openfunction.io,resources=domains/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups="",resources=configmaps,verbs=list;get;watch;update;patch
 //+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to

@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"strings"
 
-	openfunctioncontext "github.com/OpenFunction/functions-framework-go/openfunction-context"
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,6 +44,7 @@ import (
 
 const (
 	triggerHandlerImage = "openfunctiondev/trigger-handler:v2"
+	openFuncTopic       = "pubsub"
 )
 
 // TriggerReconciler reconciles a Trigger object
@@ -317,7 +317,7 @@ func (r *TriggerReconciler) handleSubscriber(ctx context.Context, log logr.Logge
 						Name:      s.EventBusOutputName,
 						Component: r.TriggerConfig.EventBusComponent,
 						Topic:     sub.Topic,
-						Type:      string(openfunctioncontext.OpenFuncTopic),
+						Type:      openFuncTopic,
 					}
 					d.Outputs = append(d.Outputs, dio)
 					r.Function.Spec.Serving.OpenFuncAsync.Dapr = d
@@ -334,7 +334,7 @@ func (r *TriggerReconciler) handleSubscriber(ctx context.Context, log logr.Logge
 						Name:      s.DLEventBusOutputName,
 						Component: r.TriggerConfig.EventBusComponent,
 						Topic:     sub.DeadLetterTopic,
-						Type:      string(openfunctioncontext.OpenFuncTopic),
+						Type:      openFuncTopic,
 					}
 					d.Outputs = append(d.Outputs, dio)
 					r.Function.Spec.Serving.OpenFuncAsync.Dapr = d

@@ -29,8 +29,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	openfunction "github.com/openfunction/apis/core/v1alpha1"
-	corev1alpha2 "github.com/openfunction/apis/core/v1alpha2"
+	openfunction "github.com/openfunction/apis/core/v1beta1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -70,7 +69,7 @@ var _ = BeforeSuite(func() {
 	err = openfunction.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = corev1alpha2.AddToScheme(scheme.Scheme)
+	err = openfunction.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme

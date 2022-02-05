@@ -17,7 +17,7 @@ limitations under the License.
 package core
 
 import (
-	openfunction "github.com/openfunction/apis/core/v1alpha2"
+	openfunction "github.com/openfunction/apis/core/v1beta1"
 )
 
 const (
@@ -41,7 +41,7 @@ type BuilderRun interface {
 }
 
 type ServingRun interface {
-	Run(s *openfunction.Serving) error
+	Run(s *openfunction.Serving, cm map[string]string) error
 	// Result get the serving result.
 	// '' means serving is starting.
 	// `Running` means serving is running.

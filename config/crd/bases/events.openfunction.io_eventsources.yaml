@@ -65,6 +65,10 @@ spec:
                           TODO: Add other useful fields. apiVersion, kind, uid?'
                         type: string
                     type: object
+                  builderMaxAge:
+                    description: The duration to retain a completed builder, defaults
+                      to 0 (forever).
+                    type: string
                   dockerfile:
                     description: Dockerfile is the path to the Dockerfile used by
                       build strategies that rely on the Dockerfile to build an image.
@@ -74,6 +78,11 @@ spec:
                       type: string
                     description: Environment variables to pass to the builder.
                     type: object
+                  failedBuildsHistoryLimit:
+                    description: The number of failed builds to retain, default is
+                      1.
+                    format: int32
+                    type: integer
                   params:
                     additionalProperties:
                       type: string
@@ -135,6 +144,15 @@ spec:
                     required:
                     - url
                     type: object
+                  successfulBuildsHistoryLimit:
+                    description: The number of successful builds to retain, default
+                      is 0.
+                    format: int32
+                    type: integer
+                  timeout:
+                    description: Timeout defines the maximum amount of time the Build
+                      should take to execute.
+                    type: string
                 required:
                 - srcRepo
                 type: object

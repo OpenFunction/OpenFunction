@@ -21,28 +21,32 @@ import (
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 
-	v1alpha1 "github.com/openfunction/pkg/client/clientset/versioned/typed/core/v1alpha1"
+	v1beta1 "github.com/openfunction/pkg/client/clientset/versioned/typed/core/v1beta1"
 )
 
-type FakeCoreV1alpha1 struct {
+type FakeCoreV1beta1 struct {
 	*testing.Fake
 }
 
-func (c *FakeCoreV1alpha1) Builders(namespace string) v1alpha1.BuilderInterface {
+func (c *FakeCoreV1beta1) Builders(namespace string) v1beta1.BuilderInterface {
 	return &FakeBuilders{c, namespace}
 }
 
-func (c *FakeCoreV1alpha1) Functions(namespace string) v1alpha1.FunctionInterface {
+func (c *FakeCoreV1beta1) Domains(namespace string) v1beta1.DomainInterface {
+	return &FakeDomains{c, namespace}
+}
+
+func (c *FakeCoreV1beta1) Functions(namespace string) v1beta1.FunctionInterface {
 	return &FakeFunctions{c, namespace}
 }
 
-func (c *FakeCoreV1alpha1) Servings(namespace string) v1alpha1.ServingInterface {
+func (c *FakeCoreV1beta1) Servings(namespace string) v1beta1.ServingInterface {
 	return &FakeServings{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeCoreV1alpha1) RESTClient() rest.Interface {
+func (c *FakeCoreV1beta1) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
 }

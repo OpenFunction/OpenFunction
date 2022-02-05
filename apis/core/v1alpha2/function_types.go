@@ -205,7 +205,6 @@ type FunctionStatus struct {
 //+genclient
 //+genclient:noStatus
 //+kubebuilder:object:root=true
-//+kubebuilder:storageversion
 //+kubebuilder:resource:shortName=fn
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="BuildState",type=string,JSONPath=`.status.build.state`

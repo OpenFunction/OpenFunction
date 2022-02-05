@@ -14,15 +14,29 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package v1beta1
 
 import (
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
-	subscriptionsv1alpha1 "github.com/dapr/dapr/pkg/apis/subscriptions/v1alpha1"
 	kedav1alpha1 "github.com/kedacore/keda/v2/api/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
+// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+
+const (
+	Knative Runtime = "Knative"
+	Async   Runtime = "Async"
+
+	DaprBindings = "bindings"
+	DaprPubsub   = "pubsub"
+)
+
+// Runtime describes the type of the backend runtime.
+// +kubebuilder:validation:Enum=Knative;Async
+type Runtime string
 
 type KedaScaledObject struct {
 	// How to run the function, known values are Deployment or StatefulSet, default is Deployment.
@@ -43,8 +57,8 @@ type KedaScaledObject struct {
 
 type KedaScaledJob struct {
 	// Restart policy for all containers within the pod.
-	// One of OnFailure, Never.
-	// Default to Never.
+	// One of 'OnFailure', 'Never'.
+	// Default to 'Never'.
 	// +optional
 	RestartPolicy *v1.RestartPolicy `json:"restartPolicy,omitempty"`
 	// +optional
@@ -62,66 +76,41 @@ type KedaScaledJob struct {
 }
 
 type DaprIO struct {
-	// The name of Dapr component, subscriptions, service invocation.
-	// Component and subscription must be created in k8s cluster, or defined in the `components` or `subscriptions`.
+	// The name of DaprIO.
 	Name string `json:"name"`
-	// Input type, known values are bindings, pubsub, invoke.
+	// Component indicates the name of components in Dapr
+	Component string `json:"component"`
+	// Input type, known values are bindings, pubsub.
 	// bindings: Indicates that the input is the Dapr bindings component.
-	// pubsub: Indicates that the input is the Dapr pubsub component or subscription.
-	// invoke: Indicates that the input is the Dapr service invocation.
-	Type string `json:"type"`
+	// pubsub: Indicates that the input is the Dapr pubsub component.
+	Type string `json:"type,omitempty"`
 	// Topic name of mq, required when type is pubsub
+	// +optional
 	Topic string `json:"topic,omitempty"`
-	// Method name of dapr service invocation, required when type is invoke.
-	MethodName string `json:"methodName,omitempty"`
 	// Parameters for dapr input/output.
+	// +optional
 	Params map[string]string `json:"params,omitempty"`
+	// Operation field tells the Dapr component which operation it should perform.
+	// +optional
+	Operation string `json:"operation,omitempty"`
 }
 
-type DaprComponent struct {
-	Name                             string `json:"name"`
-	componentsv1alpha1.ComponentSpec `json:",inline"`
+type ScaleOptions struct {
+	MaxReplicas *int32 `json:"maxReplicas,omitempty"`
+	MinReplicas *int32 `json:"minReplicas,omitempty"`
+	// +optional
+	Keda *KedaScaleOptions `json:"keda,omitempty"`
+	// Refer to https://knative.dev/docs/serving/autoscaling/ to
+	// learn more about the autoscaling options of Knative Serving.
+	// +optional
+	Knative *map[string]string `json:"knative,omitempty"`
 }
 
-type DaprSubscription struct {
-	Name                                   string `json:"name"`
-	subscriptionsv1alpha1.SubscriptionSpec `json:",inline"`
-	// +optional
-	Scopes []string `json:"scopes,omitempty"`
-}
-
-type Dapr struct {
-	// Annotations for dapr
-	// +optional
-	Annotations map[string]string `json:"annotations,omitempty"`
-	// Components of dapr.
-	// +optional
-	Components []DaprComponent `json:"components,omitempty"`
-	// Subscriptions of dapr.
-	// +optional
-	Subscriptions []DaprSubscription `json:"subscriptions,omitempty"`
-	// Function inputs from Dapr components including binding, pubsub, and service invocation
-	// +optional
-	Inputs []*DaprIO `json:"inputs,omitempty"`
-	// Function outputs from Dapr components including binding, pubsub, and service invocation
-	// +optional
-	Outputs []*DaprIO `json:"outputs,omitempty"`
-}
-
-type Keda struct {
+type KedaScaleOptions struct {
 	// +optional
 	ScaledObject *KedaScaledObject `json:"scaledObject,omitempty"`
 	// +optional
 	ScaledJob *KedaScaledJob `json:"scaledJob,omitempty"`
-}
-
-type OpenFuncAsyncRuntime struct {
-	// Configurations of dapr.
-	// +optional
-	Dapr *Dapr `json:"dapr,omitempty"`
-	// Configurations of keda.
-	// +optional
-	Keda *Keda `json:"keda,omitempty"`
 }
 
 // ServingSpec defines the desired state of Serving
@@ -132,25 +121,46 @@ type ServingSpec struct {
 	Image string `json:"image"`
 	// ImageCredentials references a Secret that contains credentials to access
 	// the image repository.
-	//
 	// +optional
 	ImageCredentials *v1.LocalObjectReference `json:"imageCredentials,omitempty"`
 	// The port on which the function will be invoked
 	Port *int32 `json:"port,omitempty"`
-	// The backend runtime to run a function, for example Knative
-	Runtime *Runtime `json:"runtime"`
+	// The configuration of the backend runtime for running function.
+	Runtime Runtime `json:"runtime"`
+	// Function inputs from Dapr components including binding, pubsub
+	// Available for Async Runtime only.
+	// +optional
+	Inputs []*DaprIO `json:"inputs,omitempty"`
+	// Function outputs from Dapr components including binding, pubsub
+	// +optional
+	Outputs []*DaprIO `json:"outputs,omitempty"`
+	// The ScaleOptions will help us to set up guidelines for the autoscaling of function workloads.
+	// +optional
+	ScaleOptions *ScaleOptions `json:"scaleOptions,omitempty"`
+	// Configurations of dapr bindings components.
+	// +optional
+	Bindings map[string]*componentsv1alpha1.ComponentSpec `json:"bindings,omitempty"`
+	// Configurations of dapr pubsub components.
+	// +optional
+	Pubsub map[string]*componentsv1alpha1.ComponentSpec `json:"pubsub,omitempty"`
 	// Parameters to pass to the serving.
 	// All parameters will be injected into the pod as environment variables.
 	// Function code can use these parameters by getting environment variables
 	Params map[string]string `json:"params,omitempty"`
 	// Parameters of OpenFuncAsync runtime.
 	// +optional
-	OpenFuncAsync *OpenFuncAsyncRuntime `json:"openFuncAsync,omitempty"`
+	Labels map[string]string `json:"labels,omitempty"`
+	// Annotations that will be add to the workload.
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
 	// Template describes the pods that will be created.
 	// The container named `function` is the container which is used to run the image built by the builder.
 	// If it is not set, the controller will automatically add one.
 	// +optional
 	Template *v1.PodSpec `json:"template,omitempty"`
+	// Timeout defines the maximum amount of time the Serving should take to execute before the Serving is running.
+	// +optional
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
 }
 
 // ServingStatus defines the observed state of Serving
@@ -159,12 +169,15 @@ type ServingStatus struct {
 	State string `json:"state,omitempty"`
 	// Associate resources.
 	ResourceRef map[string]string `json:"resourceRef,omitempty"`
+	// Service holds the service name used to access the serving.
+	// +optional
+	Service string `json:"url,omitempty"`
 }
 
 //+genclient
 //+genclient:noStatus
 //+kubebuilder:object:root=true
-//+kubebuilder:resource:shortName=fs
+//+kubebuilder:storageversion
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 //+kubebuilder:printcolumn:name="State",type=string,JSONPath=`.status.state`
@@ -190,4 +203,8 @@ type ServingList struct {
 
 func init() {
 	SchemeBuilder.Register(&Serving{}, &ServingList{})
+}
+
+func (s *ServingStatus) IsStarting() bool {
+	return s.State == "" || s.State == Starting
 }

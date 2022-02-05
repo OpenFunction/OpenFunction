@@ -14,11 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha2
+package v1beta1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
+// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 type IngressControllerService struct {
 	// Name of the Ingress controller service.
@@ -30,7 +33,6 @@ type IngressControllerService struct {
 }
 type IngressConfig struct {
 	// Annotations for Ingress.
-	//
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty"`
 	// Ingress controller service.
@@ -40,7 +42,7 @@ type IngressConfig struct {
 	IngressClassName string `json:"ingressClassName"`
 }
 
-// DomainSpec defines the desired state of a Domain
+// DomainSpec defines the desired state of Domain
 type DomainSpec struct {
 	// Ingress configuration.
 	Ingress IngressConfig `json:"ingress"`
@@ -48,14 +50,17 @@ type DomainSpec struct {
 
 // DomainStatus defines the observed state of Domain
 type DomainStatus struct {
+	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
+	// Important: Run "make" to regenerate code after modifying this file
 }
 
 //+genclient
 //+genclient:noStatus
+//+kubebuilder:storageversion
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// Domain define a unified entry for function, user can access function through it.
+// Domain is the Schema for the domains API
 type Domain struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
