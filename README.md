@@ -75,7 +75,7 @@ After you install OpenFunction, refer to [OpenFunction samples](https://github.c
 
 Here is an example of a synchronous function:
 
-> This function writes "Hello, World!" to the HTTP response.
+> This function writes "Hello, World!" to the HTTP response. Refer to [here](https://github.com/OpenFunction/samples/tree/main/functions/Knative) to find more samples of synchronous functions.
 
 ```go
 package hello
@@ -85,8 +85,9 @@ import (
 	"net/http"
 )
 
-func HelloWorld(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "Hello, World!\n")
+func HelloWorld(w http.ResponseWriter, r *http.Request) error {
+	fmt.Fprintf(w, "Hello, %s!\n", r.URL.Path[1:])
+	return nil
 }
 ```
 
@@ -98,7 +99,7 @@ curl http://<domain-name>.<domain-namespace>/<function-namespace>/<function-name
 
 Here is an example of asynchronous function:
 
-> This function receives a greeting message and then send it to "another-target".
+> This function receives a greeting message and then send it to "another-target". Refer to [here](https://github.com/OpenFunction/samples/tree/main/functions/Async) to find more samples of asynchronous functions.
 
 ```go
 package bindings
@@ -106,14 +107,24 @@ package bindings
 import (
 	"encoding/json"
 	"log"
-  
-	ofctx "github.com/OpenFunction/functions-framework-go/openfunction-context"
+
+	ofctx "github.com/OpenFunction/functions-framework-go/context"
 )
 
-func BindingsOutput(ctx *ofctx.OpenFunctionContext, in []byte) ofctx.RetValue {
-	log.Printf("receive greeting: %s", string(in))
-	_ := ctx.Send("another-target", in)
-	return 200
+func BindingsOutput(ctx ofctx.Context, in []byte) (ofctx.Out, error) {
+	var greeting []byte
+	if in != nil {
+		greeting = in
+	} else {
+		greeting, _ = json.Marshal(map[string]string{"message": "Hello"})
+	}
+
+	_, err := ctx.Send("another-target", greeting)
+	if err != nil {
+		log.Printf("Error: %v\n", err)
+		return ctx.ReturnOnInternalError(), err
+	}
+	return ctx.ReturnOnSuccess(), nil
 }
 ```
 
