@@ -5,8 +5,6 @@ metadata:
 spec:
   version: "v1.0.0"
   image: openfunctiondev/v1beta1-autoscaling-producer:latest
-  imageCredentials:
-    name: push-secret
   serving:
     template:
       containers:
@@ -47,8 +45,6 @@ metadata:
 spec:
   version: "v1.0.0"
   image: openfunctiondev/v1beta1-autoscaling-subscriber:latest
-  imageCredentials:
-    name: push-secret
   serving:
     runtime: "Async"
     scaleOptions:

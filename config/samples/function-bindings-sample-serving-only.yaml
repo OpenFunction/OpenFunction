@@ -5,8 +5,6 @@ metadata:
 spec:
   version: "v1.0.0"
   image: openfunctiondev/v1beta1-output-target:latest
-  imageCredentials:
-    name: push-secret
   serving:
     runtime: Async
     inputs:
@@ -40,8 +38,6 @@ metadata:
 spec:
   version: "v1.0.0"
   image: openfunctiondev/v1beta1-bindings:latest
-  imageCredentials:
-    name: push-secret
   serving:
     template:
       containers:
