@@ -215,19 +215,19 @@ func (dst *Serving) convertServingFrom(src *v1beta1.Serving) error {
 		if src.Spec.ScaleOptions != nil && src.Spec.ScaleOptions.Keda != nil {
 			dst.Spec.OpenFuncAsync.Keda = &Keda{}
 		}
-	}
 
-	if src.Spec.Bindings != nil {
-		for name, component := range src.Spec.Bindings {
-			c := component.DeepCopy()
-			dst.Spec.OpenFuncAsync.Dapr.Components[name] = c
+		if src.Spec.Bindings != nil {
+			for name, component := range src.Spec.Bindings {
+				c := component.DeepCopy()
+				dst.Spec.OpenFuncAsync.Dapr.Components[name] = c
+			}
 		}
-	}
 
-	if src.Spec.Pubsub != nil {
-		for name, component := range src.Spec.Pubsub {
-			c := component.DeepCopy()
-			dst.Spec.OpenFuncAsync.Dapr.Components[name] = c
+		if src.Spec.Pubsub != nil {
+			for name, component := range src.Spec.Pubsub {
+				c := component.DeepCopy()
+				dst.Spec.OpenFuncAsync.Dapr.Components[name] = c
+			}
 		}
 	}
 
