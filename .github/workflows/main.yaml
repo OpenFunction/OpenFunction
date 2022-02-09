@@ -125,11 +125,26 @@ jobs:
 #      - name: Setup tmate session
 #        uses: mxschmitt/action-tmate@v1
 
-      - name: Test
+      - name: Knative function e2e test
         timeout-minutes: 10
         run: |
           chmod +x "${GITHUB_WORKSPACE}/.github/workflows/e2e-test.sh"
-          bash "${GITHUB_WORKSPACE}"/.github/workflows/e2e-test.sh
+          bash "${GITHUB_WORKSPACE}"/.github/workflows/e2e-test.sh knative
+
+      - name: Knative function with Dapr e2e test
+        timeout-minutes: 10
+        run: |
+          bash "${GITHUB_WORKSPACE}"/.github/workflows/e2e-test.sh knative_dapr
+
+      - name: Async pubsub function e2e test
+        timeout-minutes: 10
+        run: |
+          bash "${GITHUB_WORKSPACE}"/.github/workflows/e2e-test.sh async_pubsub
+
+      - name: Async bindings function e2e test
+        timeout-minutes: 10
+        run: |
+          bash "${GITHUB_WORKSPACE}"/.github/workflows/e2e-test.sh async_bindings
 
       - name: Output debug info
         if: ${{ failure() }}

@@ -15,7 +15,7 @@ spec:
     runtime: "Async"
     params:
       OUTPUT_NAME: subscriber
-      TOPIC_NAME: "sample-topic"
+      TOPIC_NAME: "pubsub"
       NUMBER_OF_PUBLISHERS: "2"
       PUBLISHERS_FREQ: "100ms"
       PUBLISHERS_DELAY: "10s"
@@ -25,7 +25,7 @@ spec:
       - name: subscriber
         component: kafka-server
         type: pubsub
-        topic: "sample-topic"
+        topic: "pubsub"
     pubsub:
       kafka-server:
         type: pubsub.kafka
@@ -36,7 +36,7 @@ spec:
           - name: authRequired
             value: "false"
           - name: allowedTopics
-            value: "sample-topic"
+            value: "pubsub"
           - name: consumerID
             value: "producer"
 ---
@@ -61,7 +61,7 @@ spec:
           triggers:
             - type: kafka
               metadata:
-                topic: "sample-topic"
+                topic: "pubsub"
                 bootstrapServers: kafka-server-kafka-brokers.default.svc.cluster.local:9092
                 consumerGroup: autoscaling-subscriber
                 lagThreshold: "10"
@@ -73,7 +73,7 @@ spec:
       - name: producer
         component: kafka-server
         type: pubsub
-        topic: "sample-topic"
+        topic: "pubsub"
     pubsub:
       kafka-server:
         type: pubsub.kafka
@@ -84,6 +84,6 @@ spec:
           - name: authRequired
             value: "false"
           - name: allowedTopics
-            value: "sample-topic"
+            value: "pubsub"
           - name: consumerID
             value: "autoscaling-subscriber"
