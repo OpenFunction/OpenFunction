@@ -27,16 +27,23 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 const (
-	Knative Runtime = "Knative"
-	Async   Runtime = "Async"
+	Knative Runtime = "knative"
+	Async   Runtime = "async"
 
 	DaprBindings = "bindings"
 	DaprPubsub   = "pubsub"
+
+	ScaledObject ScaleTargetKind = "object"
+	ScaledJob    ScaleTargetKind = "job"
 )
 
 // Runtime describes the type of the backend runtime.
-// +kubebuilder:validation:Enum=Knative;Async
+// +kubebuilder:validation:Enum=knative;async
 type Runtime string
+
+// ScaleTargetKind represents the kind of trigger target.
+// +kubebuilder:validation:Enum=object;job
+type ScaleTargetKind string
 
 type KedaScaledObject struct {
 	// How to run the function, known values are Deployment or StatefulSet, default is Deployment.
@@ -51,8 +58,6 @@ type KedaScaledObject struct {
 	MaxReplicaCount *int32 `json:"maxReplicaCount,omitempty"`
 	// +optional
 	Advanced *kedav1alpha1.AdvancedConfig `json:"advanced,omitempty"`
-
-	Triggers []kedav1alpha1.ScaleTriggers `json:"triggers"`
 }
 
 type KedaScaledJob struct {
@@ -71,8 +76,12 @@ type KedaScaledJob struct {
 	MaxReplicaCount *int32 `json:"maxReplicaCount,omitempty"`
 	// +optional
 	ScalingStrategy kedav1alpha1.ScalingStrategy `json:"scalingStrategy,omitempty"`
+}
 
-	Triggers []kedav1alpha1.ScaleTriggers `json:"triggers"`
+type Triggers struct {
+	kedav1alpha1.ScaleTriggers `json:",inline"`
+	// +optional
+	TargetKind *ScaleTargetKind `json:"targetKind,omitempty"`
 }
 
 type DaprIO struct {
@@ -143,6 +152,10 @@ type ServingSpec struct {
 	// Configurations of dapr pubsub components.
 	// +optional
 	Pubsub map[string]*componentsv1alpha1.ComponentSpec `json:"pubsub,omitempty"`
+	// Triggers are used to specify the trigger sources of the function.
+	// The Keda (ScaledObject, ScaledJob) configuration in ScaleOptions cannot take effect without Triggers being set.
+	// +optional
+	Triggers []Triggers `json:"triggers,omitempty"`
 	// Parameters to pass to the serving.
 	// All parameters will be injected into the pod as environment variables.
 	// Function code can use these parameters by getting environment variables

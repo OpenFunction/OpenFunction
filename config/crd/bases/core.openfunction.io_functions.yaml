@@ -7716,8 +7716,8 @@ spec:
                     description: The configuration of the backend runtime for running
                       function.
                     enum:
-                    - Knative
-                    - Async
+                    - knative
+                    - async
                     type: string
                   scaleOptions:
                     description: The ScaleOptions will help us to set up guidelines
@@ -7760,44 +7760,6 @@ spec:
                               successfulJobsHistoryLimit:
                                 format: int32
                                 type: integer
-                              triggers:
-                                items:
-                                  description: ScaleTriggers reference the scaler
-                                    that will be used
-                                  properties:
-                                    authenticationRef:
-                                      description: ScaledObjectAuthRef points to the
-                                        TriggerAuthentication or ClusterTriggerAuthentication
-                                        object that is used to authenticate the scaler
-                                        with the environment
-                                      properties:
-                                        kind:
-                                          description: Kind of the resource being
-                                            referred to. Defaults to TriggerAuthentication.
-                                          type: string
-                                        name:
-                                          type: string
-                                      required:
-                                      - name
-                                      type: object
-                                    fallback:
-                                      format: int32
-                                      type: integer
-                                    metadata:
-                                      additionalProperties:
-                                        type: string
-                                      type: object
-                                    name:
-                                      type: string
-                                    type:
-                                      type: string
-                                  required:
-                                  - metadata
-                                  - type
-                                  type: object
-                                type: array
-                            required:
-                            - triggers
                             type: object
                           scaledObject:
                             properties:
@@ -7968,48 +7930,10 @@ spec:
                               pollingInterval:
                                 format: int32
                                 type: integer
-                              triggers:
-                                items:
-                                  description: ScaleTriggers reference the scaler
-                                    that will be used
-                                  properties:
-                                    authenticationRef:
-                                      description: ScaledObjectAuthRef points to the
-                                        TriggerAuthentication or ClusterTriggerAuthentication
-                                        object that is used to authenticate the scaler
-                                        with the environment
-                                      properties:
-                                        kind:
-                                          description: Kind of the resource being
-                                            referred to. Defaults to TriggerAuthentication.
-                                          type: string
-                                        name:
-                                          type: string
-                                      required:
-                                      - name
-                                      type: object
-                                    fallback:
-                                      format: int32
-                                      type: integer
-                                    metadata:
-                                      additionalProperties:
-                                        type: string
-                                      type: object
-                                    name:
-                                      type: string
-                                    type:
-                                      type: string
-                                  required:
-                                  - metadata
-                                  - type
-                                  type: object
-                                type: array
                               workloadType:
                                 description: How to run the function, known values
                                   are Deployment or StatefulSet, default is Deployment.
                                 type: string
-                            required:
-                            - triggers
                             type: object
                         type: object
                       knative:
@@ -14678,6 +14602,49 @@ spec:
                     description: Timeout defines the maximum amount of time the Serving
                       should take to execute before the Serving is running.
                     type: string
+                  triggers:
+                    description: Triggers are used to specify the trigger sources
+                      of the function. The Keda (ScaledObject, ScaledJob) configuration
+                      in ScaleOptions cannot take effect without Triggers being set.
+                    items:
+                      properties:
+                        authenticationRef:
+                          description: ScaledObjectAuthRef points to the TriggerAuthentication
+                            or ClusterTriggerAuthentication object that is used to
+                            authenticate the scaler with the environment
+                          properties:
+                            kind:
+                              description: Kind of the resource being referred to.
+                                Defaults to TriggerAuthentication.
+                              type: string
+                            name:
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        fallback:
+                          format: int32
+                          type: integer
+                        metadata:
+                          additionalProperties:
+                            type: string
+                          type: object
+                        name:
+                          type: string
+                        targetKind:
+                          description: ScaleTargetKind represents the kind of trigger
+                            target.
+                          enum:
+                          - object
+                          - job
+                          type: string
+                        type:
+                          type: string
+                      required:
+                      - metadata
+                      - type
+                      type: object
+                    type: array
                 required:
                 - runtime
                 type: object

@@ -549,6 +549,7 @@ func (r *FunctionReconciler) createServingSpec(fn *openfunction.Function) openfu
 		spec.Labels = fn.Spec.Serving.Labels
 		spec.Annotations = fn.Spec.Serving.Annotations
 		spec.Template = fn.Spec.Serving.Template
+		spec.Triggers = fn.Spec.Serving.Triggers
 	}
 
 	return spec

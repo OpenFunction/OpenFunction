@@ -6,7 +6,7 @@ spec:
   version: "v1.0.0"
   image: openfunctiondev/v1beta1-output-target:latest
   serving:
-    runtime: Async
+    runtime: async
     inputs:
       - name: greeting
         component: target-topic
@@ -43,7 +43,7 @@ spec:
       containers:
         - name: function
           imagePullPolicy: Always
-    runtime: "Async"
+    runtime: "async"
     inputs:
       - name: cron
         component: cron

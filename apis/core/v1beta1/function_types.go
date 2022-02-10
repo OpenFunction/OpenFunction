@@ -142,6 +142,10 @@ type ServingImpl struct {
 	// Configurations of dapr pubsub components.
 	// +optional
 	Pubsub map[string]*componentsv1alpha1.ComponentSpec `json:"pubsub,omitempty"`
+	// Triggers are used to specify the trigger sources of the function.
+	// The Keda (ScaledObject, ScaledJob) configuration in ScaleOptions cannot take effect without Triggers being set.
+	// +optional
+	Triggers []Triggers `json:"triggers,omitempty"`
 	// Parameters to pass to the serving.
 	// All parameters will be injected into the pod as environment variables.
 	// Function code can use these parameters by getting environment variables

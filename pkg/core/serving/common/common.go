@@ -53,12 +53,17 @@ const (
 )
 
 func GenOpenFunctionContext(
+	ctx context.Context,
+	logger logr.Logger,
 	s *openfunction.Serving,
 	cm map[string]string,
 	components map[string]*componentsv1alpha1.ComponentSpec,
 	functionName string,
 	componentName string,
 ) string {
+	log := logger.WithName("GenOpenFunctionContext").
+		WithValues("Serving", fmt.Sprintf("%s/%s", s.Namespace, s.Name))
+
 	var port int32 = 8080
 	if s.Spec.Port != nil {
 		port = *s.Spec.Port
@@ -72,7 +77,7 @@ func GenOpenFunctionContext(
 	fc := functionContext{
 		Name:    functionName,
 		Version: version,
-		Runtime: string(s.Spec.Runtime),
+		Runtime: strings.Title(strings.ToLower(string(s.Spec.Runtime))),
 		Port:    fmt.Sprintf("%d", port),
 	}
 
@@ -145,7 +150,10 @@ func GenOpenFunctionContext(
 	}
 
 	// Handle plugins information
-	parsePluginsCfg(s, cm, &fc)
+	if err := parsePluginsCfg(s, cm, &fc); err != nil {
+		// Just log the error
+		log.Error(err, "failed to parse plugins configuration.")
+	}
 
 	bs, _ := jsoniter.Marshal(fc)
 	return string(bs)
@@ -288,7 +296,7 @@ func CheckComponentSpecExist(s *openfunction.Serving, components map[string]*com
 // parsePluginsCfg parses the plugin configuration information from both ConfigMap and function annotations.
 // The plugin configuration information obtained from the function annotations has a higher priority.
 // The Tracing plugin is registered at the end of prePlugins and the beginning of postPlugins by default.
-func parsePluginsCfg(s *openfunction.Serving, cm map[string]string, fc *functionContext) {
+func parsePluginsCfg(s *openfunction.Serving, cm map[string]string, fc *functionContext) error {
 	var plgCfg = &plugins{}
 	var tcCfg = &functionPluginsTracing{}
 	var prePlugins []string
@@ -306,7 +314,7 @@ func parsePluginsCfg(s *openfunction.Serving, cm map[string]string, fc *function
 	if pluginsRaw != "" {
 		cfg := bytes.NewBufferString(pluginsRaw)
 		if err := yaml.Unmarshal(cfg.Bytes(), plgCfg); err != nil {
-			return
+			return err
 		}
 	}
 
@@ -319,7 +327,7 @@ func parsePluginsCfg(s *openfunction.Serving, cm map[string]string, fc *function
 	if pluginsTracingRaw != "" {
 		cfg := bytes.NewBufferString(pluginsTracingRaw)
 		if err := yaml.Unmarshal(cfg.Bytes(), tcCfg); err != nil {
-			return
+			return err
 		}
 	}
 
@@ -350,7 +358,7 @@ func parsePluginsCfg(s *openfunction.Serving, cm map[string]string, fc *function
 	fc.PrePlugins = prePlugins
 	fc.PostPlugins = postPlugins
 	fc.PluginsTracing = tcCfg
-	return
+	return nil
 }
 
 func reverse(originSlice []string) []string {

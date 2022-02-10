@@ -29,6 +29,7 @@ on:
       - 'config/samples/function-pubsub-sample-serving-only.yaml'
       - 'config/samples/function-knative-with-dapr-serving-only.yaml'
       - 'config/samples/function-sample-serving-only.yaml'
+      - 'config/samples/function-with-plugins-serving-only.yaml'
       - 'controllers/**'
       - 'hack/delete.sh'
       - 'hack/deploy.sh'
@@ -149,6 +150,11 @@ jobs:
         timeout-minutes: 10
         run: |
           bash "${GITHUB_WORKSPACE}"/.github/workflows/e2e-test.sh async_bindings
+
+      - name: Function with plugins e2e test
+        timeout-minutes: 10
+        run: |
+          bash "${GITHUB_WORKSPACE}"/.github/workflows/e2e-test.sh plugin
 
       - name: Output debug info
         if: ${{ failure() }}

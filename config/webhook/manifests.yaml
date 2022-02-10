@@ -12,6 +12,7 @@ webhooks:
       name: webhook-service
       namespace: openfunction
       path: /mutate-core-openfunction-io-v1beta1-function
+#    url: "https://<node-ip>:9443/mutate-core-openfunction-io-v1beta1-function"
   failurePolicy: Fail
   name: mfunctions.of.io
   rules:
@@ -32,6 +33,7 @@ webhooks:
       name: webhook-service
       namespace: openfunction
       path: /mutate-core-openfunction-io-v1beta1-serving
+#    url: "https://<node-ip>:9443/mutate-core-openfunction-io-v1beta1-serving"
   failurePolicy: Fail
   name: mservings.of.io
   rules:
