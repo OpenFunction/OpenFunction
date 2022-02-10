@@ -10,7 +10,7 @@ spec:
       containers:
         - name: function
           imagePullPolicy: Always
-    runtime: "Async"
+    runtime: "async"
     params:
       OUTPUT_NAME: subscriber
       TOPIC_NAME: "pubsub"
@@ -46,7 +46,7 @@ spec:
   version: "v1.0.0"
   image: openfunctiondev/v1beta1-autoscaling-subscriber:latest
   serving:
-    runtime: "Async"
+    runtime: "async"
     scaleOptions:
       keda:
         scaledObject:
@@ -54,13 +54,14 @@ spec:
           minReplicaCount: 0
           maxReplicaCount: 10
           cooldownPeriod: 30
-          triggers:
-            - type: kafka
-              metadata:
-                topic: "pubsub"
-                bootstrapServers: kafka-server-kafka-brokers.default.svc.cluster.local:9092
-                consumerGroup: autoscaling-subscriber
-                lagThreshold: "10"
+    triggers:
+      - type: kafka
+        metadata:
+          topic: "pubsub"
+          bootstrapServers: kafka-server-kafka-brokers.default.svc.cluster.local:9092
+          consumerGroup: autoscaling-subscriber
+          lagThreshold: "10"
+        targetKind: "object"
     template:
       containers:
         - name: function

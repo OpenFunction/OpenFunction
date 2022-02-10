@@ -206,7 +206,7 @@ func (r *servingRun) createService(s *openfunction.Serving, cm map[string]string
 
 	container.Env = append(container.Env, corev1.EnvVar{
 		Name:  common.FunctionContextEnvName,
-		Value: common.GenOpenFunctionContext(s, cm, components, getFunctionName(s), componentName),
+		Value: common.GenOpenFunctionContext(r.ctx, r.log, s, cm, components, getFunctionName(s), componentName),
 	})
 
 	if s.Spec.Params != nil {
@@ -326,10 +326,6 @@ func (r *servingRun) createService(s *openfunction.Serving, cm map[string]string
 				},
 			},
 		},
-	}
-
-	if s.Spec.Outputs != nil {
-
 	}
 
 	return &service

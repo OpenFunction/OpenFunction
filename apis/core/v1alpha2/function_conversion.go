@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
+	kedav1alpha1 "github.com/kedacore/keda/v2/api/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 
 	"github.com/openfunction/apis/core/v1beta1"
@@ -114,7 +115,7 @@ func (src *Function) convertBuildTo(dst *v1beta1.Function) error {
 
 func (src *Function) convertServingTo(dst *v1beta1.Function) error {
 	rtType := v1beta1.Knative
-	if src.Spec.Serving.Runtime != nil && *src.Spec.Serving.Runtime == OpenFuncAsync {
+	if src.Spec.Serving.Runtime != nil && strings.EqualFold(string(*src.Spec.Serving.Runtime), string(OpenFuncAsync)) {
 		rtType = v1beta1.Async
 	}
 	dst.Spec.Serving.Runtime = rtType
@@ -170,20 +171,29 @@ func (src *Function) convertServingTo(dst *v1beta1.Function) error {
 		}
 
 		if src.Spec.Serving.OpenFuncAsync.Keda != nil {
+			dst.Spec.Serving.ScaleOptions = &v1beta1.ScaleOptions{}
 			dst.Spec.Serving.ScaleOptions.Keda = &v1beta1.KedaScaleOptions{}
+			dst.Spec.Serving.Triggers = []v1beta1.Triggers{}
 			if src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob != nil {
+				scaledJobKind := v1beta1.ScaledJob
 				dst.Spec.Serving.ScaleOptions.Keda.ScaledJob = &v1beta1.KedaScaledJob{}
 				sj := src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.DeepCopy()
 				dst.Spec.Serving.ScaleOptions.Keda.ScaledJob.ScalingStrategy = sj.ScalingStrategy
-				dst.Spec.Serving.ScaleOptions.Keda.ScaledJob.Triggers = sj.Triggers
 				dst.Spec.Serving.ScaleOptions.Keda.ScaledJob.FailedJobsHistoryLimit = sj.FailedJobsHistoryLimit
 				dst.Spec.Serving.ScaleOptions.Keda.ScaledJob.SuccessfulJobsHistoryLimit = sj.SuccessfulJobsHistoryLimit
 				dst.Spec.Serving.ScaleOptions.Keda.ScaledJob.MaxReplicaCount = sj.MaxReplicaCount
 				dst.Spec.Serving.ScaleOptions.Keda.ScaledJob.PollingInterval = sj.PollingInterval
 				dst.Spec.Serving.ScaleOptions.Keda.ScaledJob.RestartPolicy = sj.RestartPolicy
+				for _, trigger := range sj.Triggers {
+					t := trigger.DeepCopy()
+					dst.Spec.Serving.Triggers = append(dst.Spec.Serving.Triggers, v1beta1.Triggers{
+						ScaleTriggers: *t, TargetKind: &scaledJobKind,
+					})
+				}
 			}
 
 			if src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject != nil {
+				scaledObjectKind := v1beta1.ScaledObject
 				dst.Spec.Serving.ScaleOptions.Keda.ScaledObject = &v1beta1.KedaScaledObject{}
 				so := src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.DeepCopy()
 				dst.Spec.Serving.ScaleOptions.Keda.ScaledObject.PollingInterval = so.PollingInterval
@@ -192,7 +202,12 @@ func (src *Function) convertServingTo(dst *v1beta1.Function) error {
 				dst.Spec.Serving.ScaleOptions.Keda.ScaledObject.Advanced = so.Advanced
 				dst.Spec.Serving.ScaleOptions.Keda.ScaledObject.MinReplicaCount = so.MinReplicaCount
 				dst.Spec.Serving.ScaleOptions.Keda.ScaledObject.MaxReplicaCount = so.MaxReplicaCount
-				dst.Spec.Serving.ScaleOptions.Keda.ScaledObject.Triggers = so.Triggers
+				for _, trigger := range so.Triggers {
+					t := trigger.DeepCopy()
+					dst.Spec.Serving.Triggers = append(dst.Spec.Serving.Triggers, v1beta1.Triggers{
+						ScaleTriggers: *t, TargetKind: &scaledObjectKind,
+					})
+				}
 			}
 		}
 	}
@@ -287,8 +302,8 @@ func (dst *Function) convertBuildFrom(src *v1beta1.Function) error {
 }
 
 func (dst *Function) convertServingFrom(src *v1beta1.Function) error {
-	rt := Runtime(src.Spec.Serving.Runtime)
-	if src.Spec.Serving.Runtime == v1beta1.Async {
+	rt := Knative
+	if strings.EqualFold(string(src.Spec.Serving.Runtime), string(v1beta1.Async)) {
 		rt = OpenFuncAsync
 	}
 	dst.Spec.Serving.Runtime = &rt
@@ -344,18 +359,30 @@ func (dst *Function) convertServingFrom(src *v1beta1.Function) error {
 
 		if src.Spec.Serving.ScaleOptions.Keda.ScaledJob != nil {
 			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob = &KedaScaledJob{}
+			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.Triggers = []kedav1alpha1.ScaleTriggers{}
 			sj := src.Spec.Serving.ScaleOptions.Keda.ScaledJob.DeepCopy()
 			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.ScalingStrategy = sj.ScalingStrategy
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.Triggers = sj.Triggers
 			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.FailedJobsHistoryLimit = sj.FailedJobsHistoryLimit
 			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.SuccessfulJobsHistoryLimit = sj.SuccessfulJobsHistoryLimit
 			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.MaxReplicaCount = sj.MaxReplicaCount
 			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.PollingInterval = sj.PollingInterval
 			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.RestartPolicy = sj.RestartPolicy
+			for _, trigger := range src.Spec.Serving.Triggers {
+				t := trigger.DeepCopy()
+				if t.TargetKind != nil && *t.TargetKind == v1beta1.ScaledJob {
+					dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.Triggers = append(dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.Triggers, t.ScaleTriggers)
+				}
+			}
+
+			// If no triggers are found, there is no need to set up the ScaledJob.
+			if dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.Triggers == nil {
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob = nil
+			}
 		}
 
 		if src.Spec.Serving.ScaleOptions.Keda.ScaledObject != nil {
 			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject = &KedaScaledObject{}
+			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Triggers = []kedav1alpha1.ScaleTriggers{}
 			so := src.Spec.Serving.ScaleOptions.Keda.ScaledObject.DeepCopy()
 			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.PollingInterval = so.PollingInterval
 			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.CooldownPeriod = so.CooldownPeriod
@@ -363,9 +390,19 @@ func (dst *Function) convertServingFrom(src *v1beta1.Function) error {
 			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Advanced = so.Advanced
 			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.MinReplicaCount = so.MinReplicaCount
 			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.MaxReplicaCount = so.MaxReplicaCount
-			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Triggers = so.Triggers
-		}
+			for _, trigger := range src.Spec.Serving.Triggers {
+				t := trigger.DeepCopy()
+				if t.TargetKind != nil && *t.TargetKind == v1beta1.ScaledJob {
+					continue
+				}
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Triggers = append(dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Triggers, t.ScaleTriggers)
+			}
 
+			// If no triggers are found, there is no need to set up the ScaledObject.
+			if dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Triggers == nil {
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject = nil
+			}
+		}
 	}
 
 	if src.Spec.Serving.Inputs != nil {

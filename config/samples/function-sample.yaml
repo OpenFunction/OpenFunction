@@ -21,7 +21,7 @@ spec:
       sourceSubPath: "functions/Knative/hello-world-go"
   serving:
     timeout: 5m
-    runtime: Knative
+    runtime: knative
     template:
       containers:
         - name: function

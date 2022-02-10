@@ -6,7 +6,7 @@ spec:
   version: "v1.0.0"
   image: openfunctiondev/v1beta1-output-target:latest
   serving:
-    runtime: Async
+    runtime: async
     inputs:
       - name: greeting
         component: target-topic
@@ -43,7 +43,7 @@ spec:
     scaleOptions:
       minReplicas: 0
       maxReplicas: 5
-    runtime: Knative
+    runtime: knative
     outputs:
       - name: target
         component: kafka-server

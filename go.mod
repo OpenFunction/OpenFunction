@@ -3,7 +3,6 @@ module github.com/openfunction
 go 1.16
 
 require (
-	github.com/OpenFunction/functions-framework-go v0.1.2-0.20220124135506-cad5f9ea685d
 	github.com/dapr/dapr v1.3.1
 	github.com/go-logr/logr v1.2.0
 	github.com/json-iterator/go v1.1.11

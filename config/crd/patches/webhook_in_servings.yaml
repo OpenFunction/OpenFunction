@@ -12,5 +12,6 @@ spec:
           namespace: openfunction
           name: webhook-service
           path: /convert
+#        url: "https://<node-ip>:9443/convert"
       conversionReviewVersions:
       - v1

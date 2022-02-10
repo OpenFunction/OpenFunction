@@ -100,6 +100,23 @@ function async_function_with_bindings() {
     done
 }
 
+function function_with_plugins() {
+    kubectl apply -f config/samples/function-with-plugins-serving-only.yaml
+
+    while /bin/true; do
+      kubectl logs $(kubectl get po -l openfunction.io/serving=$(kubectl get functions bindings-plugins -o jsonpath='{.status.serving.resourceRef}') \
+        -o jsonpath='{.items[0].metadata.name}') function |grep "the sum is: 2"
+      if [ $? -ne 0 ]; then
+        sleep 1
+        continue
+      else
+        echo "Function with plugins tested successfully!"
+        kubectl delete -f config/samples/function-with-plugins-serving-only.yaml
+        break
+      fi
+    done
+}
+
 function async_function_with_pubsub() {
     kubectl apply -f config/samples/function-pubsub-sample-serving-only.yaml
 
@@ -142,5 +159,9 @@ case $1 in
 
   async_pubsub)
     async_function_with_pubsub
+    ;;
+
+  plugin)
+    function_with_plugins
     ;;
 esac

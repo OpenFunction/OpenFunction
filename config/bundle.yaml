@@ -9361,8 +9361,8 @@ spec:
                     description: The configuration of the backend runtime for running
                       function.
                     enum:
-                    - Knative
-                    - Async
+                    - knative
+                    - async
                     type: string
                   scaleOptions:
                     description: The ScaleOptions will help us to set up guidelines
@@ -9405,44 +9405,6 @@ spec:
                               successfulJobsHistoryLimit:
                                 format: int32
                                 type: integer
-                              triggers:
-                                items:
-                                  description: ScaleTriggers reference the scaler
-                                    that will be used
-                                  properties:
-                                    authenticationRef:
-                                      description: ScaledObjectAuthRef points to the
-                                        TriggerAuthentication or ClusterTriggerAuthentication
-                                        object that is used to authenticate the scaler
-                                        with the environment
-                                      properties:
-                                        kind:
-                                          description: Kind of the resource being
-                                            referred to. Defaults to TriggerAuthentication.
-                                          type: string
-                                        name:
-                                          type: string
-                                      required:
-                                      - name
-                                      type: object
-                                    fallback:
-                                      format: int32
-                                      type: integer
-                                    metadata:
-                                      additionalProperties:
-                                        type: string
-                                      type: object
-                                    name:
-                                      type: string
-                                    type:
-                                      type: string
-                                  required:
-                                  - metadata
-                                  - type
-                                  type: object
-                                type: array
-                            required:
-                            - triggers
                             type: object
                           scaledObject:
                             properties:
@@ -9613,48 +9575,10 @@ spec:
                               pollingInterval:
                                 format: int32
                                 type: integer
-                              triggers:
-                                items:
-                                  description: ScaleTriggers reference the scaler
-                                    that will be used
-                                  properties:
-                                    authenticationRef:
-                                      description: ScaledObjectAuthRef points to the
-                                        TriggerAuthentication or ClusterTriggerAuthentication
-                                        object that is used to authenticate the scaler
-                                        with the environment
-                                      properties:
-                                        kind:
-                                          description: Kind of the resource being
-                                            referred to. Defaults to TriggerAuthentication.
-                                          type: string
-                                        name:
-                                          type: string
-                                      required:
-                                      - name
-                                      type: object
-                                    fallback:
-                                      format: int32
-                                      type: integer
-                                    metadata:
-                                      additionalProperties:
-                                        type: string
-                                      type: object
-                                    name:
-                                      type: string
-                                    type:
-                                      type: string
-                                  required:
-                                  - metadata
-                                  - type
-                                  type: object
-                                type: array
                               workloadType:
                                 description: How to run the function, known values
                                   are Deployment or StatefulSet, default is Deployment.
                                 type: string
-                            required:
-                            - triggers
                             type: object
                         type: object
                       knative:
@@ -16323,6 +16247,49 @@ spec:
                     description: Timeout defines the maximum amount of time the Serving
                       should take to execute before the Serving is running.
                     type: string
+                  triggers:
+                    description: Triggers are used to specify the trigger sources
+                      of the function. The Keda (ScaledObject, ScaledJob) configuration
+                      in ScaleOptions cannot take effect without Triggers being set.
+                    items:
+                      properties:
+                        authenticationRef:
+                          description: ScaledObjectAuthRef points to the TriggerAuthentication
+                            or ClusterTriggerAuthentication object that is used to
+                            authenticate the scaler with the environment
+                          properties:
+                            kind:
+                              description: Kind of the resource being referred to.
+                                Defaults to TriggerAuthentication.
+                              type: string
+                            name:
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        fallback:
+                          format: int32
+                          type: integer
+                        metadata:
+                          additionalProperties:
+                            type: string
+                          type: object
+                        name:
+                          type: string
+                        targetKind:
+                          description: ScaleTargetKind represents the kind of trigger
+                            target.
+                          enum:
+                          - object
+                          - job
+                          type: string
+                        type:
+                          type: string
+                      required:
+                      - metadata
+                      - type
+                      type: object
+                    type: array
                 required:
                 - runtime
                 type: object
@@ -23541,8 +23508,8 @@ spec:
                 description: The configuration of the backend runtime for running
                   function.
                 enum:
-                - Knative
-                - Async
+                - knative
+                - async
                 type: string
               scaleOptions:
                 description: The ScaleOptions will help us to set up guidelines for
@@ -23583,43 +23550,6 @@ spec:
                           successfulJobsHistoryLimit:
                             format: int32
                             type: integer
-                          triggers:
-                            items:
-                              description: ScaleTriggers reference the scaler that
-                                will be used
-                              properties:
-                                authenticationRef:
-                                  description: ScaledObjectAuthRef points to the TriggerAuthentication
-                                    or ClusterTriggerAuthentication object that is
-                                    used to authenticate the scaler with the environment
-                                  properties:
-                                    kind:
-                                      description: Kind of the resource being referred
-                                        to. Defaults to TriggerAuthentication.
-                                      type: string
-                                    name:
-                                      type: string
-                                  required:
-                                  - name
-                                  type: object
-                                fallback:
-                                  format: int32
-                                  type: integer
-                                metadata:
-                                  additionalProperties:
-                                    type: string
-                                  type: object
-                                name:
-                                  type: string
-                                type:
-                                  type: string
-                              required:
-                              - metadata
-                              - type
-                              type: object
-                            type: array
-                        required:
-                        - triggers
                         type: object
                       scaledObject:
                         properties:
@@ -23786,47 +23716,10 @@ spec:
                           pollingInterval:
                             format: int32
                             type: integer
-                          triggers:
-                            items:
-                              description: ScaleTriggers reference the scaler that
-                                will be used
-                              properties:
-                                authenticationRef:
-                                  description: ScaledObjectAuthRef points to the TriggerAuthentication
-                                    or ClusterTriggerAuthentication object that is
-                                    used to authenticate the scaler with the environment
-                                  properties:
-                                    kind:
-                                      description: Kind of the resource being referred
-                                        to. Defaults to TriggerAuthentication.
-                                      type: string
-                                    name:
-                                      type: string
-                                  required:
-                                  - name
-                                  type: object
-                                fallback:
-                                  format: int32
-                                  type: integer
-                                metadata:
-                                  additionalProperties:
-                                    type: string
-                                  type: object
-                                name:
-                                  type: string
-                                type:
-                                  type: string
-                              required:
-                              - metadata
-                              - type
-                              type: object
-                            type: array
                           workloadType:
                             description: How to run the function, known values are
                               Deployment or StatefulSet, default is Deployment.
                             type: string
-                        required:
-                        - triggers
                         type: object
                     type: object
                   knative:
@@ -30242,6 +30135,49 @@ spec:
                 description: Timeout defines the maximum amount of time the Serving
                   should take to execute before the Serving is running.
                 type: string
+              triggers:
+                description: Triggers are used to specify the trigger sources of the
+                  function. The Keda (ScaledObject, ScaledJob) configuration in ScaleOptions
+                  cannot take effect without Triggers being set.
+                items:
+                  properties:
+                    authenticationRef:
+                      description: ScaledObjectAuthRef points to the TriggerAuthentication
+                        or ClusterTriggerAuthentication object that is used to authenticate
+                        the scaler with the environment
+                      properties:
+                        kind:
+                          description: Kind of the resource being referred to. Defaults
+                            to TriggerAuthentication.
+                          type: string
+                        name:
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    fallback:
+                      format: int32
+                      type: integer
+                    metadata:
+                      additionalProperties:
+                        type: string
+                      type: object
+                    name:
+                      type: string
+                    targetKind:
+                      description: ScaleTargetKind represents the kind of trigger
+                        target.
+                      enum:
+                      - object
+                      - job
+                      type: string
+                    type:
+                      type: string
+                  required:
+                  - metadata
+                  - type
+                  type: object
+                type: array
               version:
                 description: Function version in format like v1.0.0
                 type: string
@@ -30481,6 +30417,55 @@ status:
     plural: ""
   conditions: []
   storedVersions: []
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: openfunction/openfunction-serving-cert
+  name: openfunction-mutating-webhook-configuration
+  namespace: openfunction
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: openfunction-webhook-service
+      namespace: openfunction
+      path: /mutate-core-openfunction-io-v1beta1-function
+  failurePolicy: Fail
+  name: mfunctions.of.io
+  rules:
+  - apiGroups:
+    - core.openfunction.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - functions
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: openfunction-webhook-service
+      namespace: openfunction
+      path: /mutate-core-openfunction-io-v1beta1-serving
+  failurePolicy: Fail
+  name: mservings.of.io
+  rules:
+  - apiGroups:
+    - core.openfunction.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - servings
+  sideEffects: None
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -30973,6 +30958,16 @@ spec:
     spec:
       containers:
       - args:
+        - --secure-listen-address=0.0.0.0:8443
+        - --upstream=http://127.0.0.1:8080/
+        - --logtostderr=true
+        - --v=10
+        image: openfunction/kube-rbac-proxy:v0.8.0
+        name: kube-rbac-proxy
+        ports:
+        - containerPort: 8443
+          name: https
+      - args:
         - --health-probe-bind-address=:8081
         - --metrics-bind-address=127.0.0.1:8080
         - --leader-elect
@@ -31009,16 +31004,6 @@ spec:
         - mountPath: /tmp/k8s-webhook-server/serving-certs
           name: cert
           readOnly: true
-      - args:
-        - --secure-listen-address=0.0.0.0:8443
-        - --upstream=http://127.0.0.1:8080/
-        - --logtostderr=true
-        - --v=10
-        image: openfunction/kube-rbac-proxy:v0.8.0
-        name: kube-rbac-proxy
-        ports:
-        - containerPort: 8443
-          name: https
       securityContext:
         runAsNonRoot: true
       serviceAccountName: openfunction-controller-manager
@@ -31050,54 +31035,6 @@ metadata:
   namespace: openfunction
 spec:
   selfSigned: {}
----
-apiVersion: admissionregistration.k8s.io/v1
-kind: MutatingWebhookConfiguration
-metadata:
-  annotations:
-    cert-manager.io/inject-ca-from: openfunction/openfunction-serving-cert
-  name: openfunction-mutating-webhook-configuration
-webhooks:
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: openfunction-webhook-service
-      namespace: openfunction
-      path: /mutate-core-openfunction-io-v1beta1-function
-  failurePolicy: Fail
-  name: mfunctions.of.io
-  rules:
-  - apiGroups:
-    - core.openfunction.io
-    apiVersions:
-    - v1beta1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - functions
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: openfunction-webhook-service
-      namespace: openfunction
-      path: /mutate-core-openfunction-io-v1beta1-serving
-  failurePolicy: Fail
-  name: mservings.of.io
-  rules:
-  - apiGroups:
-    - core.openfunction.io
-    apiVersions:
-    - v1beta1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - servings
-  sideEffects: None
 ---
 apiVersion: shipwright.io/v1alpha1
 kind: ClusterBuildStrategy

@@ -339,7 +339,7 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving, cm map[string]str
 
 	container.Env = append(container.Env, corev1.EnvVar{
 		Name:  common.FunctionContextEnvName,
-		Value: common.GenOpenFunctionContext(s, cm, components, getFunctionName(s), componentName),
+		Value: common.GenOpenFunctionContext(r.ctx, r.log, s, cm, components, getFunctionName(s), componentName),
 	})
 
 	if s.Spec.Params != nil {
@@ -424,6 +424,23 @@ func (r *servingRun) createScaler(s *openfunction.Serving, workload runtime.Obje
 	log := r.log.WithName("CreateKedaScaler").
 		WithValues("Serving", fmt.Sprintf("%s/%s", s.Namespace, s.Name))
 
+	// When no Triggers are configured, it means that no scaler needs to be created for the function.
+	if s.Spec.Triggers == nil {
+		log.Info("No triggers found, no need to create scaler.")
+		return nil
+	}
+
+	scaledJobTriggers := []kedav1alpha1.ScaleTriggers{}
+	scaledObjectTriggers := []kedav1alpha1.ScaleTriggers{}
+	for _, triggers := range s.Spec.Triggers {
+		t := triggers.DeepCopy()
+		if t.TargetKind != nil && *t.TargetKind == openfunction.ScaledJob {
+			scaledJobTriggers = append(scaledJobTriggers, t.ScaleTriggers)
+		} else {
+			scaledObjectTriggers = append(scaledObjectTriggers, t.ScaleTriggers)
+		}
+	}
+
 	var keda *openfunction.KedaScaleOptions
 
 	if s.Spec.ScaleOptions != nil && s.Spec.ScaleOptions.Keda != nil {
@@ -435,7 +452,7 @@ func (r *servingRun) createScaler(s *openfunction.Serving, workload runtime.Obje
 	}
 
 	var obj client.Object
-	if keda.ScaledJob != nil {
+	if keda.ScaledJob != nil && scaledJobTriggers != nil {
 		ref, err := r.getJobTargetRef(workload)
 		if err != nil {
 			return err
@@ -460,10 +477,10 @@ func (r *servingRun) createScaler(s *openfunction.Serving, workload runtime.Obje
 				EnvSourceContainerName:     core.FunctionContainer,
 				MaxReplicaCount:            scaledJob.MaxReplicaCount,
 				ScalingStrategy:            scaledJob.ScalingStrategy,
-				Triggers:                   scaledJob.Triggers,
+				Triggers:                   scaledJobTriggers,
 			},
 		}
-	} else {
+	} else if keda.ScaledObject != nil && scaledObjectTriggers != nil {
 		ref, err := r.getObjectTargetRef(workload)
 		if err != nil {
 			return err
@@ -487,7 +504,7 @@ func (r *servingRun) createScaler(s *openfunction.Serving, workload runtime.Obje
 				MinReplicaCount: scaledObject.MinReplicaCount,
 				MaxReplicaCount: scaledObject.MaxReplicaCount,
 				Advanced:        scaledObject.Advanced,
-				Triggers:        scaledObject.Triggers,
+				Triggers:        scaledObjectTriggers,
 			},
 		}
 	}
