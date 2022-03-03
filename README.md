@@ -161,9 +161,11 @@ Learn more about OpenFunction [roadmap](docs/roadmap.md).
 
 ### Community Call
 
-Meeting room: [Zoom](https://us02web.zoom.us/j/89684762679?pwd=U1JNWVdzbElScVFMSEdQQnV0YnR4UT09)
+Meeting time：15:00-16:00(GMT+08:00), Thursday every two weeks starting from March 17th, 2022
 
-Meeting time: Wednesday at 15:30—16:30 Beijing Time (biweekly, starting from June 23rd, 2021)
+Meeting room: [Tencent Meeting](https://meeting.tencent.com/dm/HMec1CjT8F2i)
+
+Tencent Meeting Number: 443-6181-3052
 
 Check out the [meeting calendar](https://kubesphere.io/contribution/) and [meeting notes](https://docs.google.com/document/d/1bh5-kVPegjNlIjjq_e37mS3ZhyXWhmmUaysFgeI9_-o/edit?usp=sharing).
 
