@@ -31,7 +31,7 @@ Maintaining the release branches for older minor releases happens on a best effo
 
 ## Prepare your release
 
-For a new major or minor release, work from the `main` branch. For a patch release, work in the branch of the minor release you want to patch (e.g. `release-0.1` if you're releasing `v0.1.1`).
+For a major or minor release, start working in the `main` branch. For a patch release, start working in the minor release branch you want to patch (e.g. `release-0.1` if you're releasing `v0.1.1`).
 
 Add an entry for the new version to the `CHANGELOG.md` file. Entries in the `CHANGELOG.md` should be in this order:
 
@@ -40,30 +40,23 @@ Add an entry for the new version to the `CHANGELOG.md` file. Entries in the `CHA
 * `[ENHANCEMENT]`
 * `[BUGFIX]`
 
-Create a PR for the changes to be reviewed.
+Create a PR for the change log.
 
 ## Publish the new release
 
 For new minor and major releases, create the `release-<major>.<minor>` branch starting at the PR merge commit.
 From now on, all work happens on the `release-<major>.<minor>` branch.
 
-Bump the version in the `VERSION` file in the root of the repository.
+Bump the version in the `VERSION` file.
 
-Regenerate bundle.yaml based on latest code and then commit the changed bundle.yaml to the `release-<major>.<minor>` branch:
+Regenerate bundle.yaml based on latest code by `make manifests` and then commit the changed bundle.yaml to the `release-<major>.<minor>` branch:
+
 ```bash
 make manifests
 git add ./
 git commit -s -m "regenerate bundle.yaml"
 git push
 ```
-
-Build and push the container image:
-
-```bash
-make docker-build
-make docker-push
-```
-> We'll add a CI pipeline in the future which will automatically push the container images to [docker hub](https://hub.docker.com/repository/docker/openfunction).
 
 Tag the new release with a tag named `v<major>.<minor>.<patch>`, e.g. `v2.1.3`. Note the `v` prefix. You can do the tagging on the commandline:
 
@@ -73,6 +66,8 @@ git tag -a "${tag}" -m "${tag}"
 git push origin "${tag}"
 ```
 Commit all the changes.
+
+The corresponding container image will be built and pushed to [docker hub](https://hub.docker.com/repository/docker/openfunction) automatically by CI once the release tag is added.
 
 Go to https://github.com/OpenFunction/OpenFunction/releases/new, associate the new release with the before pushed tag, paste in changes made to `CHANGELOG.md`, add file `config/bundle.yaml` and then click "Publish release".
 
