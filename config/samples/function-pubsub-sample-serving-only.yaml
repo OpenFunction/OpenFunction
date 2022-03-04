@@ -1,42 +1,58 @@
-apiVersion: core.openfunction.io/v1beta1
-kind: Function
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: producer
+  labels:
+    app: producer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: producer
+  template:
+    metadata:
+      labels:
+        app: producer
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "producer"
+        dapr.io/app-port: "60034"
+        dapr.io/log-as-json: "true"
+        dapr.io/app-protocol: "grpc"
+    spec:
+      containers:
+        - name: producer
+          image: openfunctiondev/v1beta1-autoscaling-producer:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PUBSUB_NAME
+              value: "autoscaling-producer"
+            - name: TOPIC_NAME
+              value: "pubsub"
+            - name: NUMBER_OF_PUBLISHERS
+              value: "50"
+          ports:
+            - containerPort: 60034
+              name: function-port
+              protocol: TCP
+---
+apiVersion: dapr.io/v1alpha1
+kind: Component
 metadata:
   name: autoscaling-producer
 spec:
-  version: "v1.0.0"
-  image: openfunctiondev/v1beta1-autoscaling-producer:latest
-  serving:
-    template:
-      containers:
-        - name: function
-          imagePullPolicy: Always
-    runtime: "async"
-    params:
-      OUTPUT_NAME: subscriber
-      TOPIC_NAME: "pubsub"
-      NUMBER_OF_PUBLISHERS: "2"
-      PUBLISHERS_FREQ: "100ms"
-      PUBLISHERS_DELAY: "10s"
-      LOG_FREQ: "3s"
-      PUBLISH_TO_CONSOLE: "false"
-    outputs:
-      - name: subscriber
-        component: kafka-server
-        type: pubsub
-        topic: "pubsub"
-    pubsub:
-      kafka-server:
-        type: pubsub.kafka
-        version: v1
-        metadata:
-          - name: brokers
-            value: "kafka-server-kafka-brokers:9092"
-          - name: authRequired
-            value: "false"
-          - name: allowedTopics
-            value: "pubsub"
-          - name: consumerID
-            value: "producer"
+  type: pubsub.kafka
+  version: v1
+  metadata:
+    - name: brokers
+      value: "kafka-server-kafka-brokers:9092"
+    - name: consumerGroup
+      value: "producer"
+    - name: authRequired
+      value: "false"
+    - name: allowedTopics
+      value: "pubsub"
+
 ---
 apiVersion: core.openfunction.io/v1beta1
 kind: Function
@@ -45,6 +61,17 @@ metadata:
 spec:
   version: "v1.0.0"
   image: openfunctiondev/v1beta1-autoscaling-subscriber:latest
+#  imageCredentials:
+#    name: push-secret
+#  build:
+#    builder: openfunctiondev/builder-go:latest
+#    env:
+#      FUNC_NAME: "Subscriber"
+#      FUNC_CLEAR_SOURCE: "true"
+#    srcRepo:
+#      url: "https://github.com/OpenFunction/samples.git"
+#      sourceSubPath: "functions/Async/pubsub/subscriber"
+#      revision: "main"
   serving:
     runtime: "async"
     scaleOptions:
@@ -69,7 +96,6 @@ spec:
     inputs:
       - name: producer
         component: kafka-server
-        type: pubsub
         topic: "pubsub"
     pubsub:
       kafka-server:

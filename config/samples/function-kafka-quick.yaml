@@ -5,7 +5,7 @@ metadata:
   namespace: default
 spec:
   kafka:
-    version: 2.8.0
+    version: 3.1.0
     replicas: 1
     listeners:
       - name: plain
@@ -20,8 +20,9 @@ spec:
       offsets.topic.replication.factor: 1
       transaction.state.log.replication.factor: 1
       transaction.state.log.min.isr: 1
-      log.message.format.version: '2.8'
-      inter.broker.protocol.version: "2.8"
+      default.replication.factor: 1
+      min.insync.replicas: 1
+      inter.broker.protocol.version: "3.1"
     storage:
       type: ephemeral
   zookeeper:
@@ -32,7 +33,7 @@ spec:
     topicOperator: {}
     userOperator: {}
 ---
-apiVersion: kafka.strimzi.io/v1beta1
+apiVersion: kafka.strimzi.io/v1beta2
 kind: KafkaTopic
 metadata:
   name: pubsub
@@ -46,7 +47,7 @@ spec:
     retention.ms: 7200000
     segment.bytes: 1073741824
 ---
-apiVersion: kafka.strimzi.io/v1beta1
+apiVersion: kafka.strimzi.io/v1beta2
 kind: KafkaTopic
 metadata:
   name: bindings
@@ -60,10 +61,24 @@ spec:
     retention.ms: 7200000
     segment.bytes: 1073741824
 ---
-apiVersion: kafka.strimzi.io/v1beta1
+apiVersion: kafka.strimzi.io/v1beta2
 kind: KafkaTopic
 metadata:
   name: knative-dapr
+  namespace: default
+  labels:
+    strimzi.io/cluster: kafka-server
+spec:
+  partitions: 10
+  replicas: 1
+  config:
+    retention.ms: 7200000
+    segment.bytes: 1073741824
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: events-sample
   namespace: default
   labels:
     strimzi.io/cluster: kafka-server

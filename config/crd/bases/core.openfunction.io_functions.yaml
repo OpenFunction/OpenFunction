@@ -7606,12 +7606,6 @@ spec:
                         topic:
                           description: Topic name of mq, required when type is pubsub
                           type: string
-                        type:
-                          description: 'Input type, known values are bindings, pubsub.
-                            bindings: Indicates that the input is the Dapr bindings
-                            component. pubsub: Indicates that the input is the Dapr
-                            pubsub component.'
-                          type: string
                       required:
                       - component
                       - name
@@ -7646,12 +7640,6 @@ spec:
                           type: object
                         topic:
                           description: Topic name of mq, required when type is pubsub
-                          type: string
-                        type:
-                          description: 'Input type, known values are bindings, pubsub.
-                            bindings: Indicates that the input is the Dapr bindings
-                            component. pubsub: Indicates that the input is the Dapr
-                            pubsub component.'
                           type: string
                       required:
                       - component

@@ -257,6 +257,7 @@ spec:
                   subscriptionType:
                     type: string
                 required:
+                - durableSubscriptionName
                 - natsStreamingClusterID
                 - natsURL
                 - subscriptionType

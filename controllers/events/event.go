@@ -31,7 +31,7 @@ import (
 	kservingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	ofcore "github.com/openfunction/apis/core/v1alpha2"
+	ofcore "github.com/openfunction/apis/core/v1beta1"
 	ofevent "github.com/openfunction/apis/events/v1alpha1"
 )
 
@@ -41,12 +41,12 @@ const (
 	EventBusNameLabel          = "eventbus-name"
 	EventBusTopicName          = "eventbus-topic-name"
 
-	DefaultLogLevel = "info"
+	DefaultLogLevel = "1"
 
 	// Component Name Template
 
-	// EventSourceComponentNameTmpl => esc(EventSource Component)-{eventSourceName}-{sourceKind}-{eventName}
-	EventSourceComponentNameTmpl = "esc-%s-%s-%s"
+	// EventSourceComponentNameTmpl => esc(EventSource Component)-{sourceKind}-{eventName}
+	EventSourceComponentNameTmpl = "esc-%s-%s"
 	// EventSourceBusComponentNameTmpl => ebfes(EventBus for EventSource)-{eventSourceName}
 	EventSourceBusComponentNameTmpl = "ebfes-%s"
 	// TriggerBusComponentNameTmpl => ebft(EventBus for Trigger)-{triggerName}
@@ -65,8 +65,8 @@ const (
 
 	// EventBusOutputNameTmpl => ebo(EventBus output)-{topicName}
 	EventBusOutputNameTmpl = "ebo-%s"
-	// SinkOutputNameTmpl => so(Sink output)-{sinkNamespace}-{sinkName}
-	SinkOutputNameTmpl = "so-%s-%s"
+	// SinkOutputNameTmpl => so(Sink output)-{resourceType}-{resourceName}-{index}
+	SinkOutputNameTmpl = "so-%s-%s-%s"
 	// EventSourceInputNameTmpl => esi(EventSource input)-{eventName}
 	EventSourceInputNameTmpl = "esi-%s"
 	// TriggerInputNameTmpl => ti(Trigger input)-{topicName}
@@ -78,6 +78,8 @@ const (
 	SourceKindCron = "cron"
 	// SourceKindMQTT indicates mqtt event source
 	SourceKindMQTT = "mqtt"
+	// SourceKindRedis indicates redis event source
+	SourceKindRedis = "redis"
 )
 
 var (
@@ -269,17 +271,17 @@ func retrieveClusterEventBus(ctx context.Context, c client.Client, eventBusName 
 }
 
 func addSinkForFunction(name string, function *ofcore.Function, component *componentsv1alpha1.Component) *ofcore.Function {
-	spec := function.Spec.Serving.OpenFuncAsync.Dapr
+	// add sink bindings component
+	function.Spec.Serving.Bindings[component.Name] = &component.Spec
 
-	obj := &ofcore.DaprIO{
+	// add sink output
+	output := &ofcore.DaprIO{
 		Name:      name,
 		Component: component.Name,
 		Operation: "post",
 	}
-	spec.Outputs = append(spec.Outputs, obj)
+	function.Spec.Serving.Outputs = append(function.Spec.Serving.Outputs, output)
 
-	spec.Components[component.Name] = &component.Spec
-	function.Spec.Serving.OpenFuncAsync.Dapr = spec
 	return function
 }
 
@@ -291,18 +293,17 @@ func InitFunction(image string) *ofcore.Function {
 		},
 	}
 
-	servingRuntime := ofcore.OpenFuncAsync
 	version := "v1.0.0"
 	function.Spec.Version = &version
-	function.Spec.Serving.Runtime = &servingRuntime
-	function.Spec.Serving.OpenFuncAsync = &ofcore.OpenFuncAsyncRuntime{
-		Dapr: &ofcore.Dapr{
-			Annotations: map[string]string{},
-			Components:  make(map[string]*componentsv1alpha1.ComponentSpec),
-			Inputs:      []*ofcore.DaprIO{},
-			Outputs:     []*ofcore.DaprIO{},
-		},
-		Keda: &ofcore.Keda{},
-	}
+	function.Spec.Serving.Runtime = ofcore.Async
+	function.Spec.Serving.Inputs = []*ofcore.DaprIO{}
+	function.Spec.Serving.Outputs = []*ofcore.DaprIO{}
+	function.Spec.Serving.Bindings = map[string]*componentsv1alpha1.ComponentSpec{}
+	function.Spec.Serving.Pubsub = map[string]*componentsv1alpha1.ComponentSpec{}
+	function.Spec.Serving.ScaleOptions = &ofcore.ScaleOptions{}
+	function.Spec.Serving.ScaleOptions.Keda = &ofcore.KedaScaleOptions{}
+	function.Spec.Serving.ScaleOptions.Keda.ScaledObject = &ofcore.KedaScaledObject{}
+	function.Spec.Serving.Triggers = []ofcore.Triggers{}
+
 	return function
 }

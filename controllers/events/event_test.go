@@ -23,18 +23,16 @@ import (
 
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	"github.com/go-logr/logr"
+	log "github.com/go-logr/logr/testing"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/json"
 	kservingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	ofcore "github.com/openfunction/apis/core/v1alpha2"
-
-	ofevent "github.com/openfunction/apis/events/v1alpha1"
-
-	log "github.com/go-logr/logr/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	ofcore "github.com/openfunction/apis/core/v1beta1"
+	ofevent "github.com/openfunction/apis/events/v1alpha1"
 )
 
 func Test_createSinkComponent(t *testing.T) {
