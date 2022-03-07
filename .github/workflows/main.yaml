@@ -130,6 +130,21 @@ jobs:
 #      - name: Setup tmate session
 #        uses: mxschmitt/action-tmate@v1
 
+      - name: Wait for kafka to be ready
+        run: |
+          for i in {1..600}
+          do
+            status=`kubectl get kafkas.kafka.strimzi.io kafka-server -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'`
+            if [ $status == "True" ]; then
+              echo "The Kafka is ready!"
+              break
+            else
+              sleep 1
+              continue
+            fi
+          done
+        shell: bash
+
       - name: Knative function e2e test
         timeout-minutes: 10
         run: |
@@ -155,6 +170,28 @@ jobs:
         timeout-minutes: 10
         run: |
           bash "${GITHUB_WORKSPACE}"/.github/workflows/e2e-test.sh plugin
+
+      - name: Function with events e2e test
+        timeout-minutes: 10
+        run: |
+          helm repo add nats https://nats-io.github.io/k8s/helm/charts/
+          helm install nats nats/nats
+          helm install stan nats/stan --set stan.nats.url=nats://nats:4222
+
+          # deploy the eventbus backend nats streaming
+          while /bin/true; do
+            nats_status=`kubectl get pod nats-0 -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'`
+            stan_status=`kubectl get pod stan-0 -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'`
+            if [[ "$nats_status" == "True" ]] && [[ "$stan_status" == "True" ]]; then
+              echo "Nats streaming is ready!"
+              break
+            else
+              sleep 1
+              continue
+            fi
+          done
+
+          bash "${GITHUB_WORKSPACE}"/.github/workflows/e2e-test.sh events
 
       - name: Output debug info
         if: ${{ failure() }}

@@ -20,10 +20,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	"github.com/go-logr/logr"
+	"github.com/kedacore/keda/v2/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -37,14 +39,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	ofcore "github.com/openfunction/apis/core/v1alpha2"
+	ofcore "github.com/openfunction/apis/core/v1beta1"
 	ofevent "github.com/openfunction/apis/events/v1alpha1"
+	"github.com/openfunction/pkg/event/eventbus/natsstreaming"
 	"github.com/openfunction/pkg/util"
 )
 
 const (
-	triggerHandlerImage = "openfunctiondev/trigger-handler:v2"
-	openFuncTopic       = "pubsub"
+	triggerHandlerImage = "openfunction/trigger-handler:v3"
 )
 
 // TriggerReconciler reconciles a Trigger object
@@ -121,6 +123,10 @@ func (r *TriggerReconciler) createOrUpdateTrigger(ctx context.Context, log logr.
 	trigger.AddCondition(*ofevent.CreateCondition(
 		ofevent.Pending, metav1.ConditionUnknown, ofevent.PendingCreation,
 	).SetMessage("Identified Trigger creation signal"))
+
+	if trigger.Spec.LogLevel != nil {
+		r.TriggerConfig.LogLevel = *trigger.Spec.LogLevel
+	}
 
 	// Handle EventBus(ClusterEventBus) reconcile.
 	if trigger.Spec.EventBus != "" {
@@ -212,14 +218,11 @@ func (r *TriggerReconciler) handleEventBus(ctx context.Context, log logr.Logger,
 
 	// Generate a dapr component based on the specification of EventBus(ClusterEventBus).
 	if eventBusSpec.NatsStreaming != nil {
+		eb := natsstreaming.NewNatsStreamingEventBus(log, eventBusSpec.NatsStreaming)
 		// Create the dapr component for Trigger to retrieve event from EventBus(ClusterEventBus).
 		// We need to assign a separate consumerID name to each nats streaming component
-		metadataMap := eventBusSpec.NatsStreaming.ConvertToMetadataMap()
-		metadataMap = append(metadataMap, map[string]interface{}{
-			"name":  "consumerID",
-			"value": consumerID,
-		})
-		component, err := eventBusSpec.NatsStreaming.GenComponent(trigger.Namespace, componentName, metadataMap)
+		eb.SetMetadata("consumerID", consumerID)
+		component, err := eb.GenComponent(trigger.Namespace, componentName)
 		if err != nil {
 			condition := ofevent.CreateCondition(
 				ofevent.Error, metav1.ConditionFalse, ofevent.ErrorGenerateComponent,
@@ -231,16 +234,8 @@ func (r *TriggerReconciler) handleEventBus(ctx context.Context, log logr.Logger,
 		}
 
 		// Generate Keda scaledObject for Nats Streaming EventBus.
-		scaledObject, err := eventBusSpec.NatsStreaming.GenEventBusScaledObject(subjects, consumerID)
-		if err != nil {
-			condition := ofevent.CreateCondition(
-				ofevent.Error, metav1.ConditionFalse, ofevent.ErrorGenerateScaledObject,
-			).SetMessage(err.Error())
-			trigger.AddCondition(*condition)
-			log.Error(err, "Failed to generate eventBus scaledObject for Nats Streaming.",
-				"namespace", trigger.Namespace, "name", trigger.Name)
-		}
-		r.Function = r.addEventBusForFunction(trigger, component, subjects, scaledObject)
+		scaledObject, triggers := eb.GenScaleOptions(subjects)
+		r.Function = r.addEventBusForFunction(trigger, component, subjects, scaledObject, triggers)
 	}
 	return nil
 }
@@ -253,6 +248,8 @@ func (r *TriggerReconciler) handleSubscriber(ctx context.Context, log logr.Logge
 	topics := map[string]bool{}
 	deadLetterTopics := map[string]bool{}
 	totalTopics := map[string]bool{}
+
+	sinkIdx := 1
 
 	if trigger.Spec.Subscribers != nil {
 		// For each subscriber, check its Sink and DeadLetterSink (for synchronous calls) and Topic and DeadLetterTopic (for asynchronous calls).
@@ -267,7 +264,7 @@ func (r *TriggerReconciler) handleSubscriber(ctx context.Context, log logr.Logge
 
 			if sub.Sink != nil && !sinks[sub.Sink] {
 				sinks[sub.Sink] = true
-				s.SinkOutputName = fmt.Sprintf(SinkOutputNameTmpl, sub.Sink.Ref.Namespace, sub.Sink.Ref.Name)
+				s.SinkOutputName = fmt.Sprintf(SinkOutputNameTmpl, "t", trigger.Name, strconv.Itoa(sinkIdx))
 				if !totalSinks[sub.Sink] {
 					totalSinks[sub.Sink] = true
 					component, err := createSinkComponent(ctx, r.Client, log, trigger, sub.Sink)
@@ -283,12 +280,13 @@ func (r *TriggerReconciler) handleSubscriber(ctx context.Context, log logr.Logge
 					if function := addSinkForFunction(s.SinkOutputName, r.Function, component); function != nil {
 						r.Function = function
 					}
+					sinkIdx += 1
 				}
 			}
 
 			if sub.DeadLetterSink != nil && !deadLetterSinks[sub.DeadLetterSink] {
 				deadLetterSinks[sub.DeadLetterSink] = true
-				s.DLSinkOutputName = fmt.Sprintf(SinkOutputNameTmpl, sub.Sink.Ref.Namespace, sub.Sink.Ref.Name)
+				s.DLSinkOutputName = fmt.Sprintf(SinkOutputNameTmpl, "t", trigger.Name, strconv.Itoa(sinkIdx))
 				if !totalSinks[sub.DeadLetterSink] {
 					totalSinks[sub.DeadLetterSink] = true
 					component, err := createSinkComponent(ctx, r.Client, log, trigger, sub.Sink)
@@ -304,6 +302,7 @@ func (r *TriggerReconciler) handleSubscriber(ctx context.Context, log logr.Logge
 					if function := addSinkForFunction(s.SinkOutputName, r.Function, component); function != nil {
 						r.Function = function
 					}
+					sinkIdx += 1
 				}
 			}
 
@@ -312,15 +311,12 @@ func (r *TriggerReconciler) handleSubscriber(ctx context.Context, log logr.Logge
 				s.EventBusOutputName = fmt.Sprintf(EventBusOutputNameTmpl, sub.Topic)
 				if !totalTopics[sub.Topic] {
 					totalTopics[sub.Topic] = true
-					d := r.Function.Spec.Serving.OpenFuncAsync.Dapr
-					dio := &ofcore.DaprIO{
+					output := &ofcore.DaprIO{
 						Name:      s.EventBusOutputName,
 						Component: r.TriggerConfig.EventBusComponent,
 						Topic:     sub.Topic,
-						Type:      openFuncTopic,
 					}
-					d.Outputs = append(d.Outputs, dio)
-					r.Function.Spec.Serving.OpenFuncAsync.Dapr = d
+					r.Function.Spec.Serving.Outputs = append(r.Function.Spec.Serving.Outputs, output)
 				}
 			}
 
@@ -329,15 +325,12 @@ func (r *TriggerReconciler) handleSubscriber(ctx context.Context, log logr.Logge
 				s.DLEventBusOutputName = fmt.Sprintf(EventBusOutputNameTmpl, sub.DeadLetterTopic)
 				if !totalTopics[sub.DeadLetterTopic] {
 					totalTopics[sub.DeadLetterTopic] = true
-					d := r.Function.Spec.Serving.OpenFuncAsync.Dapr
-					dio := &ofcore.DaprIO{
+					output := &ofcore.DaprIO{
 						Name:      s.DLEventBusOutputName,
 						Component: r.TriggerConfig.EventBusComponent,
 						Topic:     sub.DeadLetterTopic,
-						Type:      openFuncTopic,
 					}
-					d.Outputs = append(d.Outputs, dio)
-					r.Function.Spec.Serving.OpenFuncAsync.Dapr = d
+					r.Function.Spec.Serving.Outputs = append(r.Function.Spec.Serving.Outputs, output)
 				}
 			}
 			r.TriggerConfig.Subscribers[sub.Condition] = s
@@ -415,24 +408,41 @@ func (r *TriggerReconciler) addEventBusForFunction(
 	component *componentsv1alpha1.Component,
 	subjects []string,
 	scaledObject *ofcore.KedaScaledObject,
+	FunctionTriggers []*v1alpha1.ScaleTriggers,
 ) *ofcore.Function {
 	function := r.Function
 	function.Name = fmt.Sprintf(TriggerWorkloadsNameTmpl, trigger.Name)
 	function.Namespace = trigger.Namespace
-	d := function.Spec.Serving.OpenFuncAsync.Dapr
 
+	functionInputs := []*ofcore.DaprIO{}
 	for _, subject := range subjects {
-		dio := &ofcore.DaprIO{
+		input := &ofcore.DaprIO{
 			Name:      fmt.Sprintf(TriggerInputNameTmpl, subject),
 			Component: component.Name,
 			Topic:     subject,
-			Type:      strings.Split(component.Spec.Type, ".")[0],
 		}
-		d.Inputs = append(d.Inputs, dio)
+		functionInputs = append(functionInputs, input)
 	}
-	d.Components[component.Name] = &component.Spec
-	function.Spec.Serving.OpenFuncAsync.Dapr = d
-	function.Spec.Serving.OpenFuncAsync.Keda.ScaledObject = scaledObject
+	function.Spec.Serving.Inputs = functionInputs
+
+	buildingBlockType := strings.Split(component.Spec.Type, ".")[0]
+	if buildingBlockType == ofcore.DaprBindings {
+		function.Spec.Serving.Bindings[component.Name] = &component.Spec
+	}
+	if buildingBlockType == ofcore.DaprPubsub {
+		function.Spec.Serving.Pubsub[component.Name] = &component.Spec
+	}
+
+	function.Spec.Serving.ScaleOptions = &ofcore.ScaleOptions{}
+	function.Spec.Serving.ScaleOptions.Keda = &ofcore.KedaScaleOptions{}
+	function.Spec.Serving.ScaleOptions.Keda.ScaledObject = scaledObject
+	function.Spec.Serving.Triggers = []ofcore.Triggers{}
+	for _, funcTrigger := range FunctionTriggers {
+		ft := funcTrigger.DeepCopy()
+		function.Spec.Serving.Triggers = append(function.Spec.Serving.Triggers, ofcore.Triggers{
+			ScaleTriggers: *ft,
+		})
+	}
 	return function
 }
 

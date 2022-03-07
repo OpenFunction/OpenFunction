@@ -34,6 +34,16 @@ metadata:
 spec:
   version: "v1.0.0"
   image: openfunctiondev/v1beta1-bindings-plugins:latest
+#  imageCredentials:
+#    name: push-secret
+#  build:
+#    builder: openfunctiondev/builder-go:latest
+#    env:
+#      FUNC_NAME: "BindingsNoOutput"
+#      FUNC_CLEAR_SOURCE: "true"
+#    srcRepo:
+#      url: "https://github.com/OpenFunction/samples.git"
+#      sourceSubPath: "functions/Async/bindings/without-output"
   serving:
     template:
       containers:
@@ -43,7 +53,6 @@ spec:
     inputs:
       - name: input
         component: cron
-        type: bindings
     bindings:
       cron:
         type: bindings.cron

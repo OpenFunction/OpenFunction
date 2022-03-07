@@ -34,6 +34,10 @@ type TriggerSpec struct {
 	Inputs map[string]*Input `json:"inputs"`
 	// Subscribers defines the subscribers associated with the Trigger
 	Subscribers []*Subscriber `json:"subscribers"`
+	// The logging level of the event source handler, e.g. "1", "2", "3".
+	// The level increases as the value increases, default is "1".
+	// +optional
+	LogLevel *string `json:"logLevel,omitempty"`
 }
 
 type Input struct {

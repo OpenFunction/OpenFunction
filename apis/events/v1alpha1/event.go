@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	kedav1alpha1 "github.com/kedacore/keda/v2/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -145,4 +146,98 @@ func CreateCondition(
 func (c *Condition) SetMessage(message string) *Condition {
 	c.Message = message
 	return c
+}
+
+type GenericScaleOption struct {
+	PollingInterval *int32                            `json:"pollingInterval,omitempty"`
+	CooldownPeriod  *int32                            `json:"cooldownPeriod,omitempty"`
+	MinReplicaCount *int32                            `json:"minReplicaCount,omitempty"`
+	MaxReplicaCount *int32                            `json:"maxReplicaCount,omitempty"`
+	Advanced        *kedav1alpha1.AdvancedConfig      `json:"advanced,omitempty"`
+	Metadata        map[string]string                 `json:"metadata,omitempty"`
+	AuthRef         *kedav1alpha1.ScaledObjectAuthRef `json:"authRef,omitempty"`
+}
+
+type RedisSpec struct {
+	RedisHost             string  `json:"redisHost"`
+	RedisPassword         string  `json:"redisPassword"`
+	EnableTLS             *bool   `json:"enableTLS,omitempty"`
+	Failover              *bool   `json:"failover,omitempty"`
+	SentinelMasterName    *string `json:"sentinelMasterName,omitempty"`
+	RedeliverInterval     *string `json:"redeliverInterval,omitempty"`
+	ProcessingTimeout     *string `json:"processingTimeout,omitempty"`
+	RedisType             *string `json:"redisType,omitempty"`
+	RedisDB               *int64  `json:"redisDB,omitempty"`
+	RedisMaxRetries       *int64  `json:"redisMaxRetries,omitempty"`
+	RedisMinRetryInterval *string `json:"redisMinRetryInterval,omitempty"`
+	RedisMaxRetryInterval *string `json:"redisMaxRetryInterval,omitempty"`
+	DialTimeout           *string `json:"dialTimeout,omitempty"`
+	ReadTimeout           *string `json:"readTimeout,omitempty"`
+	WriteTimeout          *string `json:"writeTimeout,omitempty"`
+	PoolSize              *int64  `json:"poolSize,omitempty"`
+	PoolTimeout           *string `json:"poolTimeout,omitempty"`
+	MaxConnAge            *string `json:"maxConnAge,omitempty"`
+	MinIdleConns          *int64  `json:"minIdleConns,omitempty"`
+	IdleCheckFrequency    *string `json:"idleCheckFrequency,omitempty"`
+	IdleTimeout           *string `json:"idleTimeout,omitempty"`
+}
+
+type KafkaSpec struct {
+	Brokers         string            `json:"brokers"`
+	AuthRequired    bool              `json:"authRequired"`
+	Topic           string            `json:"topic,omitempty"`
+	SaslUsername    *string           `json:"saslUsername,omitempty"`
+	SaslPassword    *string           `json:"saslPassword,omitempty"`
+	MaxMessageBytes *int64            `json:"maxMessageBytes,omitempty"`
+	ScaleOption     *KafkaScaleOption `json:"scaleOption,omitempty"`
+}
+
+type KafkaScaleOption struct {
+	*GenericScaleOption `json:",inline"`
+	ConsumerGroup       string `json:"consumerGroup,omitempty"`
+	Topic               string `json:"topic,omitempty"`
+	LagThreshold        string `json:"lagThreshold"`
+}
+
+type CronSpec struct {
+	Schedule string `json:"schedule"`
+}
+
+type MQTTSpec struct {
+	Url          string  `json:"url"`
+	Topic        string  `json:"topic"`
+	ConsumerID   *string `json:"consumerID,omitempty"`
+	Qos          *int64  `json:"qos,omitempty"`
+	Retain       *bool   `json:"retain,omitempty"`
+	CleanSession *bool   `json:"cleanSession,omitempty"`
+	CaCert       *string `json:"caCert,omitempty"`
+	ClientCert   *string `json:"clientCert,omitempty"`
+	ClientKey    *string `json:"clientKey,omitempty"`
+}
+
+type NatsStreamingSpec struct {
+	NatsURL                 string                    `json:"natsURL"`
+	NatsStreamingClusterID  string                    `json:"natsStreamingClusterID"`
+	SubscriptionType        string                    `json:"subscriptionType"`
+	AckWaitTime             *string                   `json:"ackWaitTime,omitempty"`
+	MaxInFlight             *int64                    `json:"maxInFlight,omitempty"`
+	DurableSubscriptionName string                    `json:"durableSubscriptionName"`
+	DeliverNew              *bool                     `json:"deliverNew,omitempty"`
+	StartAtSequence         *int64                    `json:"startAtSequence,omitempty"`
+	StartWithLastReceived   *bool                     `json:"startWithLastReceived,omitempty"`
+	DeliverAll              *bool                     `json:"deliverAll,omitempty"`
+	StartAtTimeDelta        *string                   `json:"startAtTimeDelta,omitempty"`
+	StartAtTime             *string                   `json:"startAtTime,omitempty"`
+	StartAtTimeFormat       *string                   `json:"startAtTimeFormat,omitempty"`
+	ConsumerID              *string                   `json:"consumerID,omitempty"`
+	ScaleOption             *NatsStreamingScaleOption `json:"scaleOption,omitempty"`
+}
+
+type NatsStreamingScaleOption struct {
+	*GenericScaleOption          `json:",inline"`
+	NatsServerMonitoringEndpoint string `json:"natsServerMonitoringEndpoint"`
+	QueueGroup                   string `json:"queueGroup,omitempty"`
+	DurableName                  string `json:"durableName,omitempty"`
+	Subject                      string `json:"subject,omitempty"`
+	LagThreshold                 string `json:"lagThreshold"`
 }

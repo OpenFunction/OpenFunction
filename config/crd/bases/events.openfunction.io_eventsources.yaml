@@ -381,6 +381,11 @@ spec:
                 description: Kafka event source, the Key is used to refer to the name
                   of the event
                 type: object
+              logLevel:
+                description: The logging level of the event source handler, e.g. "1",
+                  "2", "3". The level increases as the value increases, default is
+                  "1".
+                type: string
               mqtt:
                 additionalProperties:
                   properties:

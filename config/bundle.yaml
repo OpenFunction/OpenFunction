@@ -627,6 +627,7 @@ spec:
                   subscriptionType:
                     type: string
                 required:
+                - durableSubscriptionName
                 - natsStreamingClusterID
                 - natsURL
                 - subscriptionType
@@ -1058,6 +1059,7 @@ spec:
                   subscriptionType:
                     type: string
                 required:
+                - durableSubscriptionName
                 - natsStreamingClusterID
                 - natsURL
                 - subscriptionType
@@ -1458,6 +1460,11 @@ spec:
                 description: Kafka event source, the Key is used to refer to the name
                   of the event
                 type: object
+              logLevel:
+                description: The logging level of the event source handler, e.g. "1",
+                  "2", "3". The level increases as the value increases, default is
+                  "1".
+                type: string
               mqtt:
                 additionalProperties:
                   properties:
@@ -9251,12 +9258,6 @@ spec:
                         topic:
                           description: Topic name of mq, required when type is pubsub
                           type: string
-                        type:
-                          description: 'Input type, known values are bindings, pubsub.
-                            bindings: Indicates that the input is the Dapr bindings
-                            component. pubsub: Indicates that the input is the Dapr
-                            pubsub component.'
-                          type: string
                       required:
                       - component
                       - name
@@ -9291,12 +9292,6 @@ spec:
                           type: object
                         topic:
                           description: Topic name of mq, required when type is pubsub
-                          type: string
-                        type:
-                          description: 'Input type, known values are bindings, pubsub.
-                            bindings: Indicates that the input is the Dapr bindings
-                            component. pubsub: Indicates that the input is the Dapr
-                            pubsub component.'
                           type: string
                       required:
                       - component
@@ -23398,11 +23393,6 @@ spec:
                     topic:
                       description: Topic name of mq, required when type is pubsub
                       type: string
-                    type:
-                      description: 'Input type, known values are bindings, pubsub.
-                        bindings: Indicates that the input is the Dapr bindings component.
-                        pubsub: Indicates that the input is the Dapr pubsub component.'
-                      type: string
                   required:
                   - component
                   - name
@@ -23435,11 +23425,6 @@ spec:
                       type: object
                     topic:
                       description: Topic name of mq, required when type is pubsub
-                      type: string
-                    type:
-                      description: 'Input type, known values are bindings, pubsub.
-                        bindings: Indicates that the input is the Dapr bindings component.
-                        pubsub: Indicates that the input is the Dapr pubsub component.'
                       type: string
                   required:
                   - component
@@ -30279,6 +30264,11 @@ spec:
                 description: Inputs defines the event sources associated with the
                   Trigger
                 type: object
+              logLevel:
+                description: The logging level of the event source handler, e.g. "1",
+                  "2", "3". The level increases as the value increases, default is
+                  "1".
+                type: string
               subscribers:
                 description: Subscribers defines the subscribers associated with the
                   Trigger
@@ -31448,10 +31438,20 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   labels:
-    app.kubernetes.io/version: v0.5.0
+    app.kubernetes.io/version: latest
   name: openfunction-config
   namespace: openfunction
 data:
+  # Tell OpenFunction the namespace where knative-serving is located
+  knative-serving.namespace: "knative-serving"
+  # Tell OpenFunction the name of the ConfigMap of the knative-serving's configuration
+  knative-serving.config-features.name: "config-features"
+  # Configuration of the tracing of functions
+  plugins.tracing: |
+    enabled: false
+  # Configuration of the order of the plugins
+  plugins: |
+  # The following is a sample configuration
   _example: |
     knative-serving.namespace: "knative-serving"
     knative-serving.config-features.name: "config-features"

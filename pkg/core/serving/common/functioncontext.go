@@ -36,18 +36,18 @@ type functionContext struct {
 }
 
 type functionInput struct {
-	Uri       string            `json:"uri,omitempty"`
-	Component string            `json:"component,omitempty"`
-	Type      string            `json:"type"`
-	Metadata  map[string]string `json:"metadata,omitempty"`
+	Uri           string            `json:"uri,omitempty"`
+	ComponentName string            `json:"componentName"`
+	ComponentType string            `json:"componentType"`
+	Metadata      map[string]string `json:"metadata,omitempty"`
 }
 
 type functionOutput struct {
-	Uri       string            `json:"uri,omitempty"`
-	Component string            `json:"component,omitempty"`
-	Type      string            `json:"type"`
-	Metadata  map[string]string `json:"metadata,omitempty"`
-	Operation string            `json:"operation,omitempty"`
+	Uri           string            `json:"uri,omitempty"`
+	ComponentName string            `json:"componentName"`
+	ComponentType string            `json:"componentType"`
+	Metadata      map[string]string `json:"metadata,omitempty"`
+	Operation     string            `json:"operation,omitempty"`
 }
 
 type functionPluginsTracing struct {

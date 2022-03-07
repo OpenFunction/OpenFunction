@@ -110,7 +110,6 @@ func (src *Serving) convertServingTo(dst *v1beta1.Serving) error {
 				in := &v1beta1.DaprIO{
 					Name:      input.Name,
 					Component: input.Component,
-					Type:      input.Type,
 					Topic:     input.Topic,
 					Params:    input.Params,
 					Operation: input.Operation,
@@ -125,7 +124,6 @@ func (src *Serving) convertServingTo(dst *v1beta1.Serving) error {
 				out := &v1beta1.DaprIO{
 					Name:      output.Name,
 					Component: output.Component,
-					Type:      output.Type,
 					Topic:     output.Topic,
 					Params:    output.Params,
 					Operation: output.Operation,
@@ -311,7 +309,6 @@ func (dst *Serving) convertServingFrom(src *v1beta1.Serving) error {
 			in := &DaprIO{
 				Name:      input.Name,
 				Component: input.Component,
-				Type:      input.Type,
 				Topic:     input.Topic,
 				Params:    input.Params,
 				Operation: input.Operation,
@@ -326,7 +323,6 @@ func (dst *Serving) convertServingFrom(src *v1beta1.Serving) error {
 			out := &DaprIO{
 				Name:      output.Name,
 				Component: output.Component,
-				Type:      output.Type,
 				Topic:     output.Topic,
 				Params:    output.Params,
 				Operation: output.Operation,
