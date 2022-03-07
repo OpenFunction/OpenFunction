@@ -1,4 +1,19 @@
-<div align=center><img  width="334" height="117" src=docs/images/logo.png></div>
+<p align="center">
+<a href="https://openfunction.dev/"><img src="docs/images/openfunction-logo-gif.gif" alt="banner" width="200px"></a>
+</p>
+
+<p align="center">
+<b>Cloud native FaaS platform for running Serverless workloads with ease</b>
+</p>
+
+<p align=center>
+<a href="https://goreportcard.com/report/github.com/openfunction/openfunction"><img src="https://goreportcard.com/badge/github.com/openfunction/openfunction" alt="A+"></a>
+<a href="https://hub.docker.com/r/openfunction/openfunction"><img src="https://img.shields.io/docker/pulls/openfunction/openfunction"></a>
+<a href="https://github.com/OpenFunction/OpenFunction/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22"><img src="https://img.shields.io/github/issues/openfunction/openfunction?label=good%20first%20issues" alt="good first"></a>
+<a href="https://twitter.com/intent/follow?screen_name=KubeSphere"><img src="https://img.shields.io/twitter/follow/KubeSphere?style=social" alt="follow on Twitter"></a>
+<a href="https://join.slack.com/t/kubesphere/shared_invite/enQtNTE3MDIxNzUxNzQ0LTZkNTdkYWNiYTVkMTM5ZThhODY1MjAyZmVlYWEwZmQ3ODQ1NmM1MGVkNWEzZTRhNzk0MzM5MmY4NDc3ZWVhMjE"><img src="https://img.shields.io/badge/Slack-600%2B-blueviolet?logo=slack&amp;logoColor=white"></a>
+<a href="https://www.youtube.com/channel/UCyTdUQUYjf7XLjxECx63Hpw"><img src="https://img.shields.io/youtube/channel/subscribers/UCyTdUQUYjf7XLjxECx63Hpw?style=social"></a>
+</p>
 
 ## 👀 Overview
 
@@ -16,7 +31,7 @@ OpenFunction features include:
 
 ## ☸ Architecture
 
-![OpenFunction Architecture](docs/images/openfunction-0.5-architecture.png)
+![OpenFunction Architecture](docs/images/openfunction-0.5-architecture.svg)
 
 OpenFunction manages resources in the form of Custom Resource Definitions (CRD) throughout the lifecycle of a function. To learn more about it, visit [Components](docs/concepts/Components.md) or [Concepts](https://openfunction.dev/docs/concepts/).
 
