@@ -22,6 +22,7 @@ patchesStrategicMerge:
 #- patches/webhook_in_eventbus.yaml
 #- patches/webhook_in_triggers.yaml
 #- patches/webhook_in_clustereventbus.yaml
+#- patches/webhook_in_domains.yaml
 #+kubebuilder:scaffold:crdkustomizewebhookpatch
 
 # [CERTMANAGER] To enable webhook, uncomment all the sections with [CERTMANAGER] prefix.
@@ -33,6 +34,9 @@ patchesStrategicMerge:
 #- patches/cainjection_in_eventbus.yaml
 #- patches/cainjection_in_triggers.yaml
 #- patches/cainjection_in_clustereventbus.yaml
+#- patches/cainjection_in_functions.yaml
+#- patches/cainjection_in_servings.yaml
+#- patches/cainjection_in_domains.yaml
 #+kubebuilder:scaffold:crdkustomizecainjectionpatch
 
 patchesJson6902:

@@ -19,6 +19,8 @@ spec:
   dnsNames:
     - $(SERVICE_NAME).$(SERVICE_NAMESPACE).svc
     - $(SERVICE_NAME).$(SERVICE_NAMESPACE).svc.cluster.local
+#  ipAddresses:
+#    - <node-ip>
   issuerRef:
     kind: Issuer
     name: selfsigned-issuer

@@ -25,6 +25,11 @@ on:
       - '.github/workflows/**'
       - 'apis/**'
       - 'config/bundle.yaml'
+      - 'config/samples/function-bindings-sample-serving-only.yaml'
+      - 'config/samples/function-pubsub-sample-serving-only.yaml'
+      - 'config/samples/function-knative-with-dapr-serving-only.yaml'
+      - 'config/samples/function-sample-serving-only.yaml'
+      - 'config/samples/function-with-plugins-serving-only.yaml'
       - 'controllers/**'
       - 'hack/delete.sh'
       - 'hack/deploy.sh'
@@ -125,11 +130,31 @@ jobs:
 #      - name: Setup tmate session
 #        uses: mxschmitt/action-tmate@v1
 
-      - name: Test
+      - name: Knative function e2e test
         timeout-minutes: 10
         run: |
           chmod +x "${GITHUB_WORKSPACE}/.github/workflows/e2e-test.sh"
-          bash "${GITHUB_WORKSPACE}"/.github/workflows/e2e-test.sh
+          bash "${GITHUB_WORKSPACE}"/.github/workflows/e2e-test.sh knative
+
+      - name: Knative function with Dapr e2e test
+        timeout-minutes: 10
+        run: |
+          bash "${GITHUB_WORKSPACE}"/.github/workflows/e2e-test.sh knative_dapr
+
+      - name: Async pubsub function e2e test
+        timeout-minutes: 10
+        run: |
+          bash "${GITHUB_WORKSPACE}"/.github/workflows/e2e-test.sh async_pubsub
+
+      - name: Async bindings function e2e test
+        timeout-minutes: 10
+        run: |
+          bash "${GITHUB_WORKSPACE}"/.github/workflows/e2e-test.sh async_bindings
+
+      - name: Function with plugins e2e test
+        timeout-minutes: 10
+        run: |
+          bash "${GITHUB_WORKSPACE}"/.github/workflows/e2e-test.sh plugin
 
       - name: Output debug info
         if: ${{ failure() }}

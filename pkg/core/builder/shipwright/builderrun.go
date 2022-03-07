@@ -30,7 +30,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	openfunction "github.com/openfunction/apis/core/v1alpha2"
+	openfunction "github.com/openfunction/apis/core/v1beta1"
 	"github.com/openfunction/pkg/core"
 	"github.com/openfunction/pkg/util"
 )
@@ -40,6 +40,7 @@ const (
 	shipwrightBuildRunName = "shipwright.io/buildRun"
 	builderLabel           = "openfunction.io/builder"
 	defaultStrategy        = "openfunction"
+	shipwrightGenerateSA   = true
 
 	waitBuildInterval = time.Second
 	waitBuildTimeout  = time.Minute
@@ -343,6 +344,10 @@ func (r *builderRun) createShipwrightBuildRun(builder *openfunction.Builder, nam
 		Spec: shipwrightv1alpha1.BuildRunSpec{
 			BuildRef: &shipwrightv1alpha1.BuildRef{
 				Name: name,
+			},
+			// Generate a temporal service account for each buildrun to avoid build failed when previous used secret was deleted
+			ServiceAccount: &shipwrightv1alpha1.ServiceAccount{
+				Generate: shipwrightGenerateSA,
 			},
 		},
 	}

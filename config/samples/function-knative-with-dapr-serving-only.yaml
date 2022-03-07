@@ -1,0 +1,70 @@
+apiVersion: core.openfunction.io/v1beta1
+kind: Function
+metadata:
+  name: output-target
+spec:
+  version: "v1.0.0"
+  image: openfunctiondev/v1beta1-output-target:latest
+  serving:
+    runtime: async
+    inputs:
+      - name: greeting
+        component: target-topic
+        type: bindings
+    bindings:
+      target-topic:
+        type: bindings.kafka
+        version: v1
+        metadata:
+          - name: brokers
+            value: "kafka-server-kafka-brokers:9092"
+          - name: topics
+            value: "knative-dapr"
+          - name: consumerGroup
+            value: "output-target"
+          - name: publishTopic
+            value: "knative-dapr"
+          - name: authRequired
+            value: "false"
+    template:
+      containers:
+        - name: function
+          imagePullPolicy: Always
+---
+apiVersion: core.openfunction.io/v1beta1
+kind: Function
+metadata:
+  name: function-front
+spec:
+  version: "v1.0.0"
+  image: "openfunctiondev/v1beta1-sample-knative-dapr:latest"
+  port: 8080 # default to 8080
+  serving:
+    scaleOptions:
+      minReplicas: 0
+      maxReplicas: 5
+    runtime: knative
+    outputs:
+      - name: target
+        component: kafka-server
+        type: bindings
+        operation: "create"
+    bindings:
+      kafka-server:
+        type: bindings.kafka
+        version: v1
+        metadata:
+          - name: brokers
+            value: "kafka-server-kafka-brokers:9092"
+          - name: authRequired
+            value: "false"
+          - name: publishTopic
+            value: "knative-dapr"
+          - name: topics
+            value: "knative-dapr"
+          - name: consumerGroup
+            value: "function-front"
+    template:
+      containers:
+        - name: function
+          imagePullPolicy: Always

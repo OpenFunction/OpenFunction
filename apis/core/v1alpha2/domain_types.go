@@ -53,7 +53,6 @@ type DomainStatus struct {
 //+genclient
 //+genclient:noStatus
 //+kubebuilder:object:root=true
-//+kubebuilder:storageversion
 //+kubebuilder:subresource:status
 
 // Domain define a unified entry for function, user can access function through it.

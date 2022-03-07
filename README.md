@@ -1,4 +1,19 @@
-<div align=center><img  width="334" height="117" src=docs/images/logo.png></div>
+<p align="center">
+<a href="https://openfunction.dev/"><img src="docs/images/openfunction-logo-gif.gif" alt="banner" width="200px"></a>
+</p>
+
+<p align="center">
+<b>Cloud native FaaS platform for running Serverless workloads with ease</b>
+</p>
+
+<p align=center>
+<a href="https://goreportcard.com/report/github.com/openfunction/openfunction"><img src="https://goreportcard.com/badge/github.com/openfunction/openfunction" alt="A+"></a>
+<a href="https://hub.docker.com/r/openfunction/openfunction"><img src="https://img.shields.io/docker/pulls/openfunction/openfunction"></a>
+<a href="https://github.com/OpenFunction/OpenFunction/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22"><img src="https://img.shields.io/github/issues/openfunction/openfunction?label=good%20first%20issues" alt="good first"></a>
+<a href="https://twitter.com/intent/follow?screen_name=KubeSphere"><img src="https://img.shields.io/twitter/follow/KubeSphere?style=social" alt="follow on Twitter"></a>
+<a href="https://join.slack.com/t/kubesphere/shared_invite/enQtNTE3MDIxNzUxNzQ0LTZkNTdkYWNiYTVkMTM5ZThhODY1MjAyZmVlYWEwZmQ3ODQ1NmM1MGVkNWEzZTRhNzk0MzM5MmY4NDc3ZWVhMjE"><img src="https://img.shields.io/badge/Slack-600%2B-blueviolet?logo=slack&amp;logoColor=white"></a>
+<a href="https://www.youtube.com/channel/UCyTdUQUYjf7XLjxECx63Hpw"><img src="https://img.shields.io/youtube/channel/subscribers/UCyTdUQUYjf7XLjxECx63Hpw?style=social"></a>
+</p>
 
 ## 👀 Overview
 
@@ -14,9 +29,9 @@ OpenFunction features include:
 - Providing event management functions for trigger functions.
 - Providing additional functions for function version management, ingress management, etc.
 
-## ☸ Kubernetes-native architecture
+## ☸ Architecture
 
-![OpenFunction Architecture](docs/images/openfunction-0.5-architecture.png)
+![OpenFunction Architecture](docs/images/openfunction-0.5-architecture.svg)
 
 OpenFunction manages resources in the form of Custom Resource Definitions (CRD) throughout the lifecycle of a function. To learn more about it, visit [Components](docs/concepts/Components.md) or [Concepts](https://openfunction.dev/docs/concepts/).
 
@@ -75,7 +90,7 @@ After you install OpenFunction, refer to [OpenFunction samples](https://github.c
 
 Here is an example of a synchronous function:
 
-> This function writes "Hello, World!" to the HTTP response.
+> This function writes "Hello, World!" to the HTTP response. Refer to [here](https://github.com/OpenFunction/samples/tree/main/functions/Knative) to find more samples of synchronous functions.
 
 ```go
 package hello
@@ -86,7 +101,7 @@ import (
 )
 
 func HelloWorld(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "Hello, World!\n")
+	fmt.Fprintf(w, "Hello, %s!\n", r.URL.Path[1:])
 }
 ```
 
@@ -98,7 +113,7 @@ curl http://<domain-name>.<domain-namespace>/<function-namespace>/<function-name
 
 Here is an example of asynchronous function:
 
-> This function receives a greeting message and then send it to "another-target".
+> This function receives a greeting message and then send it to "another-target". Refer to [here](https://github.com/OpenFunction/samples/tree/main/functions/Async) to find more samples of asynchronous functions.
 
 ```go
 package bindings
@@ -106,14 +121,24 @@ package bindings
 import (
 	"encoding/json"
 	"log"
-  
-	ofctx "github.com/OpenFunction/functions-framework-go/openfunction-context"
+
+	ofctx "github.com/OpenFunction/functions-framework-go/context"
 )
 
-func BindingsOutput(ctx *ofctx.OpenFunctionContext, in []byte) ofctx.RetValue {
-	log.Printf("receive greeting: %s", string(in))
-	_ := ctx.Send("another-target", in)
-	return 200
+func BindingsOutput(ctx ofctx.Context, in []byte) (ofctx.Out, error) {
+	var greeting []byte
+	if in != nil {
+		greeting = in
+	} else {
+		greeting, _ = json.Marshal(map[string]string{"message": "Hello"})
+	}
+
+	_, err := ctx.Send("another-target", greeting)
+	if err != nil {
+		log.Printf("Error: %v\n", err)
+		return ctx.ReturnOnInternalError(), err
+	}
+	return ctx.ReturnOnSuccess(), nil
 }
 ```
 
@@ -151,9 +176,11 @@ Learn more about OpenFunction [roadmap](docs/roadmap.md).
 
 ### Community Call
 
-Meeting room: [Zoom](https://us02web.zoom.us/j/89684762679?pwd=U1JNWVdzbElScVFMSEdQQnV0YnR4UT09)
+Meeting time：15:00-16:00(GMT+08:00), Thursday every two weeks starting from March 17th, 2022
 
-Meeting time: Wednesday at 15:30—16:30 Beijing Time (biweekly, starting from June 23rd, 2021)
+Meeting room: [Tencent Meeting](https://meeting.tencent.com/dm/HMec1CjT8F2i)
+
+Tencent Meeting Number: 443-6181-3052
 
 Check out the [meeting calendar](https://kubesphere.io/contribution/) and [meeting notes](https://docs.google.com/document/d/1bh5-kVPegjNlIjjq_e37mS3ZhyXWhmmUaysFgeI9_-o/edit?usp=sharing).
 

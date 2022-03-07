@@ -1,0 +1,20 @@
+# permissions for end users to view domains.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: domain-viewer-role
+rules:
+- apiGroups:
+  - core.openfunction.io
+  resources:
+  - domains
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - core.openfunction.io
+  resources:
+  - domains/status
+  verbs:
+  - get

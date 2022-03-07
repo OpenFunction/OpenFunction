@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	openfunction "github.com/openfunction/apis/core/v1alpha2"
+	openfunction "github.com/openfunction/apis/core/v1beta1"
 	"github.com/openfunction/pkg/constants"
 	"github.com/openfunction/pkg/util"
 )
@@ -65,6 +65,7 @@ func NewFunctionReconciler(mgr manager.Manager, interval time.Duration) *Functio
 
 //+kubebuilder:rbac:groups=core.openfunction.io,resources=functions,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core.openfunction.io,resources=functions/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups="",resources=configmaps,verbs=list;get;watch;update;patch
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -407,6 +408,7 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 			Labels: map[string]string{
 				constants.FunctionLabel: fn.Name,
 			},
+			Annotations: fn.Annotations,
 		},
 		Spec: r.createServingSpec(fn),
 	}
@@ -537,18 +539,17 @@ func (r *FunctionReconciler) createServingSpec(fn *openfunction.Function) openfu
 	}
 
 	if fn.Spec.Serving != nil {
+		spec.Runtime = fn.Spec.Serving.Runtime
+		spec.ScaleOptions = fn.Spec.Serving.ScaleOptions
+		spec.Bindings = fn.Spec.Serving.Bindings
+		spec.Pubsub = fn.Spec.Serving.Pubsub
+		spec.Inputs = fn.Spec.Serving.Inputs
+		spec.Outputs = fn.Spec.Serving.Outputs
 		spec.Params = fn.Spec.Serving.Params
-		spec.OpenFuncAsync = fn.Spec.Serving.OpenFuncAsync
 		spec.Labels = fn.Spec.Serving.Labels
 		spec.Annotations = fn.Spec.Serving.Annotations
 		spec.Template = fn.Spec.Serving.Template
-	}
-
-	if fn.Spec.Serving != nil && fn.Spec.Serving.Runtime != nil {
-		spec.Runtime = fn.Spec.Serving.Runtime
-	} else {
-		runt := openfunction.Knative
-		spec.Runtime = &runt
+		spec.Triggers = fn.Spec.Serving.Triggers
 	}
 
 	return spec

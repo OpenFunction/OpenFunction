@@ -18,8 +18,9 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	openfunction "github.com/openfunction/apis/core/v1alpha1"
+	openfunction "github.com/openfunction/apis/core/v1beta1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -68,6 +69,10 @@ type Reference struct {
 	Name string `json:"name"`
 	// API version of the referent.
 	APIVersion string `json:"apiVersion"`
+}
+
+func (ref Reference) GroupVersionKind() schema.GroupVersionKind {
+	return schema.FromAPIVersionAndKind(ref.APIVersion, ref.Kind)
 }
 
 // EventSourceStatus defines the observed state of EventSource

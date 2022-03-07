@@ -1,0 +1,76 @@
+apiVersion: core.openfunction.io/v1beta1
+kind: Function
+metadata:
+  name: output-target
+spec:
+  version: "v1.0.0"
+  image: openfunctiondev/v1beta1-output-target:latest
+  serving:
+    runtime: async
+    inputs:
+      - name: greeting
+        component: target-topic
+        type: bindings
+    bindings:
+      target-topic:
+        type: bindings.kafka
+        version: v1
+        metadata:
+          - name: brokers
+            value: "kafka-server-kafka-brokers:9092"
+          - name: topics
+            value: "bindings"
+          - name: consumerGroup
+            value: "output-target"
+          - name: publishTopic
+            value: "bindings"
+          - name: authRequired
+            value: "false"
+    template:
+      containers:
+        - name: function
+          imagePullPolicy: Always
+---
+apiVersion: core.openfunction.io/v1beta1
+kind: Function
+metadata:
+  name: bindings
+spec:
+  version: "v1.0.0"
+  image: openfunctiondev/v1beta1-bindings:latest
+  serving:
+    template:
+      containers:
+        - name: function
+          imagePullPolicy: Always
+    runtime: "async"
+    inputs:
+      - name: cron
+        component: cron
+        type: bindings
+    outputs:
+      - name: target
+        component: kafka-server
+        type: bindings
+        operation: "create"
+    bindings:
+      cron:
+        type: bindings.cron
+        version: v1
+        metadata:
+          - name: schedule
+            value: "@every 2s"
+      kafka-server:
+        type: bindings.kafka
+        version: v1
+        metadata:
+          - name: brokers
+            value: "kafka-server-kafka-brokers:9092"
+          - name: topics
+            value: "bindings"
+          - name: consumerGroup
+            value: "bindings-with-output"
+          - name: publishTopic
+            value: "bindings"
+          - name: authRequired
+            value: "false"

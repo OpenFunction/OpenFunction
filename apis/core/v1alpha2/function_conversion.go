@@ -20,12 +20,13 @@ package, plus the API version for our hub type (v1), and finally some of the
 standard packages.
 */
 import (
-	"fmt"
+	"strings"
 
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
+	kedav1alpha1 "github.com/kedacore/keda/v2/api/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 
-	"github.com/openfunction/apis/core/v1alpha1"
+	"github.com/openfunction/apis/core/v1beta1"
 )
 
 // +kubebuilder:docs-gen:collapse=Imports
@@ -41,20 +42,20 @@ the hub version.
 ConvertTo is expected to modify its argument to contain the converted object.
 Most of the conversion is straightforward copying, except for converting our changed field.
 */
-// ConvertTo converts this CronJob to the Hub version (v1alpha1).
+// ConvertTo converts this Function to the Hub version (v1beta1).
 func (src *Function) ConvertTo(dstRaw conversion.Hub) error {
-	dst := dstRaw.(*v1alpha1.Function)
+	dst := dstRaw.(*v1beta1.Function)
 	dst.ObjectMeta = src.ObjectMeta
 
 	if src.Spec.Serving != nil {
-		dst.Spec.Serving = &v1alpha1.ServingImpl{}
+		dst.Spec.Serving = &v1beta1.ServingImpl{}
 		if err := src.convertServingTo(dst); err != nil {
 			return err
 		}
 	}
 
 	if src.Spec.Build != nil {
-		dst.Spec.Build = &v1alpha1.BuildImpl{}
+		dst.Spec.Build = &v1beta1.BuildImpl{}
 		if err := src.convertBuildTo(dst); err != nil {
 			return err
 		}
@@ -67,14 +68,14 @@ func (src *Function) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Status
 	if src.Status.Build != nil {
-		dst.Status.Build = &v1alpha1.Condition{
+		dst.Status.Build = &v1beta1.Condition{
 			State:        src.Status.Build.State,
 			ResourceRef:  src.Status.Build.ResourceRef,
 			ResourceHash: src.Status.Build.ResourceHash,
 		}
 	}
 	if src.Status.Serving != nil {
-		dst.Status.Serving = &v1alpha1.Condition{
+		dst.Status.Serving = &v1beta1.Condition{
 			State:        src.Status.Serving.State,
 			ResourceRef:  src.Status.Serving.ResourceRef,
 			ResourceHash: src.Status.Serving.ResourceHash,
@@ -85,7 +86,7 @@ func (src *Function) ConvertTo(dstRaw conversion.Hub) error {
 	return nil
 }
 
-func (src *Function) convertBuildTo(dst *v1alpha1.Function) error {
+func (src *Function) convertBuildTo(dst *v1beta1.Function) error {
 	dst.Spec.Build.Builder = src.Spec.Build.Builder
 	dst.Spec.Build.BuilderCredentials = src.Spec.Build.BuilderCredentials
 	dst.Spec.Build.Env = src.Spec.Build.Env
@@ -93,7 +94,7 @@ func (src *Function) convertBuildTo(dst *v1alpha1.Function) error {
 	dst.Spec.Build.Dockerfile = src.Spec.Build.Dockerfile
 
 	if src.Spec.Build.SrcRepo != nil {
-		dst.Spec.Build.SrcRepo = &v1alpha1.GitRepo{}
+		dst.Spec.Build.SrcRepo = &v1beta1.GitRepo{}
 		dst.Spec.Build.SrcRepo.Url = src.Spec.Build.SrcRepo.Url
 		dst.Spec.Build.SrcRepo.SourceSubPath = src.Spec.Build.SrcRepo.SourceSubPath
 		dst.Spec.Build.SrcRepo.Revision = src.Spec.Build.SrcRepo.Revision
@@ -101,9 +102,9 @@ func (src *Function) convertBuildTo(dst *v1alpha1.Function) error {
 	}
 
 	if src.Spec.Build.Shipwright != nil {
-		dst.Spec.Build.Shipwright = &v1alpha1.ShipwrightEngine{}
+		dst.Spec.Build.Shipwright = &v1beta1.ShipwrightEngine{}
 		if src.Spec.Build.Shipwright.Strategy != nil {
-			dst.Spec.Build.Shipwright.Strategy = &v1alpha1.Strategy{}
+			dst.Spec.Build.Shipwright.Strategy = &v1beta1.Strategy{}
 			dst.Spec.Build.Shipwright.Strategy.Name = src.Spec.Build.Shipwright.Strategy.Name
 			dst.Spec.Build.Shipwright.Strategy.Kind = src.Spec.Build.Shipwright.Strategy.Kind
 		}
@@ -112,78 +113,112 @@ func (src *Function) convertBuildTo(dst *v1alpha1.Function) error {
 	return nil
 }
 
-func (src *Function) convertServingTo(dst *v1alpha1.Function) error {
-	dst.Spec.Serving.Runtime = (*v1alpha1.Runtime)(src.Spec.Serving.Runtime)
+func (src *Function) convertServingTo(dst *v1beta1.Function) error {
+	rtType := v1beta1.Knative
+	if src.Spec.Serving.Runtime != nil && strings.EqualFold(string(*src.Spec.Serving.Runtime), string(OpenFuncAsync)) {
+		rtType = v1beta1.Async
+	}
+	dst.Spec.Serving.Runtime = rtType
 
-	dst.Spec.Serving.OpenFuncAsync = &v1alpha1.OpenFuncAsyncRuntime{}
 	if src.Spec.Serving.OpenFuncAsync != nil {
 		if src.Spec.Serving.OpenFuncAsync.Dapr != nil {
-			dst.Spec.Serving.OpenFuncAsync.Dapr = &v1alpha1.Dapr{}
-			dst.Spec.Serving.OpenFuncAsync.Dapr.Annotations = src.Spec.Serving.OpenFuncAsync.Dapr.Annotations
-
 			if src.Spec.Serving.OpenFuncAsync.Dapr.Components != nil {
-				dst.Spec.Serving.OpenFuncAsync.Dapr.Components = []v1alpha1.DaprComponent{}
+				dst.Spec.Serving.Bindings = map[string]*componentsv1alpha1.ComponentSpec{}
+				dst.Spec.Serving.Pubsub = map[string]*componentsv1alpha1.ComponentSpec{}
 				for name, component := range src.Spec.Serving.OpenFuncAsync.Dapr.Components {
-					dc := v1alpha1.DaprComponent{
-						Name:          name,
-						ComponentSpec: *component,
+					c := component.DeepCopy()
+					if strings.HasPrefix(c.Type, v1beta1.DaprBindings) {
+						dst.Spec.Serving.Bindings[name] = c
+					} else if strings.HasPrefix(c.Type, v1beta1.DaprPubsub) {
+						dst.Spec.Serving.Pubsub[name] = c
 					}
-					dst.Spec.Serving.OpenFuncAsync.Dapr.Components = append(dst.Spec.Serving.OpenFuncAsync.Dapr.Components, dc)
 				}
 			}
 
+			if src.Spec.Serving.OpenFuncAsync.Dapr.Annotations != nil {
+				dst.Spec.Serving.Annotations = src.Spec.Serving.OpenFuncAsync.Dapr.Annotations
+			}
+
 			if src.Spec.Serving.OpenFuncAsync.Dapr.Inputs != nil {
-				dst.Spec.Serving.OpenFuncAsync.Dapr.Inputs = []*v1alpha1.DaprIO{}
+				dst.Spec.Serving.Inputs = []*v1beta1.DaprIO{}
 				for _, input := range src.Spec.Serving.OpenFuncAsync.Dapr.Inputs {
-					in := v1alpha1.DaprIO{
-						Name:   input.Component,
-						Topic:  input.Topic,
-						Type:   input.Type,
-						Params: input.Params,
+					in := &v1beta1.DaprIO{
+						Name:      input.Name,
+						Component: input.Component,
+						Type:      input.Type,
+						Topic:     input.Topic,
+						Params:    input.Params,
+						Operation: input.Operation,
 					}
-					dst.Spec.Serving.OpenFuncAsync.Dapr.Inputs = append(dst.Spec.Serving.OpenFuncAsync.Dapr.Inputs, &in)
+					dst.Spec.Serving.Inputs = append(dst.Spec.Serving.Inputs, in)
 				}
 			}
 
 			if src.Spec.Serving.OpenFuncAsync.Dapr.Outputs != nil {
-				dst.Spec.Serving.OpenFuncAsync.Dapr.Outputs = []*v1alpha1.DaprIO{}
+				dst.Spec.Serving.Outputs = []*v1beta1.DaprIO{}
 				for _, output := range src.Spec.Serving.OpenFuncAsync.Dapr.Outputs {
-					output.Params = map[string]string{}
-					output.Params["operation"] = output.Operation
-					out := v1alpha1.DaprIO{
-						Name:   output.Component,
-						Topic:  output.Topic,
-						Type:   output.Type,
-						Params: output.Params,
+					out := &v1beta1.DaprIO{
+						Name:      output.Name,
+						Component: output.Component,
+						Type:      output.Type,
+						Topic:     output.Topic,
+						Params:    output.Params,
+						Operation: output.Operation,
 					}
-					dst.Spec.Serving.OpenFuncAsync.Dapr.Outputs = append(dst.Spec.Serving.OpenFuncAsync.Dapr.Outputs, &out)
+					dst.Spec.Serving.Outputs = append(dst.Spec.Serving.Outputs, out)
 				}
 			}
 		}
 
 		if src.Spec.Serving.OpenFuncAsync.Keda != nil {
-			dst.Spec.Serving.OpenFuncAsync.Keda = &v1alpha1.Keda{}
+			dst.Spec.Serving.ScaleOptions = &v1beta1.ScaleOptions{}
+			dst.Spec.Serving.ScaleOptions.Keda = &v1beta1.KedaScaleOptions{}
+			dst.Spec.Serving.Triggers = []v1beta1.Triggers{}
 			if src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob != nil {
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob = &v1alpha1.KedaScaledJob{}
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.ScalingStrategy = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.ScalingStrategy
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.Triggers = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.Triggers
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.FailedJobsHistoryLimit = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.FailedJobsHistoryLimit
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.SuccessfulJobsHistoryLimit = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.SuccessfulJobsHistoryLimit
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.MaxReplicaCount = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.MaxReplicaCount
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.PollingInterval = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.PollingInterval
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.RestartPolicy = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.RestartPolicy
+				scaledJobKind := v1beta1.ScaledJob
+				dst.Spec.Serving.ScaleOptions.Keda.ScaledJob = &v1beta1.KedaScaledJob{}
+				sj := src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.DeepCopy()
+				dst.Spec.Serving.ScaleOptions.Keda.ScaledJob.ScalingStrategy = sj.ScalingStrategy
+				dst.Spec.Serving.ScaleOptions.Keda.ScaledJob.FailedJobsHistoryLimit = sj.FailedJobsHistoryLimit
+				dst.Spec.Serving.ScaleOptions.Keda.ScaledJob.SuccessfulJobsHistoryLimit = sj.SuccessfulJobsHistoryLimit
+				dst.Spec.Serving.ScaleOptions.Keda.ScaledJob.MaxReplicaCount = sj.MaxReplicaCount
+				dst.Spec.Serving.ScaleOptions.Keda.ScaledJob.PollingInterval = sj.PollingInterval
+				dst.Spec.Serving.ScaleOptions.Keda.ScaledJob.RestartPolicy = sj.RestartPolicy
+				for _, trigger := range sj.Triggers {
+					t := trigger.DeepCopy()
+					dst.Spec.Serving.Triggers = append(dst.Spec.Serving.Triggers, v1beta1.Triggers{
+						ScaleTriggers: *t, TargetKind: &scaledJobKind,
+					})
+				}
 			}
 
 			if src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject != nil {
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject = &v1alpha1.KedaScaledObject{}
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.PollingInterval = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.PollingInterval
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.CooldownPeriod = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.CooldownPeriod
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.WorkloadType = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.WorkloadType
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Advanced = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Advanced
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.MinReplicaCount = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.MinReplicaCount
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.MaxReplicaCount = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.MaxReplicaCount
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Triggers = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Triggers
+				scaledObjectKind := v1beta1.ScaledObject
+				dst.Spec.Serving.ScaleOptions.Keda.ScaledObject = &v1beta1.KedaScaledObject{}
+				so := src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.DeepCopy()
+				dst.Spec.Serving.ScaleOptions.Keda.ScaledObject.PollingInterval = so.PollingInterval
+				dst.Spec.Serving.ScaleOptions.Keda.ScaledObject.CooldownPeriod = so.CooldownPeriod
+				dst.Spec.Serving.ScaleOptions.Keda.ScaledObject.WorkloadType = so.WorkloadType
+				dst.Spec.Serving.ScaleOptions.Keda.ScaledObject.Advanced = so.Advanced
+				dst.Spec.Serving.ScaleOptions.Keda.ScaledObject.MinReplicaCount = so.MinReplicaCount
+				dst.Spec.Serving.ScaleOptions.Keda.ScaledObject.MaxReplicaCount = so.MaxReplicaCount
+				for _, trigger := range so.Triggers {
+					t := trigger.DeepCopy()
+					dst.Spec.Serving.Triggers = append(dst.Spec.Serving.Triggers, v1beta1.Triggers{
+						ScaleTriggers: *t, TargetKind: &scaledObjectKind,
+					})
+				}
 			}
+		}
+	}
+
+	if src.Spec.Serving.Annotations != nil {
+		if dst.Spec.Serving.Annotations != nil {
+			for k, v := range src.Spec.Serving.Annotations {
+				dst.Spec.Serving.Annotations[k] = v
+			}
+		} else {
+			dst.Spec.Serving.Annotations = src.Spec.Serving.Annotations
 		}
 	}
 	return nil
@@ -194,9 +229,9 @@ ConvertFrom is expected to modify its receiver to contain the converted object.
 Most of the conversion is straightforward copying, except for converting our changed field.
 */
 
-// ConvertFrom converts from the Hub version (v1alpha1) to this version.
+// ConvertFrom converts from the Hub version (v1beta1) to this version.
 func (dst *Function) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*v1alpha1.Function)
+	src := srcRaw.(*v1beta1.Function)
 	dst.ObjectMeta = src.ObjectMeta
 
 	if src.Spec.Serving != nil {
@@ -239,7 +274,7 @@ func (dst *Function) ConvertFrom(srcRaw conversion.Hub) error {
 	return nil
 }
 
-func (dst *Function) convertBuildFrom(src *v1alpha1.Function) error {
+func (dst *Function) convertBuildFrom(src *v1beta1.Function) error {
 	dst.Spec.Build.Builder = src.Spec.Build.Builder
 	dst.Spec.Build.BuilderCredentials = src.Spec.Build.BuilderCredentials
 	dst.Spec.Build.Env = src.Spec.Build.Env
@@ -266,8 +301,16 @@ func (dst *Function) convertBuildFrom(src *v1alpha1.Function) error {
 	return nil
 }
 
-func (dst *Function) convertServingFrom(src *v1alpha1.Function) error {
-	dst.Spec.Serving.Runtime = (*Runtime)(src.Spec.Serving.Runtime)
+func (dst *Function) convertServingFrom(src *v1beta1.Function) error {
+	rt := Knative
+	if strings.EqualFold(string(src.Spec.Serving.Runtime), string(v1beta1.Async)) {
+		rt = OpenFuncAsync
+	}
+	dst.Spec.Serving.Runtime = &rt
+
+	if dst.Spec.Serving.Annotations != nil {
+		src.Spec.Serving.Annotations = dst.Spec.Service.Annotations
+	}
 
 	if src.Spec.Serving.Params != nil {
 		dst.Spec.Serving.Params = src.Spec.Serving.Params
@@ -277,74 +320,118 @@ func (dst *Function) convertServingFrom(src *v1alpha1.Function) error {
 		dst.Spec.Serving.Template = src.Spec.Serving.Template
 	}
 
-	if src.Spec.Serving.OpenFuncAsync != nil {
-		dst.Spec.Serving.OpenFuncAsync = &OpenFuncAsyncRuntime{}
-		if src.Spec.Serving.OpenFuncAsync.Dapr != nil {
-			dst.Spec.Serving.OpenFuncAsync.Dapr = &Dapr{}
-			if src.Spec.Serving.OpenFuncAsync.Dapr.Annotations != nil {
-				dst.Spec.Serving.OpenFuncAsync.Dapr.Annotations = src.Spec.Serving.OpenFuncAsync.Dapr.Annotations
-			}
+	if src.Spec.Serving.Runtime == v1beta1.Async {
+		dst.Spec.Serving.OpenFuncAsync = &OpenFuncAsyncRuntime{
+			Dapr: &Dapr{},
+		}
+		dst.Spec.Serving.OpenFuncAsync.Dapr.Annotations = map[string]string{}
+		dst.Spec.Serving.OpenFuncAsync.Dapr.Components = map[string]*componentsv1alpha1.ComponentSpec{}
 
-			if src.Spec.Serving.OpenFuncAsync.Dapr.Components != nil {
-				dst.Spec.Serving.OpenFuncAsync.Dapr.Components = map[string]*componentsv1alpha1.ComponentSpec{}
-				for _, component := range src.Spec.Serving.OpenFuncAsync.Dapr.Components {
-					dst.Spec.Serving.OpenFuncAsync.Dapr.Components[component.Name] = &component.ComponentSpec
-				}
-			}
+		if src.Spec.Serving.ScaleOptions != nil && src.Spec.Serving.ScaleOptions.Keda != nil {
+			dst.Spec.Serving.OpenFuncAsync.Keda = &Keda{}
+		}
 
-			if src.Spec.Serving.OpenFuncAsync.Dapr.Inputs != nil {
-				for _, input := range src.Spec.Serving.OpenFuncAsync.Dapr.Inputs {
-					in := DaprIO{
-						Name:      fmt.Sprintf("%s-%s-%s", src.Namespace, src.Name, input.Name),
-						Component: input.Name,
-						Topic:     input.Topic,
-						Params:    input.Params,
-					}
-					dst.Spec.Serving.OpenFuncAsync.Dapr.Inputs = append(dst.Spec.Serving.OpenFuncAsync.Dapr.Inputs, &in)
-				}
-			}
-
-			if src.Spec.Serving.OpenFuncAsync.Dapr.Outputs != nil {
-				for _, output := range src.Spec.Serving.OpenFuncAsync.Dapr.Outputs {
-					operation, ok := output.Params["operation"]
-					if !ok {
-						return fmt.Errorf("cannot find opertion in params, output: %s", output.Name)
-					}
-					out := DaprIO{
-						Name:      fmt.Sprintf("%s-%s-%s", src.Namespace, src.Name, output.Name),
-						Component: output.Name,
-						Topic:     output.Topic,
-						Params:    output.Params,
-						Operation: operation,
-					}
-					dst.Spec.Serving.OpenFuncAsync.Dapr.Outputs = append(dst.Spec.Serving.OpenFuncAsync.Dapr.Outputs, &out)
-				}
+		if src.Spec.Serving.Bindings != nil {
+			for name, component := range src.Spec.Serving.Bindings {
+				c := component.DeepCopy()
+				dst.Spec.Serving.OpenFuncAsync.Dapr.Components[name] = c
 			}
 		}
 
-		if src.Spec.Serving.OpenFuncAsync.Keda != nil {
-			dst.Spec.Serving.OpenFuncAsync.Keda = &Keda{}
-			if src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob != nil {
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob = &KedaScaledJob{}
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.ScalingStrategy = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.ScalingStrategy
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.Triggers = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.Triggers
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.FailedJobsHistoryLimit = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.FailedJobsHistoryLimit
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.SuccessfulJobsHistoryLimit = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.SuccessfulJobsHistoryLimit
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.MaxReplicaCount = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.MaxReplicaCount
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.PollingInterval = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.PollingInterval
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.RestartPolicy = src.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.RestartPolicy
+		if src.Spec.Serving.Pubsub != nil {
+			for name, component := range src.Spec.Serving.Pubsub {
+				c := component.DeepCopy()
+				dst.Spec.Serving.OpenFuncAsync.Dapr.Components[name] = c
+			}
+		}
+	}
+
+	if src.Spec.Serving.Annotations != nil {
+		for k, v := range src.Spec.Serving.Annotations {
+			if strings.HasPrefix(k, "dapr.io") {
+				dst.Spec.Serving.OpenFuncAsync.Dapr.Annotations[k] = v
+			}
+		}
+	}
+
+	if src.Spec.Serving.ScaleOptions != nil && src.Spec.Serving.ScaleOptions.Keda != nil {
+		dst.Spec.Serving.OpenFuncAsync.Keda = &Keda{}
+
+		if src.Spec.Serving.ScaleOptions.Keda.ScaledJob != nil {
+			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob = &KedaScaledJob{}
+			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.Triggers = []kedav1alpha1.ScaleTriggers{}
+			sj := src.Spec.Serving.ScaleOptions.Keda.ScaledJob.DeepCopy()
+			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.ScalingStrategy = sj.ScalingStrategy
+			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.FailedJobsHistoryLimit = sj.FailedJobsHistoryLimit
+			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.SuccessfulJobsHistoryLimit = sj.SuccessfulJobsHistoryLimit
+			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.MaxReplicaCount = sj.MaxReplicaCount
+			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.PollingInterval = sj.PollingInterval
+			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.RestartPolicy = sj.RestartPolicy
+			for _, trigger := range src.Spec.Serving.Triggers {
+				t := trigger.DeepCopy()
+				if t.TargetKind != nil && *t.TargetKind == v1beta1.ScaledJob {
+					dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.Triggers = append(dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.Triggers, t.ScaleTriggers)
+				}
 			}
 
-			if src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject != nil {
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject = &KedaScaledObject{}
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.PollingInterval = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.PollingInterval
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.CooldownPeriod = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.CooldownPeriod
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.WorkloadType = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.WorkloadType
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Advanced = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Advanced
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.MinReplicaCount = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.MinReplicaCount
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.MaxReplicaCount = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.MaxReplicaCount
-				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Triggers = src.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Triggers
+			// If no triggers are found, there is no need to set up the ScaledJob.
+			if dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob.Triggers == nil {
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledJob = nil
 			}
+		}
+
+		if src.Spec.Serving.ScaleOptions.Keda.ScaledObject != nil {
+			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject = &KedaScaledObject{}
+			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Triggers = []kedav1alpha1.ScaleTriggers{}
+			so := src.Spec.Serving.ScaleOptions.Keda.ScaledObject.DeepCopy()
+			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.PollingInterval = so.PollingInterval
+			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.CooldownPeriod = so.CooldownPeriod
+			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.WorkloadType = so.WorkloadType
+			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Advanced = so.Advanced
+			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.MinReplicaCount = so.MinReplicaCount
+			dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.MaxReplicaCount = so.MaxReplicaCount
+			for _, trigger := range src.Spec.Serving.Triggers {
+				t := trigger.DeepCopy()
+				if t.TargetKind != nil && *t.TargetKind == v1beta1.ScaledJob {
+					continue
+				}
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Triggers = append(dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Triggers, t.ScaleTriggers)
+			}
+
+			// If no triggers are found, there is no need to set up the ScaledObject.
+			if dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject.Triggers == nil {
+				dst.Spec.Serving.OpenFuncAsync.Keda.ScaledObject = nil
+			}
+		}
+	}
+
+	if src.Spec.Serving.Inputs != nil {
+		dst.Spec.Serving.OpenFuncAsync.Dapr.Inputs = []*DaprIO{}
+		for _, input := range src.Spec.Serving.Inputs {
+			in := &DaprIO{
+				Name:      input.Name,
+				Component: input.Component,
+				Type:      input.Type,
+				Topic:     input.Topic,
+				Params:    input.Params,
+				Operation: input.Operation,
+			}
+			dst.Spec.Serving.OpenFuncAsync.Dapr.Inputs = append(dst.Spec.Serving.OpenFuncAsync.Dapr.Inputs, in)
+		}
+	}
+
+	if src.Spec.Serving.Outputs != nil && src.Spec.Serving.Runtime == v1beta1.Async {
+		dst.Spec.Serving.OpenFuncAsync.Dapr.Outputs = []*DaprIO{}
+		for _, output := range src.Spec.Serving.Outputs {
+			out := &DaprIO{
+				Name:      output.Name,
+				Component: output.Component,
+				Type:      output.Type,
+				Topic:     output.Topic,
+				Params:    output.Params,
+				Operation: output.Operation,
+			}
+			dst.Spec.Serving.OpenFuncAsync.Dapr.Outputs = append(dst.Spec.Serving.OpenFuncAsync.Dapr.Outputs, out)
 		}
 	}
 	return nil

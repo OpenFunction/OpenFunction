@@ -25,6 +25,7 @@ import (
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
 	kservingv1 "knative.dev/serving/pkg/apis/serving/v1"
@@ -77,6 +78,11 @@ const (
 	SourceKindCron = "cron"
 	// SourceKindMQTT indicates mqtt event source
 	SourceKindMQTT = "mqtt"
+)
+
+var (
+	knativeServiceGVK = schema.FromAPIVersionAndKind(kservingv1.SchemeGroupVersion.String(), "Service")
+	ofFunctionGVK     = schema.FromAPIVersionAndKind(ofcore.SchemeGroupVersion.String(), "Function")
 )
 
 type EventSourceConfig struct {
@@ -198,12 +204,25 @@ func createSinkComponent(ctx context.Context, c client.Client, log logr.Logger, 
 		// when setting the Uri, use resource.GetNamespace()
 		namespace = resource.GetNamespace()
 	} else {
-		var ksvc kservingv1.Service
-		if err := c.Get(ctx, types.NamespacedName{Namespace: sink.Ref.Namespace, Name: sink.Ref.Name}, &ksvc); err != nil {
-			log.Error(err, "Failed to find Knative Service", "namespace", sink.Ref.Namespace, "name", sink.Ref.Name)
-			return nil, err
+		gvk := sink.Ref.GroupVersionKind()
+		switch gvk {
+		case knativeServiceGVK:
+			var ksvc kservingv1.Service
+			if err := c.Get(ctx, types.NamespacedName{Namespace: sink.Ref.Namespace, Name: sink.Ref.Name}, &ksvc); err != nil {
+				log.Error(err, "Failed to find Knative Service", "namespace", sink.Ref.Namespace, "name", sink.Ref.Name)
+				return nil, err
+			}
+			url = ksvc.Status.URL.String()
+		case ofFunctionGVK:
+			var of ofcore.Function
+			if err := c.Get(ctx, types.NamespacedName{Namespace: sink.Ref.Namespace, Name: sink.Ref.Name}, &of); err != nil {
+				log.Error(err, "Failed to find OpenFunction", "namespace", sink.Ref.Namespace, "name", sink.Ref.Name)
+				return nil, err
+			}
+			url = of.Status.URL
+		default:
+			return nil, fmt.Errorf("unsupported reference %s", gvk.String())
 		}
-		url = ksvc.Status.URL.String()
 		namespace = sink.Ref.Namespace
 	}
 

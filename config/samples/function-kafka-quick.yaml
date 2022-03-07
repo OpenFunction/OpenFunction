@@ -1,7 +1,7 @@
 apiVersion: kafka.strimzi.io/v1beta2
 kind: Kafka
 metadata:
-  name: kafka-pubsub-server
+  name: kafka-server
   namespace: default
 spec:
   kafka:
@@ -35,13 +35,41 @@ spec:
 apiVersion: kafka.strimzi.io/v1beta1
 kind: KafkaTopic
 metadata:
-  name: logs
+  name: pubsub
   namespace: default
   labels:
-    strimzi.io/cluster: kafka-pubsub-server
+    strimzi.io/cluster: kafka-server
 spec:
   partitions: 10
-  replicas: 3
+  replicas: 1
+  config:
+    retention.ms: 7200000
+    segment.bytes: 1073741824
+---
+apiVersion: kafka.strimzi.io/v1beta1
+kind: KafkaTopic
+metadata:
+  name: bindings
+  namespace: default
+  labels:
+    strimzi.io/cluster: kafka-server
+spec:
+  partitions: 10
+  replicas: 1
+  config:
+    retention.ms: 7200000
+    segment.bytes: 1073741824
+---
+apiVersion: kafka.strimzi.io/v1beta1
+kind: KafkaTopic
+metadata:
+  name: knative-dapr
+  namespace: default
+  labels:
+    strimzi.io/cluster: kafka-server
+spec:
+  partitions: 10
+  replicas: 1
   config:
     retention.ms: 7200000
     segment.bytes: 1073741824

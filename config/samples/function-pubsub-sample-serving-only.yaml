@@ -1,88 +1,86 @@
-apiVersion: core.openfunction.io/v1alpha2
+apiVersion: core.openfunction.io/v1beta1
 kind: Function
 metadata:
   name: autoscaling-producer
 spec:
   version: "v1.0.0"
-  image: openfunctiondev/autoscaling-producer:latest
+  image: openfunctiondev/v1beta1-autoscaling-producer:latest
   serving:
     template:
       containers:
         - name: function
           imagePullPolicy: Always
-    runtime: "OpenFuncAsync"
+    runtime: "async"
     params:
-      OUTPUT_NAME: producer
-      TOPIC_NAME: metric
+      OUTPUT_NAME: subscriber
+      TOPIC_NAME: "pubsub"
       NUMBER_OF_PUBLISHERS: "2"
       PUBLISHERS_FREQ: "100ms"
       PUBLISHERS_DELAY: "10s"
       LOG_FREQ: "3s"
       PUBLISH_TO_CONSOLE: "false"
-    openFuncAsync:
-      dapr:
-        outputs:
-          - name: producer
-            component: autoscaling-producer
-            type: pubsub
-            topic: metric
-        annotations:
-          "dapr.io/log-level": "debug"
-        components:
-          autoscaling-producer:
-            type: pubsub.kafka
-            version: v1
-            metadata:
-              - name: brokers
-                value: "kafka-pubsub-server-kafka-brokers:9092"
-              - name: authRequired
-                value: "false"
-              - name: allowedTopics
-                value: "metric"
-              - name: consumerID
-                value: "autoscaling-producer"
+    outputs:
+      - name: subscriber
+        component: kafka-server
+        type: pubsub
+        topic: "pubsub"
+    pubsub:
+      kafka-server:
+        type: pubsub.kafka
+        version: v1
+        metadata:
+          - name: brokers
+            value: "kafka-server-kafka-brokers:9092"
+          - name: authRequired
+            value: "false"
+          - name: allowedTopics
+            value: "pubsub"
+          - name: consumerID
+            value: "producer"
 ---
-apiVersion: core.openfunction.io/v1alpha2
+apiVersion: core.openfunction.io/v1beta1
 kind: Function
 metadata:
   name: autoscaling-subscriber
 spec:
   version: "v1.0.0"
-  image: openfunctiondev/autoscaling-subscriber:latest
+  image: openfunctiondev/v1beta1-autoscaling-subscriber:latest
   serving:
-    runtime: "OpenFuncAsync"
-    openFuncAsync:
-      dapr:
-        inputs:
-          - name: subscriber
-            component: autoscaling-subscriber
-            type: pubsub
-            topic: metric
-        annotations:
-          dapr.io/log-level: "debug"
-        components:
-          autoscaling-subscriber:
-            type: pubsub.kafka
-            version: v1
-            metadata:
-              - name: brokers
-                value: "kafka-pubsub-server-kafka-brokers:9092"
-              - name: authRequired
-                value: "false"
-              - name: allowedTopics
-                value: "metric"
-              - name: consumerID
-                value: "autoscaling-subscriber"
+    runtime: "async"
+    scaleOptions:
       keda:
         scaledObject:
           pollingInterval: 15
           minReplicaCount: 0
           maxReplicaCount: 10
           cooldownPeriod: 30
-          triggers:
-            - type: kafka
-              metadata:
-                topic: metric
-                bootstrapServers: kafka-pubsub-server-kafka-brokers.default.svc.cluster.local:9092
-                consumerGroup: autoscaling-subscriber
-                lagThreshold: "10"
+    triggers:
+      - type: kafka
+        metadata:
+          topic: "pubsub"
+          bootstrapServers: kafka-server-kafka-brokers.default.svc.cluster.local:9092
+          consumerGroup: autoscaling-subscriber
+          lagThreshold: "10"
+        targetKind: "object"
+    template:
+      containers:
+        - name: function
+          imagePullPolicy: Always
+    inputs:
+      - name: producer
+        component: kafka-server
+        type: pubsub
+        topic: "pubsub"
+    pubsub:
+      kafka-server:
+        type: pubsub.kafka
+        version: v1
+        metadata:
+          - name: brokers
+            value: "kafka-server-kafka-brokers:9092"
+          - name: authRequired
+            value: "false"
+          - name: allowedTopics
+            value: "pubsub"
+          - name: consumerID
+            value: "autoscaling-subscriber"

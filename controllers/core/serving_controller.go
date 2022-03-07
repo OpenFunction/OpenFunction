@@ -19,28 +19,35 @@ package core
 import (
 	"context"
 	"fmt"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	openfunction "github.com/openfunction/apis/core/v1alpha2"
+	openfunction "github.com/openfunction/apis/core/v1beta1"
+	"github.com/openfunction/pkg/constants"
 	"github.com/openfunction/pkg/core"
 	"github.com/openfunction/pkg/core/serving/knative"
 	"github.com/openfunction/pkg/core/serving/openfuncasync"
 	"github.com/openfunction/pkg/util"
 )
 
+var doOnce sync.Once
+
 // ServingReconciler reconciles a Serving object
 type ServingReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
-	ctx    context.Context
-	timers map[string]*time.Timer
+	Log           logr.Logger
+	Scheme        *runtime.Scheme
+	ctx           context.Context
+	timers        map[string]*time.Timer
+	defaultConfig map[string]string
 }
 
 func NewServingReconciler(mgr manager.Manager) *ServingReconciler {
@@ -63,6 +70,7 @@ func NewServingReconciler(mgr manager.Manager) *ServingReconciler {
 //+kubebuilder:rbac:groups=keda.sh,resources=scaledjobs;scaledobjects,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=apps,resources=deployments;statefulsets,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups="",resources=configmaps,verbs=list;get;watch;update;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -89,7 +97,7 @@ func (r *ServingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	servingRun := r.getServingRun(&s)
 	if util.InterfaceIsNil(servingRun) {
-		log.Error(nil, "Unknown runtime", "runtime", *s.Spec.Runtime)
+		log.Error(nil, "Unknown runtime", "runtime", s.Spec.Runtime)
 		s.Status.Phase = openfunction.ServingPhase
 		s.Status.State = openfunction.UnknownRuntime
 		if err := r.Status().Update(r.ctx, &s); err != nil {
@@ -111,6 +119,9 @@ func (r *ServingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 		return ctrl.Result{}, nil
 	}
+
+	// Get default global configuration from ConfigMap
+	r.defaultConfig = r.getDefaultConfig()
 
 	// Start timer if serving is starting.
 	if s.Status.IsStarting() {
@@ -151,8 +162,40 @@ func (r *ServingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
-	if err := servingRun.Run(&s); err != nil {
-		log.Error(err, "Failed to start serving")
+	if err := servingRun.Run(&s, r.defaultConfig); err != nil {
+		doOnce.Do(func() {
+			if strings.Contains(err.Error(), "valueFrom.fieldRef") {
+				log.Info("In order to use the Kubernetes Downward API, " +
+					"we need to enable the 'kubernetes.podspec-fieldref' configuration for Knative, refer to: " +
+					"https://knative.dev/development/serving/configuration/feature-flags/#kubernetes-downward-api")
+				log.Info("Now we will update the 'config-features' ConfigMap resource under the 'knative-serving' Namespace")
+
+				cm := &corev1.ConfigMap{}
+
+				ns := util.GetConfigOrDefault(
+					r.defaultConfig,
+					"knative-serving.namespace",
+					constants.DefaultKnativeServingNamespace,
+				)
+				name := util.GetConfigOrDefault(r.defaultConfig,
+					"knative-serving.config-features.name",
+					constants.DefaultKnativeServingFeaturesCMName,
+				)
+
+				if err := r.Client.Get(ctx, client.ObjectKey{Namespace: ns, Name: name}, cm); err == nil {
+					if d, ok := cm.Data["kubernetes.podspec-fieldref"]; !ok || d != "enabled" {
+						cm.Data["kubernetes.podspec-fieldref"] = "enabled"
+						if err := r.Client.Update(ctx, cm); err != nil {
+							log.Error(err, "Failed to update 'config-features' ConfigMap")
+						}
+					}
+				} else {
+					log.Error(err, "Failed to get 'config-features' ConfigMap")
+				}
+			} else {
+				log.Error(err, "Failed to start serving")
+			}
+		})
 		return ctrl.Result{}, err
 	}
 
@@ -170,8 +213,8 @@ func (r *ServingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 func (r *ServingReconciler) getServingRun(s *openfunction.Serving) core.ServingRun {
 
-	switch *s.Spec.Runtime {
-	case openfunction.OpenFuncAsync:
+	switch s.Spec.Runtime {
+	case openfunction.Async:
 		return openfuncasync.NewServingRun(r.ctx, r.Client, r.Scheme, r.Log)
 	case openfunction.Knative:
 		return knative.NewServingRun(r.ctx, r.Client, r.Scheme, r.Log)
@@ -265,6 +308,26 @@ func (r *ServingReconciler) stopTimer(key string) {
 		delete(r.timers, key)
 		log.Info("Timer stopped")
 	}
+}
+
+func (r *ServingReconciler) getDefaultConfig() map[string]string {
+	ctx := r.ctx
+	log := r.Log.WithName("Config").WithValues("ConfigMap", constants.DefaultConfigMapName)
+
+	cm := &corev1.ConfigMap{}
+
+	if err := r.Client.Get(ctx, client.ObjectKey{
+		Namespace: constants.DefaultControllerNamespace,
+		Name:      constants.DefaultConfigMapName,
+	}, cm); err == nil {
+		if cm != nil {
+			return cm.Data
+		}
+	}
+
+	log.Info(fmt.Sprintf("Unable to get the default global configuration from ConfigMap %s in namespace %s",
+		constants.DefaultConfigMapName, constants.DefaultControllerNamespace))
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
