@@ -7187,7 +7187,7 @@ spec:
                             type: object
                         type: object
                       serviceAccount:
-                        description: 'DeprecatedServiceAccount is a depreciated alias
+                        description: 'DeprecatedServiceAccount is a deprecated alias
                           for ServiceAccountName. Deprecated: Use serviceAccountName
                           instead.'
                         type: string
@@ -14478,7 +14478,7 @@ spec:
                             type: object
                         type: object
                       serviceAccount:
-                        description: 'DeprecatedServiceAccount is a depreciated alias
+                        description: 'DeprecatedServiceAccount is a deprecated alias
                           for ServiceAccountName. Deprecated: Use serviceAccountName
                           instead.'
                         type: string
@@ -21560,7 +21560,7 @@ spec:
                         type: object
                     type: object
                   serviceAccount:
-                    description: 'DeprecatedServiceAccount is a depreciated alias
+                    description: 'DeprecatedServiceAccount is a deprecated alias
                       for ServiceAccountName. Deprecated: Use serviceAccountName instead.'
                     type: string
                   serviceAccountName:
@@ -28432,7 +28432,7 @@ spec:
                         type: object
                     type: object
                   serviceAccount:
-                    description: 'DeprecatedServiceAccount is a depreciated alias
+                    description: 'DeprecatedServiceAccount is a deprecated alias
                       for ServiceAccountName. Deprecated: Use serviceAccountName instead.'
                     type: string
                   serviceAccountName:
