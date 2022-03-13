@@ -55,7 +55,6 @@ type DomainStatus struct {
 }
 
 //+genclient
-//+genclient:noStatus
 //+kubebuilder:storageversion
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status

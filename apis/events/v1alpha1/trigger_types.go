@@ -69,7 +69,6 @@ type TriggerStatus struct {
 }
 
 //+genclient
-//+genclient:noStatus
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="EventBus",type=string,JSONPath=`.spec.eventBus`

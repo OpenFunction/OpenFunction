@@ -40,6 +40,7 @@ type TriggersGetter interface {
 type TriggerInterface interface {
 	Create(ctx context.Context, trigger *v1alpha1.Trigger, opts v1.CreateOptions) (*v1alpha1.Trigger, error)
 	Update(ctx context.Context, trigger *v1alpha1.Trigger, opts v1.UpdateOptions) (*v1alpha1.Trigger, error)
+	UpdateStatus(ctx context.Context, trigger *v1alpha1.Trigger, opts v1.UpdateOptions) (*v1alpha1.Trigger, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
 	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.Trigger, error)
@@ -128,6 +129,22 @@ func (c *triggers) Update(ctx context.Context, trigger *v1alpha1.Trigger, opts v
 		Namespace(c.ns).
 		Resource("triggers").
 		Name(trigger.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Body(trigger).
+		Do(ctx).
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *triggers) UpdateStatus(ctx context.Context, trigger *v1alpha1.Trigger, opts v1.UpdateOptions) (result *v1alpha1.Trigger, err error) {
+	result = &v1alpha1.Trigger{}
+	err = c.client.Put().
+		Namespace(c.ns).
+		Resource("triggers").
+		Name(trigger.Name).
+		SubResource("status").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(trigger).
 		Do(ctx).

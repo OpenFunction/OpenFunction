@@ -40,6 +40,7 @@ type FunctionsGetter interface {
 type FunctionInterface interface {
 	Create(ctx context.Context, function *v1alpha2.Function, opts v1.CreateOptions) (*v1alpha2.Function, error)
 	Update(ctx context.Context, function *v1alpha2.Function, opts v1.UpdateOptions) (*v1alpha2.Function, error)
+	UpdateStatus(ctx context.Context, function *v1alpha2.Function, opts v1.UpdateOptions) (*v1alpha2.Function, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
 	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha2.Function, error)
@@ -128,6 +129,22 @@ func (c *functions) Update(ctx context.Context, function *v1alpha2.Function, opt
 		Namespace(c.ns).
 		Resource("functions").
 		Name(function.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Body(function).
+		Do(ctx).
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *functions) UpdateStatus(ctx context.Context, function *v1alpha2.Function, opts v1.UpdateOptions) (result *v1alpha2.Function, err error) {
+	result = &v1alpha2.Function{}
+	err = c.client.Put().
+		Namespace(c.ns).
+		Resource("functions").
+		Name(function.Name).
+		SubResource("status").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(function).
 		Do(ctx).
