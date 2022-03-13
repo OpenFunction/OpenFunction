@@ -181,7 +181,7 @@ ConvertFrom is expected to modify its receiver to contain the converted object.
 Most of the conversion is straightforward copying, except for converting our changed field.
 */
 
-// ConvertFrom converts from the Hub version (v1alpha1) to this version.
+// ConvertFrom converts from the Hub version (v1beta1) to this version.
 func (dst *Serving) ConvertFrom(srcRaw conversion.Hub) error {
 	src := srcRaw.(*v1beta1.Serving)
 

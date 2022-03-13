@@ -87,7 +87,6 @@ type EventSourceStatus struct {
 }
 
 //+genclient
-//+genclient:noStatus
 //+kubebuilder:object:root=true
 //+kubebuilder:resource:shortName=es
 //+kubebuilder:subresource:status

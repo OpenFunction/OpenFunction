@@ -102,6 +102,18 @@ func (c *FakeTriggers) Update(ctx context.Context, trigger *v1alpha1.Trigger, op
 	return obj.(*v1alpha1.Trigger), err
 }
 
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeTriggers) UpdateStatus(ctx context.Context, trigger *v1alpha1.Trigger, opts v1.UpdateOptions) (*v1alpha1.Trigger, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateSubresourceAction(triggersResource, "status", c.ns, trigger), &v1alpha1.Trigger{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.Trigger), err
+}
+
 // Delete takes name of the trigger and deletes it. Returns an error if one occurs.
 func (c *FakeTriggers) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
