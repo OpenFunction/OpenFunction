@@ -32,7 +32,7 @@ type CoreV1beta1Interface interface {
 	ServingsGetter
 }
 
-// CoreV1alpha2Client is used to interact with features provided by the core.openfunction.io group.
+// CoreV1beta1Client is used to interact with features provided by the core.openfunction.io group.
 type CoreV1beta1Client struct {
 	restClient rest.Interface
 }
@@ -53,7 +53,7 @@ func (c *CoreV1beta1Client) Servings(namespace string) ServingInterface {
 	return newServings(c, namespace)
 }
 
-// NewForConfig creates a new CoreV1alpha2Client for the given config.
+// NewForConfig creates a new CoreV1beta1Client for the given config.
 func NewForConfig(c *rest.Config) (*CoreV1beta1Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
@@ -66,7 +66,7 @@ func NewForConfig(c *rest.Config) (*CoreV1beta1Client, error) {
 	return &CoreV1beta1Client{client}, nil
 }
 
-// NewForConfigOrDie creates a new CoreV1alpha2Client for the given config and
+// NewForConfigOrDie creates a new CoreV1beta1Client for the given config and
 // panics if there is an error in the config.
 func NewForConfigOrDie(c *rest.Config) *CoreV1beta1Client {
 	client, err := NewForConfig(c)
@@ -76,7 +76,7 @@ func NewForConfigOrDie(c *rest.Config) *CoreV1beta1Client {
 	return client
 }
 
-// New creates a new CoreV1alpha2Client for the given RESTClient.
+// New creates a new CoreV1beta1Client for the given RESTClient.
 func New(c rest.Interface) *CoreV1beta1Client {
 	return &CoreV1beta1Client{c}
 }

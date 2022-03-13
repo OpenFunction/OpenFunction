@@ -102,6 +102,18 @@ func (c *FakeEventSources) Update(ctx context.Context, eventSource *v1alpha1.Eve
 	return obj.(*v1alpha1.EventSource), err
 }
 
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeEventSources) UpdateStatus(ctx context.Context, eventSource *v1alpha1.EventSource, opts v1.UpdateOptions) (*v1alpha1.EventSource, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateSubresourceAction(eventsourcesResource, "status", c.ns, eventSource), &v1alpha1.EventSource{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.EventSource), err
+}
+
 // Delete takes name of the eventSource and deletes it. Returns an error if one occurs.
 func (c *FakeEventSources) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
