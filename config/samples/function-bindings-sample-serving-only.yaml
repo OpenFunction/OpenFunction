@@ -8,13 +8,13 @@ spec:
 #  imageCredentials:
 #    name: push-secret
 #  build:
-#    builder: openfunctiondev/builder-go:latest
+#    builder: openfunction/builder-go:latest
 #    env:
-#      FUNC_NAME: "Target"
+#      FUNC_NAME: "HandleKafkaInput"
 #      FUNC_CLEAR_SOURCE: "true"
 #    srcRepo:
 #      url: "https://github.com/OpenFunction/samples.git"
-#      sourceSubPath: "functions/Async/bindings/with-output/output-target"
+#      sourceSubPath: "functions/async/bindings/kafka-input"
   serving:
     runtime: async
     inputs:
@@ -50,13 +50,13 @@ spec:
 #  imageCredentials:
 #    name: push-secret
 #  build:
-#    builder: openfunctiondev/builder-go:latest
+#    builder: openfunction/builder-go:latest
 #    env:
-#      FUNC_NAME: "BindingsOutput"
+#      FUNC_NAME: "HandleCronInput"
 #      FUNC_CLEAR_SOURCE: "true"
 #    srcRepo:
 #      url: "https://github.com/OpenFunction/samples.git"
-#      sourceSubPath: "functions/Async/bindings/with-output"
+#      sourceSubPath: "functions/async/bindings/cron-input-kafka-output"
   serving:
     template:
       containers:
@@ -67,7 +67,7 @@ spec:
       - name: cron
         component: cron
     outputs:
-      - name: target
+      - name: sample
         component: kafka-server
         operation: "create"
     bindings:

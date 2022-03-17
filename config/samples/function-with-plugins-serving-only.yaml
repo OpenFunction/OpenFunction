@@ -12,7 +12,7 @@ metadata:
       - plugin-example
     plugins.tracing: |
       # Switch for tracing, default to false
-      enabled: true
+      enabled: false
       # Provider name can be set to "skywalking", "opentelemetry"
       # A valid provider must be set if tracing is enabled.
       provider:
@@ -37,13 +37,13 @@ spec:
 #  imageCredentials:
 #    name: push-secret
 #  build:
-#    builder: openfunctiondev/builder-go:latest
+#    builder: openfunction/builder-go:latest
 #    env:
-#      FUNC_NAME: "BindingsNoOutput"
+#      FUNC_NAME: "HandleCronInput"
 #      FUNC_CLEAR_SOURCE: "true"
 #    srcRepo:
 #      url: "https://github.com/OpenFunction/samples.git"
-#      sourceSubPath: "functions/Async/bindings/without-output"
+#      sourceSubPath: "functions/async/bindings/cron-input"
   serving:
     template:
       containers:

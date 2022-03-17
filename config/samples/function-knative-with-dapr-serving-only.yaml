@@ -8,14 +8,13 @@ spec:
 #  imageCredentials:
 #    name: push-secret
 #  build:
-#    builder: openfunctiondev/builder-go:latest
+#    builder: openfunction/builder-go:latest
 #    env:
-#      FUNC_NAME: "Target"
+#      FUNC_NAME: "HandleKafkaInput"
 #      FUNC_CLEAR_SOURCE: "true"
 #    srcRepo:
 #      url: "https://github.com/OpenFunction/samples.git"
-#      sourceSubPath: "functions/Knative/function-with-dapr/output-target"
-#      revision: "main"
+#      sourceSubPath: "functions/async/bindings/kafka-input"
   serving:
     runtime: async
     inputs:
@@ -52,13 +51,13 @@ spec:
 #  imageCredentials:
 #    name: push-secret
 #  build:
-#    builder: openfunctiondev/builder-go:latest
+#    builder: openfunction/builder-go:latest
 #    env:
-#      FUNC_NAME: "Sender"
+#      FUNC_NAME: "ForwardToKafka"
 #      FUNC_CLEAR_SOURCE: "true"
 #    srcRepo:
 #      url: "https://github.com/OpenFunction/samples.git"
-#      sourceSubPath: "functions/Knative/function-with-dapr"
+#      sourceSubPath: "functions/knative/with-output-binding"
   serving:
     scaleOptions:
       minReplicas: 0
