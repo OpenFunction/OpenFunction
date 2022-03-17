@@ -350,7 +350,7 @@ func parsePluginsCfg(s *openfunction.Serving, cm map[string]string, fc *function
 		}
 	}
 
-	if tcCfg != nil && tcCfg.Enable {
+	if tcCfg != nil && tcCfg.Enabled {
 		prePlugins = append(prePlugins, tcCfg.Provider.Name)
 		postPlugins = append([]string{tcCfg.Provider.Name}, postPlugins...)
 	}

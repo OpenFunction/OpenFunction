@@ -51,7 +51,7 @@ type functionOutput struct {
 }
 
 type functionPluginsTracing struct {
-	Enable   bool              `json:"enable" yaml:"enable"`
+	Enabled  bool              `json:"enabled" yaml:"enabled"`
 	Provider *tracingProvider  `json:"provider" yaml:"provider"`
 	Tags     map[string]string `json:"tags,omitempty" yaml:"tags,omitempty"`
 	Baggage  map[string]string `json:"baggage" yaml:"baggage"`
