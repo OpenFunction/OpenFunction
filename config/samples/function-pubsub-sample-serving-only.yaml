@@ -52,7 +52,6 @@ spec:
       value: "false"
     - name: allowedTopics
       value: "pubsub"
-
 ---
 apiVersion: core.openfunction.io/v1beta1
 kind: Function
@@ -64,14 +63,15 @@ spec:
 #  imageCredentials:
 #    name: push-secret
 #  build:
-#    builder: openfunctiondev/builder-go:latest
+#    builder: openfunction/builder-go:latest
 #    env:
 #      FUNC_NAME: "Subscriber"
 #      FUNC_CLEAR_SOURCE: "true"
+#      # Use FUNC_GOPROXY to set the goproxy
+#      # FUNC_GOPROXY: "https://goproxy.cn"
 #    srcRepo:
 #      url: "https://github.com/OpenFunction/samples.git"
-#      sourceSubPath: "functions/Async/pubsub/subscriber"
-#      revision: "main"
+#      sourceSubPath: "functions/async/pubsub/subscriber"
   serving:
     runtime: "async"
     scaleOptions:

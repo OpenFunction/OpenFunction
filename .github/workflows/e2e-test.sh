@@ -105,7 +105,7 @@ function function_with_plugins() {
 
   while /bin/true; do
     kubectl logs $(kubectl get po -l openfunction.io/serving=$(kubectl get functions bindings-plugins -o jsonpath='{.status.serving.resourceRef}') \
-      -o jsonpath='{.items[0].metadata.name}') function |grep "the sum is: 2"
+      -o jsonpath='{.items[0].metadata.name}') function |grep "Result: {\"sum\":2}"
     if [ $? -ne 0 ]; then
       sleep 1
       continue

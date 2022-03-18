@@ -4,7 +4,7 @@ metadata:
   name: function-sample-serving-only
 spec:
   version: "v1.0.0"
-  image: "openfunctiondev/v1beta1-sample:latest"
+  image: "openfunctiondev/v1beta1-http:latest"
   port: 8080 # default to 8080
   serving:
     runtime: knative
