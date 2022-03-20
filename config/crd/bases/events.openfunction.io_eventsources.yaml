@@ -22,7 +22,7 @@ spec:
     - jsonPath: .spec.eventBus
       name: EventBus
       type: string
-    - jsonPath: .spec.sink.ref.name
+    - jsonPath: .spec.sink.uri
       name: Sink
       type: string
     - jsonPath: .status.conditions[-1].type
