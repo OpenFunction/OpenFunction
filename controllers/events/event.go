@@ -228,6 +228,8 @@ func createSinkComponent(ctx context.Context, c client.Client, log logr.Logger, 
 		namespace = sink.Ref.Namespace
 	}
 
+	sink.Uri = &url
+
 	component := &componentsv1alpha1.Component{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf(SinkComponentNameTmpl, resource.GetName(), namespace),
