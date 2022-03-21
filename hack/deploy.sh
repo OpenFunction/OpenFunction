@@ -22,13 +22,30 @@ with_openFuncAsync=false
 with_ingress=false
 region_cn=false
 
+# add help information
+if [[ ${1} = "--help" ]] || [[ ${1} = "-h" ]]
+then
+  clear
+  echo "-----------------------------------------------------------------------------------------------"
+  echo "This shell script used to deploy OpenFunction components in your Cluster"
+  echo "--all Will install cert_manager shipwright knative openFuncAsync nginx-ingress components"
+  echo "--with-cert-manager Will install cert-manager component"
+  echo "--with-shipwright Will install shipwright component"
+  echo "--with-knative Will install knative component"
+  echo "--with-openFuncAsync Will install dapr and keda components"
+  echo "--with-ingress Will install nginx-ingress component"
+  echo "-p If you can't access the github repo"
+  echo "-----------------------------------------------------------------------------------------------"
+  exit 0
+fi
+
 if [ $? != 0 ]; then
   echo "Terminating..." >&2
   exit 1
 fi
 
 while test $# -gt 0; do
-  case "$1" in
+  case "${1}" in
   --all)
     all=true
     ;;
@@ -58,7 +75,7 @@ while test $# -gt 0; do
   shift
 done
 
-if [ "$all" = "true" ]; then
+if [ "${all}" = "true" ]; then
   with_cert_manager=true
   with_shipwright=true
   with_knative=true
@@ -66,16 +83,16 @@ if [ "$all" = "true" ]; then
   with_ingress=true
 fi
 
-if [ "$with_cert_manager" = "true" ]; then
-  if [ "$region_cn" = "false" ]; then
+if [ "${with_cert_manager}" = "true" ]; then
+  if [ "${region_cn}" = "false" ]; then
     kubectl apply --filename https://github.com/jetstack/cert-manager/releases/download/v1.5.4/cert-manager.yaml
   else
     kubectl apply --filename https://openfunction.sh1a.qingstor.com/cert-manager/v1.5.4/cert-manager.yaml
   fi
 fi
 
-if [ "$with_shipwright" = "true" ]; then
-  if [ "$region_cn" = "false" ]; then
+if [ "${with_shipwright}" = "true" ]; then
+  if [ "${region_cn}" = "false" ]; then
     # Install Tekton pipeline
     kubectl apply --filename https://github.com/tektoncd/pipeline/releases/download/v0.28.1/release.yaml
     # Install the Shipwright deployment
@@ -88,8 +105,8 @@ if [ "$with_shipwright" = "true" ]; then
   fi
 fi
 
-if [ "$with_knative" = "true" ]; then
-  if [ "$region_cn" = "false" ]; then
+if [ "${with_knative}" = "true" ]; then
+  if [ "${region_cn}" = "false" ]; then
     # Install the required custom resources
     kubectl apply -f https://github.com/knative/serving/releases/download/v0.26.0/serving-crds.yaml
     # Install the core components of Serving
@@ -122,8 +139,8 @@ if [ "$with_knative" = "true" ]; then
   fi
 fi
 
-if [ "$with_openFuncAsync" = "true" ]; then
-  if [ "$region_cn" = "false" ]; then
+if [ "${with_openFuncAsync}" = "true" ]; then
+  if [ "${region_cn}" = "false" ]; then
     # Installs the latest Dapr CLI.
     wget -q https://raw.githubusercontent.com/dapr/cli/master/install/install.sh -O - | /bin/bash -s 1.4.0
     # Init dapr
@@ -140,10 +157,11 @@ if [ "$with_openFuncAsync" = "true" ]; then
   fi
 fi
 
-if [ "$with_ingress" = "true" ]; then
-  if [ "$region_cn" = "false" ]; then
+if [ "${with_ingress}" = "true" ]; then
+  if [ "${region_cn}" = "false" ]; then
     kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/cloud/deploy.yaml
   else
     kubectl apply -f https://openfunction.sh1a.qingstor.com/ingress-nginx/deploy/static/provider/cloud/deploy.yaml
   fi
 fi
+
