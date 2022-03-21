@@ -36,9 +36,9 @@ type FakeDomains struct {
 	ns   string
 }
 
-var domainsResource = schema.GroupVersionResource{Group: "core.openfunction.io", Version: "v1alpha2", Resource: "domains"}
+var domainsResource = schema.GroupVersionResource{Group: "core.openfunction.io", Version: "v1beta1", Resource: "domains"}
 
-var domainsKind = schema.GroupVersionKind{Group: "core.openfunction.io", Version: "v1alpha2", Kind: "Domain"}
+var domainsKind = schema.GroupVersionKind{Group: "core.openfunction.io", Version: "v1beta1", Kind: "Domain"}
 
 // Get takes name of the domain, and returns the corresponding domain object, and an error if there is any.
 func (c *FakeDomains) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.Domain, err error) {
@@ -95,6 +95,18 @@ func (c *FakeDomains) Create(ctx context.Context, domain *v1beta1.Domain, opts v
 func (c *FakeDomains) Update(ctx context.Context, domain *v1beta1.Domain, opts v1.UpdateOptions) (result *v1beta1.Domain, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(domainsResource, c.ns, domain), &v1beta1.Domain{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1beta1.Domain), err
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeDomains) UpdateStatus(ctx context.Context, domain *v1beta1.Domain, opts v1.UpdateOptions) (*v1beta1.Domain, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateSubresourceAction(domainsResource, "status", c.ns, domain), &v1beta1.Domain{})
 
 	if obj == nil {
 		return nil, err

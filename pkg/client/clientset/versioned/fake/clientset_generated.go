@@ -85,7 +85,7 @@ func (c *Clientset) CoreV1alpha2() corev1alpha2.CoreV1alpha2Interface {
 	return &fakecorev1alpha2.FakeCoreV1alpha2{Fake: &c.Fake}
 }
 
-// CoreV1alpha1 retrieves the CoreV1beta1Client
+// CoreV1beta1 retrieves the CoreV1beta1Client
 func (c *Clientset) CoreV1beta1() corev1beta1.CoreV1beta1Interface {
 	return &fakecorev1beta1.FakeCoreV1beta1{Fake: &c.Fake}
 }

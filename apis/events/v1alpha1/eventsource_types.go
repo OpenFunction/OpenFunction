@@ -87,12 +87,11 @@ type EventSourceStatus struct {
 }
 
 //+genclient
-//+genclient:noStatus
 //+kubebuilder:object:root=true
 //+kubebuilder:resource:shortName=es
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="EventBus",type=string,JSONPath=`.spec.eventBus`
-//+kubebuilder:printcolumn:name="Sink",type=string,JSONPath=`.spec.sink.ref.name`
+//+kubebuilder:printcolumn:name="Sink",type=string,JSONPath=`.spec.sink.uri`
 //+kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[-1].type"
 
 // EventSource is the Schema for the eventsources API

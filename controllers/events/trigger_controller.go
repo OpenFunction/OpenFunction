@@ -351,9 +351,12 @@ func (r *TriggerReconciler) handleSubscriber(ctx context.Context, log logr.Logge
 func (r *TriggerReconciler) createOrUpdateTriggerFunction(ctx context.Context, log logr.Logger, trigger *ofevent.Trigger) error {
 	log = r.Log.WithName("createOrUpdateTriggerFunction")
 
-	function := r.Function
+	// resourceVersion should not be set on objects to be created
+	r.Function.ResourceVersion = ""
 
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, function, r.mutateHandler(function, trigger))
+	newServingSpec := r.Function.Spec.Serving.DeepCopy()
+
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, r.Function, r.mutateHandler(trigger, newServingSpec))
 	if err != nil {
 		condition := ofevent.CreateCondition(
 			ofevent.Error, metav1.ConditionFalse, ofevent.ErrorCreatingTriggerFunction,
@@ -372,24 +375,26 @@ func (r *TriggerReconciler) createOrUpdateTriggerFunction(ctx context.Context, l
 	return nil
 }
 
-func (r *TriggerReconciler) mutateHandler(function *ofcore.Function, trigger *ofevent.Trigger) controllerutil.MutateFn {
+func (r *TriggerReconciler) mutateHandler(trigger *ofevent.Trigger, serving *ofcore.ServingImpl) controllerutil.MutateFn {
 	return func() error {
 		l := map[string]string{
 			"openfunction.io/managed": "true",
 			TriggerControlledLabel:    trigger.Name,
 		}
-		function.SetLabels(l)
+		r.Function.SetLabels(l)
+
+		r.Function.Spec.Serving = serving
 
 		envEncode, err := r.TriggerConfig.EncodeConfig()
 		if err != nil {
 			return err
 		}
-		function.Spec.Serving.Params = map[string]string{
+		r.Function.Spec.Serving.Params = map[string]string{
 			"CONFIG": envEncode,
 		}
 
-		function.SetOwnerReferences(nil)
-		return controllerutil.SetControllerReference(trigger, function, r.Scheme)
+		r.Function.SetOwnerReferences(nil)
+		return controllerutil.SetControllerReference(trigger, r.Function, r.Scheme)
 	}
 }
 

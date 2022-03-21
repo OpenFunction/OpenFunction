@@ -164,7 +164,9 @@ func (r *EventSourceReconciler) createOrUpdateEventSource(ctx context.Context, l
 		return err
 	}
 
-	if _, err := ctrl.CreateOrUpdate(ctx, r.Client, eventSource, r.mutateEventSource(eventSource)); err != nil {
+	newSinkUri := *eventSource.Spec.Sink.Uri
+
+	if _, err := ctrl.CreateOrUpdate(ctx, r.Client, eventSource, r.mutateEventSource(eventSource, newSinkUri)); err != nil {
 		condition := ofevent.CreateCondition(
 			ofevent.Error, metav1.ConditionFalse, ofevent.ErrorCreatingEventSource,
 		).SetMessage(err.Error())
@@ -386,7 +388,12 @@ func (r *EventSourceReconciler) handleEventSource(ctx context.Context, log logr.
 func (r *EventSourceReconciler) createOrUpdateEventSourceFunction(ctx context.Context, log logr.Logger, eventSource *ofevent.EventSource, function *ofcore.Function) error {
 	log = r.Log.WithName("createOrUpdateEventSourceFunction")
 
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, function, r.mutateHandler(function, eventSource))
+	// resourceVersion should not be set on objects to be created
+	function.ResourceVersion = ""
+
+	newServingSpec := function.Spec.Serving.DeepCopy()
+
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, function, r.mutateHandler(function, eventSource, newServingSpec))
 	if err != nil {
 		condition := ofevent.CreateCondition(
 			ofevent.Error, metav1.ConditionFalse, ofevent.ErrorCreatingEventSourceFunction,
@@ -405,13 +412,15 @@ func (r *EventSourceReconciler) createOrUpdateEventSourceFunction(ctx context.Co
 	return nil
 }
 
-func (r *EventSourceReconciler) mutateHandler(function *ofcore.Function, eventSource *ofevent.EventSource) controllerutil.MutateFn {
+func (r *EventSourceReconciler) mutateHandler(function *ofcore.Function, eventSource *ofevent.EventSource, serving *ofcore.ServingImpl) controllerutil.MutateFn {
 	return func() error {
 		l := map[string]string{
 			"openfunction.io/managed":  "true",
 			EventSourceControlledLabel: eventSource.Name,
 		}
 		function.SetLabels(l)
+
+		function.Spec.Serving = serving
 
 		envEncode, err := r.EventSourceConfig.EncodeConfig()
 		if err != nil {
@@ -426,7 +435,7 @@ func (r *EventSourceReconciler) mutateHandler(function *ofcore.Function, eventSo
 	}
 }
 
-func (r *EventSourceReconciler) mutateEventSource(eventSource *ofevent.EventSource) controllerutil.MutateFn {
+func (r *EventSourceReconciler) mutateEventSource(eventSource *ofevent.EventSource, uri string) controllerutil.MutateFn {
 	return func() error {
 		if eventSource.GetLabels() == nil {
 			eventSource.SetLabels(make(map[string]string))
@@ -434,6 +443,7 @@ func (r *EventSourceReconciler) mutateEventSource(eventSource *ofevent.EventSour
 		if eventSource.Spec.EventBus != "" {
 			eventSource.Labels[EventBusNameLabel] = eventSource.Spec.EventBus
 		}
+		eventSource.Spec.Sink.Uri = &uri
 		return nil
 	}
 }
@@ -446,7 +456,7 @@ func (r *EventSourceReconciler) addEventSourceForFunction(
 	scaledObject *ofcore.KedaScaledObject,
 	trigger *kedav1alpha1.ScaleTriggers,
 ) *ofcore.Function {
-	function := r.Function
+	function := r.Function.DeepCopy()
 	function.Name = fmt.Sprintf(EventSourceWorkloadsNameTmpl, eventSource.Name, sourceKind, eventName)
 	function.Namespace = eventSource.Namespace
 
