@@ -13,6 +13,7 @@ This page describes the release process and the currently planned schedule for u
 | v0.4.0           | 2021-10-19                                 | Wanjun Lei @wanjunlei     |
 | v0.5.0           | 2021-12-31                                 | Benjamin Huo @benjaminhuo |
 | v0.6.0-rc        | 2022-03-08                                 | Benjamin Huo @benjaminhuo |
+| v0.6.0           | 2022-03-21                                 | Benjamin Huo @benjaminhuo |
 
 # How to cut a new release
 
