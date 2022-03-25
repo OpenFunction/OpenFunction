@@ -142,6 +142,16 @@ func BindingsOutput(ctx ofctx.Context, in []byte) (ofctx.Out, error) {
 }
 ```
 
+One more example with tracing capability: 
+
+> SkyWalking provides solutions for observing and monitoring distributed systems, in many different scenarios.
+>
+> We have introduced SkyWalking (go2sky) for OpenFunction as a distributed tracing solution for Go language functions. 
+
+You can find the method to enable SkyWalking tracing for Go functions in [tracing sample](https://github.com/OpenFunction/samples/blob/main/functions/tracing/README.md).
+
+![](docs/images/tracing-topology.gif)
+
 You can also run the following command to make a quick demo:
 
 ```shell
