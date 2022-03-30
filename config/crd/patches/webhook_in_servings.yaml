@@ -8,6 +8,7 @@ spec:
     strategy: Webhook
     webhook:
       clientConfig:
+        caBundle: <caBundle-placement>
         service:
           namespace: openfunction
           name: webhook-service

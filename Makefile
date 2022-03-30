@@ -55,7 +55,7 @@ help: ## Display this help.
 
 ##@ Development
 
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+manifests: generate fmt vet controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 	kubectl kustomize config/default | sed -e '/creationTimestamp: null/d' | sed -e 's/openfunction-system/openfunction/g' | sed -e 's/openfunction\:latest/openfunction\:$(VERSION)/g' | sed -e 's/app.kubernetes.io\/version\: latest/app.kubernetes.io\/version\: $(VERSION)/g' > config/bundle.yaml
 	cat config/strategy/strategy.yaml >> config/bundle.yaml
@@ -77,14 +77,14 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
-test: generate fmt vet manifests ## Run tests.
+test: manifests ## Run tests.
 	mkdir -p ${ENVTEST_ASSETS_DIR}
 	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.8.3/hack/setup-envtest.sh
 	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./pkg/... ./controllers/... -coverprofile cover.out
 
 verify: verify-crds
 
-verify-crds: generate fmt vet
+verify-crds: manifests
 	@if !(git diff --quiet HEAD config/crd); then \
 		echo "generated files are out of date, run make generate"; exit 1; \
 	fi
@@ -97,7 +97,7 @@ binary: ## Build openfunction binary without test.
 build: generate fmt vet ## Build openfunction binary.
 	go build -o bin/openfunction main.go
 
-run: manifests generate fmt vet ## Run a controller from your host.
+run: manifests ## Run a controller from your host.
 	go run ./main.go
 
 docker-build: all ## Build docker image with the openfunction.

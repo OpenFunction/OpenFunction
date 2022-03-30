@@ -31,6 +31,7 @@ on:
       - 'config/samples/function-sample-serving-only.yaml'
       - 'config/samples/function-with-plugins-serving-only.yaml'
       - 'controllers/**'
+      - 'hack/generate-cert.sh'
       - 'hack/delete.sh'
       - 'hack/deploy.sh'
       - 'pkg/**'

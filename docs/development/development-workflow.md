@@ -85,6 +85,12 @@ git checkout new_feature
 git rebase -i main
 ```
 
+> ***Note**:* A script is provided in the `hack` directory to generate the certificate information required by the webhook and you can execute it using the following command. This script can generate certificates for a lifetime of 3650 days, so we recommend not running it until OpenFunction's certificate has expired.
+
+```shell
+cd hack && bash generate-cert.sh
+```
+
 ### Commit local changes
 
 ```

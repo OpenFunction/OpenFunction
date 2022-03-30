@@ -1646,7 +1646,6 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    cert-manager.io/inject-ca-from: openfunction/openfunction-serving-cert
     controller-gen.kubebuilder.io/version: v0.4.1
   name: functions.core.openfunction.io
 spec:
@@ -1654,6 +1653,7 @@ spec:
     strategy: Webhook
     webhook:
       clientConfig:
+        caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUROVENDQWgyZ0F3SUJBZ0lVQTFMdHl6VmVLOGQrTXUvUlU0MUpVclRRSlM4d0RRWUpLb1pJaHZjTkFRRUwKQlFBd0tqRW9NQ1lHQTFVRUF3d2ZZMkV0YjNCbGJtWjFibU4wYVc5dUxYZGxZbWh2YjJzdGMyVnlkbWxqWlRBZQpGdzB5TWpBek16QXdORFF6TURCYUZ3MHpNakF6TWpjd05EUXpNREJhTUNveEtEQW1CZ05WQkFNTUgyTmhMVzl3ClpXNW1kVzVqZEdsdmJpMTNaV0pvYjI5ckxYTmxjblpwWTJVd2dnRWlNQTBHQ1NxR1NJYjNEUUVCQVFVQUE0SUIKRHdBd2dnRUtBb0lCQVFDbm1aVWx0Yzd5ZTZSYmlVbXJXdmkvclgvQ01XUGt6bHNHakJ1ZVE3RUgxUnRQTE9idwpkN25lOWE0VEJKM0M3S0J0aTkyaHArUGpVUjVRcGZKNXUzMm53dlRURlRLWW5PbEw0cnNPa2dncE5aSS9IS1dDCmpVM2JOK1dBNjZDaTZqZUtEMGdhTzNKcm84TDBVMTZjdGF1MFZCTjBnWlkvbU41SW1jcjV1NGN1ZVIyK1hMYlEKNkJTek5wdVlCMWtpM1MwK1hIYkYzM3JNT1ZNa2dxZno4Qy9jSWQ5RlJIMTh6MXVwdjBXMEZHbUxOejdhWDNISgpIeGFhK3o2UnQ5cm9PUFo5eWZaQUtjQlhIcURYMVJ5WkhaQ1ZPcGVCMjNWd2gyNFRhSllWRG44UDQ5REtLa090Ckp3bW1tM2k5dm1wVzJsaW9BVmkvdnNsOThHMUtoUW9OcU5aTEFnTUJBQUdqVXpCUk1CMEdBMVVkRGdRV0JCU1oKeEVUb3Z5SURaRHZUMHhyejJrR0hJL2hEZ3pBZkJnTlZIU01FR0RBV2dCU1p4RVRvdnlJRFpEdlQweHJ6MmtHSApJL2hEZ3pBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFBeFdhb1ZseXptCkM5NTBLaUNnQnR1SkFySXRNK3lGcHZERmttaFQ4allTSkswZjQ1d1RRV1JuYmhGRmQ2SVNqekJOeEd0b3lYK04KK0QvNGhTeXhuc21FaHRpdCtIa1pmYmpkWkZCSWNWUWNqK0hNc3ZCMlVhelhzWXBVVHRmWjBsajFTNkltQ2tQTQpaNHlYQitNK2pkRkU1c2xQamNoU0dRak9qbExVbkRtcEVXaG5XQzV4QmwvRVE4YWI2OVJRNGZ6K0V0N2NUb3JYCmZqc2VnTmQ1eEdCS2ZDdVpKYjdlWm1xNkNvSWg1STRUVVlTUDB0RlQ3YkdaYzMvbFBpTm5vN1hnaExaLzExcm4KZnJDQWtxeXJEZjBrbGxRdlRIU1hrYXpjZ2h0MFUveVFqOVY1R0haYXk5T2xCMnI5ay91RW44SnFTamNUK0FZNgpjUmxWejRSNk5hTXUKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
         service:
           name: openfunction-webhook-service
           namespace: openfunction
@@ -16344,7 +16344,6 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    cert-manager.io/inject-ca-from: openfunction/openfunction-serving-cert
     controller-gen.kubebuilder.io/version: v0.4.1
   name: servings.core.openfunction.io
 spec:
@@ -16352,6 +16351,7 @@ spec:
     strategy: Webhook
     webhook:
       clientConfig:
+        caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUROVENDQWgyZ0F3SUJBZ0lVQTFMdHl6VmVLOGQrTXUvUlU0MUpVclRRSlM4d0RRWUpLb1pJaHZjTkFRRUwKQlFBd0tqRW9NQ1lHQTFVRUF3d2ZZMkV0YjNCbGJtWjFibU4wYVc5dUxYZGxZbWh2YjJzdGMyVnlkbWxqWlRBZQpGdzB5TWpBek16QXdORFF6TURCYUZ3MHpNakF6TWpjd05EUXpNREJhTUNveEtEQW1CZ05WQkFNTUgyTmhMVzl3ClpXNW1kVzVqZEdsdmJpMTNaV0pvYjI5ckxYTmxjblpwWTJVd2dnRWlNQTBHQ1NxR1NJYjNEUUVCQVFVQUE0SUIKRHdBd2dnRUtBb0lCQVFDbm1aVWx0Yzd5ZTZSYmlVbXJXdmkvclgvQ01XUGt6bHNHakJ1ZVE3RUgxUnRQTE9idwpkN25lOWE0VEJKM0M3S0J0aTkyaHArUGpVUjVRcGZKNXUzMm53dlRURlRLWW5PbEw0cnNPa2dncE5aSS9IS1dDCmpVM2JOK1dBNjZDaTZqZUtEMGdhTzNKcm84TDBVMTZjdGF1MFZCTjBnWlkvbU41SW1jcjV1NGN1ZVIyK1hMYlEKNkJTek5wdVlCMWtpM1MwK1hIYkYzM3JNT1ZNa2dxZno4Qy9jSWQ5RlJIMTh6MXVwdjBXMEZHbUxOejdhWDNISgpIeGFhK3o2UnQ5cm9PUFo5eWZaQUtjQlhIcURYMVJ5WkhaQ1ZPcGVCMjNWd2gyNFRhSllWRG44UDQ5REtLa090Ckp3bW1tM2k5dm1wVzJsaW9BVmkvdnNsOThHMUtoUW9OcU5aTEFnTUJBQUdqVXpCUk1CMEdBMVVkRGdRV0JCU1oKeEVUb3Z5SURaRHZUMHhyejJrR0hJL2hEZ3pBZkJnTlZIU01FR0RBV2dCU1p4RVRvdnlJRFpEdlQweHJ6MmtHSApJL2hEZ3pBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFBeFdhb1ZseXptCkM5NTBLaUNnQnR1SkFySXRNK3lGcHZERmttaFQ4allTSkswZjQ1d1RRV1JuYmhGRmQ2SVNqekJOeEd0b3lYK04KK0QvNGhTeXhuc21FaHRpdCtIa1pmYmpkWkZCSWNWUWNqK0hNc3ZCMlVhelhzWXBVVHRmWjBsajFTNkltQ2tQTQpaNHlYQitNK2pkRkU1c2xQamNoU0dRak9qbExVbkRtcEVXaG5XQzV4QmwvRVE4YWI2OVJRNGZ6K0V0N2NUb3JYCmZqc2VnTmQ1eEdCS2ZDdVpKYjdlWm1xNkNvSWg1STRUVVlTUDB0RlQ3YkdaYzMvbFBpTm5vN1hnaExaLzExcm4KZnJDQWtxeXJEZjBrbGxRdlRIU1hrYXpjZ2h0MFUveVFqOVY1R0haYXk5T2xCMnI5ay91RW44SnFTamNUK0FZNgpjUmxWejRSNk5hTXUKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
         service:
           name: openfunction-webhook-service
           namespace: openfunction
@@ -30408,55 +30408,6 @@ status:
   conditions: []
   storedVersions: []
 ---
-apiVersion: admissionregistration.k8s.io/v1
-kind: MutatingWebhookConfiguration
-metadata:
-  annotations:
-    cert-manager.io/inject-ca-from: openfunction/openfunction-serving-cert
-  name: openfunction-mutating-webhook-configuration
-  namespace: openfunction
-webhooks:
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: openfunction-webhook-service
-      namespace: openfunction
-      path: /mutate-core-openfunction-io-v1beta1-function
-  failurePolicy: Fail
-  name: mfunctions.of.io
-  rules:
-  - apiGroups:
-    - core.openfunction.io
-    apiVersions:
-    - v1beta1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - functions
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: openfunction-webhook-service
-      namespace: openfunction
-      path: /mutate-core-openfunction-io-v1beta1-serving
-  failurePolicy: Fail
-  name: mservings.of.io
-  rules:
-  - apiGroups:
-    - core.openfunction.io
-    apiVersions:
-    - v1beta1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - servings
-  sideEffects: None
----
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -30901,6 +30852,16 @@ metadata:
   namespace: openfunction
 ---
 apiVersion: v1
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUQvVENDQXVXZ0F3SUJBZ0lVRkozMGoranFrNkNjWjdWNUFsbTRuNHZpa1Z3d0RRWUpLb1pJaHZjTkFRRUwKQlFBd0tqRW9NQ1lHQTFVRUF3d2ZZMkV0YjNCbGJtWjFibU4wYVc5dUxYZGxZbWh2YjJzdGMyVnlkbWxqWlRBZQpGdzB5TWpBek16QXdORFF6TURCYUZ3MHpNakF6TWpjd05EUXpNREJhTUNjeEpUQWpCZ05WQkFNTUhHOXdaVzVtCmRXNWpkR2x2YmkxM1pXSm9iMjlyTFhObGNuWnBZMlV3Z2dFaU1BMEdDU3FHU0liM0RRRUJBUVVBQTRJQkR3QXcKZ2dFS0FvSUJBUUNoZHd2QkJDajA0eU5lVStSLy9Cb2VralhQSS81dHZWcFVqdUVYVzJGczkxbmFQWXFwR1FLKwprdVllSDM4UHhxVjA3Tm9mSWZJb3Y1dEFwMFZhOHl0TyswRGJhcUcydXBuMC9nOG85VDkvR25CVUVtN0g5OThGCkE0SFFGZFhNbVlxU1hqRVdxUU80bUsvMU9INEJqRFBRQjAwenZRWUhYQVQzS2crS0FCWTFSUUpNeVNjT0d0b3kKMlJ5SnNROU5YcWdKQzZYYlp0SVV0ejBwWlkvT0hHUmEzUmxDS3d0RnFjRm1CSXMxcTFYaGFiRm1EeTBBdzQ3ZgoyaytUc1A5QUhQam1LczBVZ0R2Z3NyaEJZaFVnT0dlUGorenJxQWU5NmhDQzdNdzFpVU9sL2JtZ201WGtCb3BhClhVVkthZE1VZFFGUHlXVlJkd3krUTlaOHZPazJ4b3FsQWdNQkFBR2pnZ0VjTUlJQkdEQUpCZ05WSFJNRUFqQUEKTUFzR0ExVWREd1FFQXdJRjREQWRCZ05WSFNVRUZqQVVCZ2dyQmdFRkJRY0RBZ1lJS3dZQkJRVUhBd0V3Z2Q0RwpBMVVkRVFTQjFqQ0IwNEljYjNCbGJtWjFibU4wYVc5dUxYZGxZbWh2YjJzdGMyVnlkbWxqWllJcGIzQmxibVoxCmJtTjBhVzl1TFhkbFltaHZiMnN0YzJWeWRtbGpaUzV2Y0dWdVpuVnVZM1JwYjI2Q0xXOXdaVzVtZFc1amRHbHYKYmkxM1pXSm9iMjlyTFhObGNuWnBZMlV1YjNCbGJtWjFibU4wYVc5dUxuTjJZNEk3YjNCbGJtWjFibU4wYVc5dQpMWGRsWW1odmIyc3RjMlZ5ZG1salpTNXZjR1Z1Wm5WdVkzUnBiMjR1YzNaakxtTnNkWE4wWlhJdWJHOWpZV3lDCkhHOXdaVzVtZFc1amRHbHZiaTEzWldKb2IyOXJMWE5sY25acFkyVXdEUVlKS29aSWh2Y05BUUVMQlFBRGdnRUIKQUpkZkJEcjFRYWhPaXYzR05EQzRnWnMxUDg5dTc4Q3hQL1RVRW1YMEhOa0RDOTg0cUxyRVgxejlrOGhIYVBsNQpHazFVdnJuWktsbXFwazNROElWNnRWWC9RQVJacy9ZVHhvUzVteWxMTXdXQVZpRGlQSTVNNDFITks4blRPU1VLCkxFY3NoTVpOYU8veTJueDV4bCtWMEVBaTRmWkRYUVZPWGhpaUZTbGhQNzNOSjdKa3ZQNStJdkhjTDlnUlNNd0cKNzZQQm1QUHlVSXdLZzBSdmtCWjZkV0dKWm8vcW5rZzZmanBlWjBzeEtZYmdDS0Yxc0p2OEdQdzdHMjBsaHlHQwpMR0phS2lqbUV0ZFpKNXBjbytBdkorN2hGeDZOakMrQ2xVVGx5eTVrT0UzSzJDRU40ZUwxUmNMU2xKdUxseFlWCmErcDlLMWt4eWpqelhaYkxMUTMwMnlzPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+  tls.key: LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFcFFJQkFBS0NBUUVBb1hjTHdRUW85T01qWGxQa2Yvd2FIcEkxenlQK2JiMWFWSTdoRjF0aGJQZFoyajJLCnFSa0N2cExtSGg5L0Q4YWxkT3phSHlIeUtMK2JRS2RGV3ZNclR2dEEyMnFodHJxWjlQNFBLUFUvZnhwd1ZCSnUKeC9mZkJRT0IwQlhWekptS2tsNHhGcWtEdUppdjlUaCtBWXd6MEFkTk03MEdCMXdFOXlvUGlnQVdOVVVDVE1rbgpEaHJhTXRrY2liRVBUVjZvQ1F1bDIyYlNGTGM5S1dXUHpoeGtXdDBaUWlzTFJhbkJaZ1NMTmF0VjRXbXhaZzh0CkFNT08zOXBQazdEL1FCejQ1aXJORklBNzRMSzRRV0lWSURobmo0L3M2NmdIdmVvUWd1ek1OWWxEcGYyNW9KdVYKNUFhS1dsMUZTbW5URkhVQlQ4bGxVWGNNdmtQV2ZMenBOc2FLcFFJREFRQUJBb0lCQUJDN3piUUxRbE5lMXVPSAp2ajZsV2UraEo0SjRNSDRmQ2FXSnlUb3Fka1pjdkNzcUJaelF3c0FOYVZ2bDE3MUMwUkwxR1FYdzlxL1NhN3lmCm1VaDd1eGxNWU1SY29MWFhVTzFiQnljdmc0MGdxRk9PTlh6ejYyRVJvL3AweU51VGJoRU5RZmtmT3d0K2gzM2EKaFBTVUd5cU1GeXd0Z3Rwd1p2TldvSldrdktoNGZEd1N0K3lIcmxWTjFpNlh2QmMrM2NDOCs2dFJFR3BkYUpPLwpGem1iU1JnbEMyVTc4WE5JNWVLRTVFS1lpR3RIK0FIYmpoSTR3Q1dwWEFyWUdIaE5sNWtXejI5Zi8vMzRpQ0tXCnFxUG5wM3l5NnZBREFweWJraDRIRDl4VnFtK2Y4UENhUjlORUFRdVQrZjRDTGZ3TE1IM3p0bkVtOUIxdUowNWkKYkNxNCtBRUNnWUVBMVVKRWNpSXM2bEduR2tXTGxuWnpXQlJ1SFk2b2gvODYwV05raStHYVI2NWpyNHV3V0lTdQpHajA3RWh1OC9IZWhWZzZnRURYM3E2TGpXNU1CclZOUC9oVWQ0aFhvK0JmNXJIUEYxT1lwVDRlRlZtUlpNTWJpCjk1VVdad2NlT1lwUm9xQlh3bUgvc3YwVzA4OGxETlFmb2ZxOTlNQXZTUXlFZ2oreXVUU1hhZVVDZ1lFQXdkTmcKcklIT0t4ZnF0MUhMTm9xRk5OVW5Lb01rWGloRFVobUtac3pBdW92Nm91cjRmSUhmM2pYeklXQUIxYzFGK0t3SApzS0JUTDVYY0RYbHhZWmJ2OWdxejhreTFjUmNaNkxVN1F5VXF0UGNRb2VCV1IzTlR1LzlJSnZBWUtpd3F0akJqCmVJbTQ0anc0RDdYbzlWdHRVdTBvMHZ3ZTIvUC9yWjlHR0pqQmtjRUNnWUVBc3ptY0dHZU1ZK2ozak9iQnAxUXAKSCs4YmxBK2VwNXppcTdMaWY0UzhpbDJQUGFzaUsySm1oM3JLT0MvRHBsSkw3dTBmckVBT3c5cURSU1RKRmdlYwpoS2J1bEdGaGg0OXVyM1lrM3dZSDFlVEpOSS9sUFU4STFKWWhXN2pwdCtYOU1iV2J5NnRjbitwLzBzYVdGcS8zClhjUkMvSHkvd0o2YWhuUk9HY1NQTTlrQ2dZRUFoOFJhaVR0N2dMQUdGMWJSODJoZ0dqdmNiV2pqQnBsSlhxN0oKUld6UzYxaTF2WHk5aGVrck9PbXRYb2x6ZjZHRUM4WGt0Ukg0Y3ZLVDYxUlAyVDN5NC9OblRLZnl5RDZZUldyOQpFZkZzMHNuaytwNjdrTnoxb0ZBVzZEOXhqY2pXT2p2MjBTNFhOVkZkSzVRT2xCN3dtdy9JY3RGcmhFS0xxOEJQClIxZG83NEVDZ1lFQXBleW5DR3hTakt2a0thRVBnbUJXUlhCQ0FybHFJTk9VT09wM1A3dXlRaHBtUGt2ck93S3EKbm0xMko1emM2c3RPVGoyZ0pYbkdncndoVFdseGxLUThkV09tc2hqUjZhUDNRWHlpMTFWNU1TdXcxRWE3V2dobApWSS9GNWxSeWtpU0xRTloyQ2xXN1lqSU1rT2R4bUc0eFlEd3Q5NWlQNVpTaXRLOW5DeSsveEhzPQotLS0tLUVORCBSU0EgUFJJVkFURSBLRVktLS0tLQo=
+kind: Secret
+metadata:
+  name: openfunction-webhook-server-cert
+  namespace: openfunction
+type: kubernetes.io/tls
+---
+apiVersion: v1
 kind: Service
 metadata:
   labels:
@@ -30948,16 +30909,6 @@ spec:
     spec:
       containers:
       - args:
-        - --secure-listen-address=0.0.0.0:8443
-        - --upstream=http://127.0.0.1:8080/
-        - --logtostderr=true
-        - --v=10
-        image: openfunction/kube-rbac-proxy:v0.8.0
-        name: kube-rbac-proxy
-        ports:
-        - containerPort: 8443
-          name: https
-      - args:
         - --health-probe-bind-address=:8081
         - --metrics-bind-address=127.0.0.1:8080
         - --leader-elect
@@ -30994,6 +30945,16 @@ spec:
         - mountPath: /tmp/k8s-webhook-server/serving-certs
           name: cert
           readOnly: true
+      - args:
+        - --secure-listen-address=0.0.0.0:8443
+        - --upstream=http://127.0.0.1:8080/
+        - --logtostderr=true
+        - --v=10
+        image: openfunction/kube-rbac-proxy:v0.8.0
+        name: kube-rbac-proxy
+        ports:
+        - containerPort: 8443
+          name: https
       securityContext:
         runAsNonRoot: true
       serviceAccountName: openfunction-controller-manager
@@ -31002,29 +30963,55 @@ spec:
       - name: cert
         secret:
           defaultMode: 420
-          secretName: webhook-server-cert
+          secretName: openfunction-webhook-server-cert
 ---
-apiVersion: cert-manager.io/v1
-kind: Certificate
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
 metadata:
-  name: openfunction-serving-cert
-  namespace: openfunction
-spec:
-  dnsNames:
-  - openfunction-webhook-service.openfunction.svc
-  - openfunction-webhook-service.openfunction.svc.cluster.local
-  issuerRef:
-    kind: Issuer
-    name: openfunction-selfsigned-issuer
-  secretName: webhook-server-cert
----
-apiVersion: cert-manager.io/v1
-kind: Issuer
-metadata:
-  name: openfunction-selfsigned-issuer
-  namespace: openfunction
-spec:
-  selfSigned: {}
+  name: openfunction-mutating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUROVENDQWgyZ0F3SUJBZ0lVQTFMdHl6VmVLOGQrTXUvUlU0MUpVclRRSlM4d0RRWUpLb1pJaHZjTkFRRUwKQlFBd0tqRW9NQ1lHQTFVRUF3d2ZZMkV0YjNCbGJtWjFibU4wYVc5dUxYZGxZbWh2YjJzdGMyVnlkbWxqWlRBZQpGdzB5TWpBek16QXdORFF6TURCYUZ3MHpNakF6TWpjd05EUXpNREJhTUNveEtEQW1CZ05WQkFNTUgyTmhMVzl3ClpXNW1kVzVqZEdsdmJpMTNaV0pvYjI5ckxYTmxjblpwWTJVd2dnRWlNQTBHQ1NxR1NJYjNEUUVCQVFVQUE0SUIKRHdBd2dnRUtBb0lCQVFDbm1aVWx0Yzd5ZTZSYmlVbXJXdmkvclgvQ01XUGt6bHNHakJ1ZVE3RUgxUnRQTE9idwpkN25lOWE0VEJKM0M3S0J0aTkyaHArUGpVUjVRcGZKNXUzMm53dlRURlRLWW5PbEw0cnNPa2dncE5aSS9IS1dDCmpVM2JOK1dBNjZDaTZqZUtEMGdhTzNKcm84TDBVMTZjdGF1MFZCTjBnWlkvbU41SW1jcjV1NGN1ZVIyK1hMYlEKNkJTek5wdVlCMWtpM1MwK1hIYkYzM3JNT1ZNa2dxZno4Qy9jSWQ5RlJIMTh6MXVwdjBXMEZHbUxOejdhWDNISgpIeGFhK3o2UnQ5cm9PUFo5eWZaQUtjQlhIcURYMVJ5WkhaQ1ZPcGVCMjNWd2gyNFRhSllWRG44UDQ5REtLa090Ckp3bW1tM2k5dm1wVzJsaW9BVmkvdnNsOThHMUtoUW9OcU5aTEFnTUJBQUdqVXpCUk1CMEdBMVVkRGdRV0JCU1oKeEVUb3Z5SURaRHZUMHhyejJrR0hJL2hEZ3pBZkJnTlZIU01FR0RBV2dCU1p4RVRvdnlJRFpEdlQweHJ6MmtHSApJL2hEZ3pBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFBeFdhb1ZseXptCkM5NTBLaUNnQnR1SkFySXRNK3lGcHZERmttaFQ4allTSkswZjQ1d1RRV1JuYmhGRmQ2SVNqekJOeEd0b3lYK04KK0QvNGhTeXhuc21FaHRpdCtIa1pmYmpkWkZCSWNWUWNqK0hNc3ZCMlVhelhzWXBVVHRmWjBsajFTNkltQ2tQTQpaNHlYQitNK2pkRkU1c2xQamNoU0dRak9qbExVbkRtcEVXaG5XQzV4QmwvRVE4YWI2OVJRNGZ6K0V0N2NUb3JYCmZqc2VnTmQ1eEdCS2ZDdVpKYjdlWm1xNkNvSWg1STRUVVlTUDB0RlQ3YkdaYzMvbFBpTm5vN1hnaExaLzExcm4KZnJDQWtxeXJEZjBrbGxRdlRIU1hrYXpjZ2h0MFUveVFqOVY1R0haYXk5T2xCMnI5ay91RW44SnFTamNUK0FZNgpjUmxWejRSNk5hTXUKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+    service:
+      name: openfunction-webhook-service
+      namespace: openfunction
+      path: /mutate-core-openfunction-io-v1beta1-function
+  failurePolicy: Fail
+  name: mfunctions.of.io
+  rules:
+  - apiGroups:
+    - core.openfunction.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - functions
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUROVENDQWgyZ0F3SUJBZ0lVQTFMdHl6VmVLOGQrTXUvUlU0MUpVclRRSlM4d0RRWUpLb1pJaHZjTkFRRUwKQlFBd0tqRW9NQ1lHQTFVRUF3d2ZZMkV0YjNCbGJtWjFibU4wYVc5dUxYZGxZbWh2YjJzdGMyVnlkbWxqWlRBZQpGdzB5TWpBek16QXdORFF6TURCYUZ3MHpNakF6TWpjd05EUXpNREJhTUNveEtEQW1CZ05WQkFNTUgyTmhMVzl3ClpXNW1kVzVqZEdsdmJpMTNaV0pvYjI5ckxYTmxjblpwWTJVd2dnRWlNQTBHQ1NxR1NJYjNEUUVCQVFVQUE0SUIKRHdBd2dnRUtBb0lCQVFDbm1aVWx0Yzd5ZTZSYmlVbXJXdmkvclgvQ01XUGt6bHNHakJ1ZVE3RUgxUnRQTE9idwpkN25lOWE0VEJKM0M3S0J0aTkyaHArUGpVUjVRcGZKNXUzMm53dlRURlRLWW5PbEw0cnNPa2dncE5aSS9IS1dDCmpVM2JOK1dBNjZDaTZqZUtEMGdhTzNKcm84TDBVMTZjdGF1MFZCTjBnWlkvbU41SW1jcjV1NGN1ZVIyK1hMYlEKNkJTek5wdVlCMWtpM1MwK1hIYkYzM3JNT1ZNa2dxZno4Qy9jSWQ5RlJIMTh6MXVwdjBXMEZHbUxOejdhWDNISgpIeGFhK3o2UnQ5cm9PUFo5eWZaQUtjQlhIcURYMVJ5WkhaQ1ZPcGVCMjNWd2gyNFRhSllWRG44UDQ5REtLa090Ckp3bW1tM2k5dm1wVzJsaW9BVmkvdnNsOThHMUtoUW9OcU5aTEFnTUJBQUdqVXpCUk1CMEdBMVVkRGdRV0JCU1oKeEVUb3Z5SURaRHZUMHhyejJrR0hJL2hEZ3pBZkJnTlZIU01FR0RBV2dCU1p4RVRvdnlJRFpEdlQweHJ6MmtHSApJL2hEZ3pBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFBeFdhb1ZseXptCkM5NTBLaUNnQnR1SkFySXRNK3lGcHZERmttaFQ4allTSkswZjQ1d1RRV1JuYmhGRmQ2SVNqekJOeEd0b3lYK04KK0QvNGhTeXhuc21FaHRpdCtIa1pmYmpkWkZCSWNWUWNqK0hNc3ZCMlVhelhzWXBVVHRmWjBsajFTNkltQ2tQTQpaNHlYQitNK2pkRkU1c2xQamNoU0dRak9qbExVbkRtcEVXaG5XQzV4QmwvRVE4YWI2OVJRNGZ6K0V0N2NUb3JYCmZqc2VnTmQ1eEdCS2ZDdVpKYjdlWm1xNkNvSWg1STRUVVlTUDB0RlQ3YkdaYzMvbFBpTm5vN1hnaExaLzExcm4KZnJDQWtxeXJEZjBrbGxRdlRIU1hrYXpjZ2h0MFUveVFqOVY1R0haYXk5T2xCMnI5ay91RW44SnFTamNUK0FZNgpjUmxWejRSNk5hTXUKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+    service:
+      name: openfunction-webhook-service
+      namespace: openfunction
+      path: /mutate-core-openfunction-io-v1beta1-serving
+  failurePolicy: Fail
+  name: mservings.of.io
+  rules:
+  - apiGroups:
+    - core.openfunction.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - servings
+  sideEffects: None
 ---
 apiVersion: shipwright.io/v1alpha1
 kind: ClusterBuildStrategy
