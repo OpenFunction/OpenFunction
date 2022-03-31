@@ -8,6 +8,7 @@ webhooks:
 - admissionReviewVersions:
   - v1
   clientConfig:
+    caBundle: <caBundle-placement>
     service:
       name: webhook-service
       namespace: openfunction
@@ -29,6 +30,7 @@ webhooks:
 - admissionReviewVersions:
   - v1
   clientConfig:
+    caBundle: <caBundle-placement>
     service:
       name: webhook-service
       namespace: openfunction
