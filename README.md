@@ -174,6 +174,10 @@ ofn uninstall --all
 
 For more information about how to use the `ofn uninstall` command, refer to [ofn uninstall document](https://github.com/OpenFunction/cli/blob/main/docs/uninstall.md).
 
+### FAQ
+
+When you encounter any problems when using OpenFunction, you can refer to the [FAQ](docs/faq/README.md) for help.
+
 ## 💻 Development
 
 See the [Development Guide](docs/development/README.md) to get started with developing this project.
