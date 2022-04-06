@@ -19,49 +19,30 @@ spec:
   - name: v1alpha2
     schema:
       openAPIV3Schema:
-        description: Domain define a unified entry for function, user can access function
-          through it.
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
           spec:
-            description: DomainSpec defines the desired state of a Domain
             properties:
               ingress:
-                description: Ingress configuration.
                 properties:
                   annotations:
                     additionalProperties:
                       type: string
-                    description: Annotations for Ingress.
                     type: object
                   ingressClassName:
-                    description: IngressClassName is the name of the IngressClass
-                      cluster resource. The associated IngressClass defines which
-                      controller will implement the resource.
                     type: string
                   service:
-                    description: Ingress controller service.
                     properties:
                       name:
-                        description: Name of the Ingress controller service.
                         type: string
                       namespace:
-                        description: Namespace of the Ingress controller service.
                         type: string
                       port:
-                        description: Port of the Ingress controller service, default
-                          is 80.
                         format: int32
                         type: integer
                     required:
@@ -76,7 +57,6 @@ spec:
             - ingress
             type: object
           status:
-            description: DomainStatus defines the observed state of Domain
             type: object
         type: object
     served: true
@@ -86,48 +66,30 @@ spec:
   - name: v1beta1
     schema:
       openAPIV3Schema:
-        description: Domain is the Schema for the domains API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
           spec:
-            description: DomainSpec defines the desired state of Domain
             properties:
               ingress:
-                description: Ingress configuration.
                 properties:
                   annotations:
                     additionalProperties:
                       type: string
-                    description: Annotations for Ingress.
                     type: object
                   ingressClassName:
-                    description: IngressClassName is the name of the IngressClass
-                      cluster resource. The associated IngressClass defines which
-                      controller will implement the resource.
                     type: string
                   service:
-                    description: Ingress controller service.
                     properties:
                       name:
-                        description: Name of the Ingress controller service.
                         type: string
                       namespace:
-                        description: Namespace of the Ingress controller service.
                         type: string
                       port:
-                        description: Port of the Ingress controller service, default
-                          is 80.
                         format: int32
                         type: integer
                     required:
@@ -142,7 +104,6 @@ spec:
             - ingress
             type: object
           status:
-            description: DomainStatus defines the observed state of Domain
             type: object
         type: object
     served: true
