@@ -20,7 +20,7 @@ IMG ?= openfunction/openfunction:$(VERSION)
 IMG_DEV ?= openfunctiondev/openfunction:$(VERSION)
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 #CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
-CRD_OPTIONS ?= "crd:preserveUnknownFields=false"
+CRD_OPTIONS ?= "crd:preserveUnknownFields=false,maxDescLen=0"
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
