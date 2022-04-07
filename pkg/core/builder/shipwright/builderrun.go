@@ -25,8 +25,10 @@ import (
 	"github.com/go-logr/logr"
 	shipwrightv1alpha1 "github.com/shipwright-io/build/pkg/apis/build/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -65,9 +67,18 @@ func NewBuildRun(ctx context.Context, c client.Client, scheme *runtime.Scheme, l
 	}
 }
 
-func Registry() []client.Object {
+func Registry(rm meta.RESTMapper) []client.Object {
+	var objs = []client.Object{}
 
-	return []client.Object{&shipwrightv1alpha1.Build{}, &shipwrightv1alpha1.BuildRun{}}
+	if _, err := rm.ResourcesFor(schema.GroupVersionResource{Group: "shipwright.io", Version: "v1alpha1", Resource: "buildruns"}); err == nil {
+		objs = append(objs, &shipwrightv1alpha1.BuildRun{})
+	}
+
+	if _, err := rm.ResourcesFor(schema.GroupVersionResource{Group: "shipwright.io", Version: "v1alpha1", Resource: "builds"}); err == nil {
+		objs = append(objs, &shipwrightv1alpha1.Build{})
+	}
+
+	return objs
 }
 
 func (r *builderRun) Start(builder *openfunction.Builder) error {
