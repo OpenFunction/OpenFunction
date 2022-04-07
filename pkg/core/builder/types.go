@@ -17,11 +17,21 @@ limitations under the License.
 package builder
 
 import (
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/openfunction/pkg/core/builder/shipwright"
 )
 
-func Registry() []client.Object {
-	return shipwright.Registry()
+func Registry(mgr ctrl.Manager) []client.Object {
+	rm, err := apiutil.NewDiscoveryRESTMapper(mgr.GetConfig())
+	if err != nil {
+		return nil
+	}
+
+	var objs []client.Object
+	objs = append(objs, shipwright.Registry(rm)...)
+
+	return objs
 }

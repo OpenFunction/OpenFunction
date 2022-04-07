@@ -71,6 +71,7 @@ Commit all the changes.
 
 The corresponding container image will be built and pushed to [docker hub](https://hub.docker.com/repository/docker/openfunction) automatically by CI once the release tag is added.
 
-Go to https://github.com/OpenFunction/OpenFunction/releases/new, associate the new release with the before pushed tag, paste in changes made to `CHANGELOG.md`, add file `config/bundle.yaml` and then click "Publish release".
+Go to https://github.com/OpenFunction/OpenFunction/releases/new, associate the new release with the before pushed tag, paste in changes made to `CHANGELOG.md`, add file `config/bundle.yaml`, file `config/strategy/build-strategy.yaml`, file `config/domain/default-domain.yaml` and then click "Publish release".
 
 For patch releases, submit a pull request to merge back the release branch into the `main` branch.
+
