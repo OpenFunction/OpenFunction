@@ -1,0 +1,97 @@
+#
+# Copyright 2022 The OpenFunction Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+apiVersion: core.openfunction.io/v1beta1
+kind: Function
+metadata:
+  name: e2e-v1beta1-plugins
+  annotations:
+    plugins: |
+      pre:
+      - plugin-custom
+      - plugin-example
+      post:
+      - plugin-custom
+      - plugin-example
+    plugins.tracing: |
+      # Switch for tracing, default to false
+      enabled: false
+      # Provider name can be set to "skywalking", "opentelemetry"
+      # A valid provider must be set if tracing is enabled.
+      provider:
+        name: "skywalking"
+        oapServer: "localhost:xxx"
+      # Custom tags to add to tracing
+      tags:
+        func: function-with-tracing
+        layer: faas
+        tag1: value1
+        tag2: value2
+      baggage:
+      # baggage key is `sw8-correlation` for skywalking and `baggage` for opentelemetry
+      # Correlation context for skywalking: https://skywalking.apache.org/docs/main/latest/en/protocols/skywalking-cross-process-correlation-headers-protocol-v1/
+      # baggage for opentelemetry: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/baggage/api.md
+      # W3C Baggage Specification/: https://w3c.github.io/baggage/
+        key: sw8-correlation # key should be baggage for opentelemetry
+        value: "base64(string key):base64(string value),base64(string key2):base64(string value2)"
+spec:
+  version: "v1.0.0"
+  image: "openfunctiondev/e2e-v1beta1-plugins:latest"
+  imageCredentials:
+    name: push-secret
+  build:
+    builder: openfunction/builder-go:latest
+    env:
+      FUNC_NAME: "HandleCronInput"
+      FUNC_CLEAR_SOURCE: "true"
+    srcRepo:
+      url: "https://github.com/OpenFunction/samples.git"
+      sourceSubPath: "functions/async/bindings/cron-input-kafka-output"
+      revision: "main"
+  serving:
+    template:
+      containers:
+        - name: function
+          imagePullPolicy: Always
+    runtime: "async"
+    inputs:
+      - name: cron
+        component: cron
+    outputs:
+      - name: sample
+        component: kafka-server
+        operation: "create"
+    bindings:
+      cron:
+        type: bindings.cron
+        version: v1
+        metadata:
+          - name: schedule
+            value: "@every 2s"
+      kafka-server:
+        type: bindings.kafka
+        version: v1
+        metadata:
+          - name: brokers
+            value: "kafka-server-kafka-brokers:9092"
+          - name: topics
+            value: "bindings"
+          - name: consumerGroup
+            value: "bindings-with-output"
+          - name: publishTopic
+            value: "bindings"
+          - name: authRequired
+            value: "false"

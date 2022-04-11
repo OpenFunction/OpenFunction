@@ -1,0 +1,140 @@
+#
+# Copyright 2022 The OpenFunction Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+apiVersion: core.openfunction.io/v1beta1
+kind: Function
+metadata:
+  name: e2e-v1beta1-cron-in-kafka-out
+spec:
+  version: "v2.0.0"
+  image: "openfunctiondev/e2e-v1beta1-cron-in-kafka-out:latest"
+#  imageCredentials:
+#    name: push-secret
+#  build:
+#    builder: openfunction/builder-go:latest
+#    env:
+#      FUNC_NAME: "HandleCronInput"
+#      FUNC_CLEAR_SOURCE: "true"
+#    srcRepo:
+#      url: "https://github.com/OpenFunction/samples.git"
+#      sourceSubPath: "functions/async/bindings/cron-input-kafka-output"
+#      revision: "main"
+  serving:
+    template:
+      containers:
+        - name: function
+          imagePullPolicy: Always
+    runtime: "async"
+    inputs:
+      - name: cron
+        component: cron
+    outputs:
+      - name: sample
+        component: kafka-server
+        operation: "create"
+    bindings:
+      cron:
+        type: bindings.cron
+        version: v1
+        metadata:
+          - name: schedule
+            value: "@every 2s"
+      kafka-server:
+        type: bindings.kafka
+        version: v1
+        metadata:
+          - name: brokers
+            value: "kafka-server-kafka-brokers:9092"
+          - name: topics
+            value: "events-sample"
+          - name: consumerGroup
+            value: "bindings-with-output"
+          - name: publishTopic
+            value: "events-sample"
+          - name: authRequired
+            value: "false"
+---
+apiVersion: core.openfunction.io/v1beta1
+kind: Function
+metadata:
+  name: sink-a
+spec:
+  version: "v1.0.0"
+  image: "openfunction/sink-sample:latest"
+  port: 8080
+  serving:
+    runtime: "knative"
+    template:
+      containers:
+        - name: function
+          imagePullPolicy: Always
+---
+apiVersion: core.openfunction.io/v1beta1
+kind: Function
+metadata:
+  name: sink-b
+spec:
+  version: "v1.0.0"
+  image: "openfunction/sink-sample:latest"
+  port: 8080
+  serving:
+    runtime: "knative"
+    template:
+      containers:
+        - name: function
+          imagePullPolicy: Always
+---
+apiVersion: events.openfunction.io/v1alpha1
+kind: EventBus
+metadata:
+  name: default
+spec:
+  natsStreaming:
+    natsURL: "nats://nats.default:4222"
+    natsStreamingClusterID: "stan"
+    subscriptionType: "queue"
+    durableSubscriptionName: "ImDurable"
+---
+apiVersion: events.openfunction.io/v1alpha1
+kind: EventSource
+metadata:
+  name: my-eventsource
+spec:
+  logLevel: "2"
+  eventBus: "default"
+  kafka:
+    sample-one:
+      brokers: "kafka-server-kafka-brokers.default.svc.cluster.local:9092"
+      topic: "events-sample"
+      authRequired: false
+  sink:
+    uri: "http://openfunction.io.svc.cluster.local/default/sink-a"
+---
+apiVersion: events.openfunction.io/v1alpha1
+kind: Trigger
+metadata:
+  name: my-trigger
+spec:
+  logLevel: "2"
+  eventBus: "default"
+  inputs:
+    inputDemo:
+      eventSource: "my-eventsource"
+      event: "sample-one"
+  subscribers:
+    - condition: inputDemo
+      sink:
+        uri: "http://openfunction.io.svc.cluster.local/default/sink-b"

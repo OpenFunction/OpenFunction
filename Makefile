@@ -133,6 +133,23 @@ clean:
 	rm -rf config/samples/function-sample-dev.yaml
 	docker rmi `docker image ls | sed -e 's/[ ][ ]*/\t/g' | cut -f 2,3 | grep none | cut -f 2 | tr "\n" " "`  2>/dev/null
 
+##@ E2E test
+
+e2e: skywalking-e2e yq
+	$(E2E) run -c test/e2e.yaml
+
+e2e-knative: skywalking-e2e yq
+	$(E2E) run -c test/knative-runtime/e2e.yaml
+
+e2e-async: skywalking-e2e yq
+	$(E2E) run -c test/async-runtime/e2e.yaml
+
+e2e-plugin: skywalking-e2e yq
+	$(E2E) run -c test/plugin/e2e.yaml
+
+e2e-events: skywalking-e2e yq
+	$(E2E) run -c test/events/e2e.yaml
+
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
 	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.4.1)
@@ -140,6 +157,14 @@ controller-gen: ## Download controller-gen locally if necessary.
 KUSTOMIZE = $(shell pwd)/bin/kustomize
 kustomize: ## Download kustomize locally if necessary.
 	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.8.7)
+
+E2E = $(shell pwd)/bin/e2e
+skywalking-e2e: ## Download skywalking-e2e locally if necessary.
+	$(call go-get-tool,$(E2E),github.com/apache/skywalking-infra-e2e/cmd/e2e@2a33478)
+
+YQ = $(shell pwd)/bin/yq
+yq: ## Download yq locally if necessary.
+	$(call go-get-tool,$(YQ),github.com/mikefarah/yq/v4@latest)
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
