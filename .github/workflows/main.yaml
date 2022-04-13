@@ -180,7 +180,6 @@ jobs:
           helm repo add nats https://nats-io.github.io/k8s/helm/charts/
           helm install nats nats/nats
           helm install stan nats/stan --set stan.nats.url=nats://nats:4222
-
           # deploy the eventbus backend nats streaming
           while /bin/true; do
             nats_status=`kubectl get pod nats-0 -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'`
@@ -193,7 +192,6 @@ jobs:
               continue
             fi
           done
-
           bash "${GITHUB_WORKSPACE}"/.github/workflows/e2e-test.sh events
 
       - name: Output debug info

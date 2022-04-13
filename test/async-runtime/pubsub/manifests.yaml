@@ -1,0 +1,137 @@
+#
+# Copyright 2022 The OpenFunction Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: producer
+  labels:
+    app: producer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: producer
+  template:
+    metadata:
+      labels:
+        app: producer
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "producer"
+        dapr.io/app-port: "60034"
+        dapr.io/log-as-json: "true"
+        dapr.io/app-protocol: "grpc"
+    spec:
+      containers:
+        - name: producer
+          image: openfunctiondev/v1beta1-autoscaling-producer:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PUBSUB_NAME
+              value: "autoscaling-producer"
+            - name: TOPIC_NAME
+              value: "pubsub"
+            - name: NUMBER_OF_PUBLISHERS
+              value: "20"
+          ports:
+            - containerPort: 60034
+              name: function-port
+              protocol: TCP
+---
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: autoscaling-producer
+spec:
+  type: pubsub.kafka
+  version: v1
+  metadata:
+    - name: brokers
+      value: "kafka-server-kafka-brokers:9092"
+    - name: consumerGroup
+      value: "producer"
+    - name: authRequired
+      value: "false"
+    - name: allowedTopics
+      value: "pubsub"
+---
+apiVersion: core.openfunction.io/v1beta1
+kind: Function
+metadata:
+  name: e2e-v1beta1-subscriber
+spec:
+  version: "v2.0.0"
+  image: "openfunctiondev/e2e-v1beta1-subscriber:latest"
+  imageCredentials:
+    name: push-secret
+  build:
+    builder: openfunction/builder-go:latest
+    env:
+      FUNC_NAME: "Subscriber"
+      FUNC_CLEAR_SOURCE: "true"
+    srcRepo:
+      url: "https://github.com/OpenFunction/samples.git"
+      sourceSubPath: "functions/async/pubsub/subscriber"
+      revision: "main"
+  serving:
+    runtime: "async"
+    scaleOptions:
+      keda:
+        scaledObject:
+          pollingInterval: 15
+          minReplicaCount: 0
+          maxReplicaCount: 10
+          cooldownPeriod: 60
+          advanced:
+            horizontalPodAutoscalerConfig:
+              behavior:
+                scaleDown:
+                  stabilizationWindowSeconds: 45
+                  policies:
+                    - type: Percent
+                      value: 50
+                      periodSeconds: 15
+                scaleUp:
+                  stabilizationWindowSeconds: 0
+    triggers:
+      - type: kafka
+        metadata:
+          topic: "pubsub"
+          bootstrapServers: kafka-server-kafka-brokers.default.svc.cluster.local:9092
+          consumerGroup: autoscaling-subscriber
+          lagThreshold: "10"
+    template:
+      containers:
+        - name: function
+          imagePullPolicy: Always
+    inputs:
+      - name: producer
+        component: kafka-server
+        topic: "pubsub"
+    pubsub:
+      kafka-server:
+        type: pubsub.kafka
+        version: v1
+        metadata:
+          - name: brokers
+            value: "kafka-server-kafka-brokers:9092"
+          - name: authRequired
+            value: "false"
+          - name: allowedTopics
+            value: "pubsub"
+          - name: consumerID
+            value: "autoscaling-subscriber"
