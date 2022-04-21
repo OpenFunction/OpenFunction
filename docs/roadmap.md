@@ -70,7 +70,7 @@
 - [ ] [Serverless workflow](https://serverlessworkflow.io/) support, refer to [Serverless Workflow Project Deep Dive](https://www.youtube.com/watch?v=dsuo1VQQZ2E&list=PLj6h78yzYM2MqBm19mRz9SYLsw4kfQBrC&index=166) for more info. Reference implementations include [
 SYNAPSE](https://github.com/serverlessworkflow/synapse), [FunctionGraph](https://www.huaweicloud.com/en-us/product/functiongraph.html), [Kogito](https://kogito.kie.org/), [Automatiko](https://automatiko.io/).
 - [ ] Use [ShipWright](https://github.com/shipwright-io/build) to build functions with Dockerfile.
-- [ ] Function tracing: support using OpenTelemtry for tracing.
+- [ ] Function tracing: support using OpenTelemetry for tracing.
 - [ ] Support Rust functions & WebAssembly runtime.
 
 For more information, please refer to [OpenFunction Roadmap](https://github.com/orgs/OpenFunction/projects/3)
