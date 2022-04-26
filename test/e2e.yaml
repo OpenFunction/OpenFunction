@@ -1,0 +1,107 @@
+#
+# Copyright 2022 The OpenFunction Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+setup:
+  env: kind
+  file: ./kind.yaml
+  init-system-environment: ./e2e_env
+  steps:
+    - name: install helm
+      command: |
+        curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+    - name: install kafka operator
+      command: |
+        helm repo add strimzi https://strimzi.io/charts/
+        helm install kafka-operator -n default strimzi/strimzi-kafka-operator
+
+    - name: setup kafka
+      path: ./kafka.yaml
+
+    - name: setup nats streaming
+      command: |
+        helm repo add nats https://nats-io.github.io/k8s/helm/charts/
+        helm install nats nats/nats
+        helm install stan nats/stan --set stan.nats.url=nats://nats:4222
+
+    - name: create secret
+      command: |
+        kubectl create secret docker-registry push-secret --docker-server="https://index.docker.io/v1/" --docker-username=${DOCKERHUB_USERNAME} --docker-password=${DOCKERHUB_PASSWORD}
+
+    - name: install ofn
+      command: |
+        wget -c  https://github.com/OpenFunction/cli/releases/latest/download/ofn_linux_amd64.tar.gz -O - | tar -xz
+        chmod +x ofn && mv ofn /usr/local/bin/
+
+    - name: install OpenFunction
+      command: |
+        ofn install --all --version latest
+        kubectl patch deployments.apps -n openfunction openfunction-controller-manager -p '{"spec":{"template":{"spec":{"containers":[{"name":"openfunction","image":"openfunction-dev:latest","imagePullPolicy":"IfNotPresent"}]}}}}'
+      wait:
+        - namespace: openfunction
+          resource: pod
+          label-selector: control-plane=controller-manager
+          for: condition=Ready
+
+    - name: setup build strategy
+      path: ../config/strategy/build-strategy.yaml
+
+    - name: setup domain
+      path: ../config/domain/default-domain.yaml
+
+  kind:
+    import-images:
+      - openfunction-dev:latest
+
+  timeout: 30m
+
+cleanup:
+  # always never success failure
+  on: success
+
+#trigger:
+#  action: "http"
+#  interval: 3s
+#  times: 10
+#  url: http://127.0.0.1:80
+#  method: GET
+
+verify:
+  # verify with retry strategy
+  retry:
+    # max retry count
+    count: 60
+    # the interval between two attempts, e.g. 10s, 1m.
+    interval: 10s
+  cases:
+      # knative-runtime knative sample test
+    - query: bash test/knative-runtime/knative/verify.sh
+      expected: knative-runtime/knative/expected.data.yaml
+      # knative-runtime knative with dapr sample test
+    - query: bash test/knative-runtime/knative-dapr/verify.sh
+      expected: knative-runtime/knative-dapr/expected.data.yaml
+      # async-runtime bindings sample test
+    - query: bash test/async-runtime/bindings/verify.sh
+      expected: async-runtime/bindings/expected.data.yaml
+      # async-runtime pubsub sample test
+    - query: bash test/async-runtime/pubsub/verify.sh
+      expected: async-runtime/pubsub/expected.data.yaml
+      # plugin sample test
+    - query: bash test/plugin/verify.sh
+      expected: plugin/expected.data.yaml
+      # events api sample test
+    - query: bash test/events/verify.sh
+      expected: events/expected.data.yaml

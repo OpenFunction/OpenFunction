@@ -5,12 +5,21 @@ metadata:
 spec:
   version: "v1.0.0"
   image: openfunctiondev/v1beta1-output-target:latest
+#  imageCredentials:
+#    name: push-secret
+#  build:
+#    builder: openfunction/builder-go:latest
+#    env:
+#      FUNC_NAME: "HandleKafkaInput"
+#      FUNC_CLEAR_SOURCE: "true"
+#    srcRepo:
+#      url: "https://github.com/OpenFunction/samples.git"
+#      sourceSubPath: "functions/async/bindings/kafka-input"
   serving:
     runtime: async
     inputs:
       - name: greeting
         component: target-topic
-        type: bindings
     bindings:
       target-topic:
         type: bindings.kafka
@@ -39,6 +48,16 @@ spec:
   version: "v1.0.0"
   image: "openfunctiondev/v1beta1-sample-knative-dapr:latest"
   port: 8080 # default to 8080
+#  imageCredentials:
+#    name: push-secret
+#  build:
+#    builder: openfunction/builder-go:latest
+#    env:
+#      FUNC_NAME: "ForwardToKafka"
+#      FUNC_CLEAR_SOURCE: "true"
+#    srcRepo:
+#      url: "https://github.com/OpenFunction/samples.git"
+#      sourceSubPath: "functions/knative/with-output-binding"
   serving:
     scaleOptions:
       minReplicas: 0
@@ -47,7 +66,6 @@ spec:
     outputs:
       - name: target
         component: kafka-server
-        type: bindings
         operation: "create"
     bindings:
       kafka-server:

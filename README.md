@@ -1,5 +1,5 @@
 <p align="center">
-<a href="https://openfunction.dev/"><img src="docs/images/openfunction-logo-gif.gif" alt="banner" width="200px"></a>
+<a href="https://openfunction.dev/"><img src="docs/images/openfunction-logo-gif.gif" alt="banner" width="500px"></a>
 </p>
 
 <p align="center">
@@ -46,9 +46,9 @@ The following Kubernetes versions are supported as we tested against these versi
 
 | OpenFunction                                                 | Kubernetes 1.17 | Kubernetes 1.18 | Kubernetes 1.19 | Kubernetes 1.20+ |
 | ------------------------------------------------------------ | --------------- | --------------- | --------------- | ---------------- |
-| [`release-0.3`](https://github.com/OpenFunction/OpenFunction/tree/v0.3.0) | &radic;         | &radic;         | &radic;         | &radic;          |
 | [`release-0.4`](https://github.com/OpenFunction/OpenFunction/tree/v0.4.0) | &radic;         | &radic;         | &radic;         | &radic;          |
 | [`release-0.5`](https://github.com/OpenFunction/OpenFunction/tree/v0.5.0) | &radic; *         | &radic; *         | &radic;         | &radic;          |
+| [`release-0.6`](https://github.com/OpenFunction/OpenFunction/tree/v0.6.0) | &radic; *         | &radic; *         | &radic;         | &radic;          |
 | [`HEAD`](https://github.com/OpenFunction/OpenFunction/tree/main) | &radic; *         | &radic; *         | &radic;         | &radic;          |
 
 \****Note***: OpenFunction has added the [function ingress](docs/concepts/Components.md#domain) feature in *release-0.5*, which means that:
@@ -142,6 +142,16 @@ func BindingsOutput(ctx ofctx.Context, in []byte) (ofctx.Out, error) {
 }
 ```
 
+One more example with tracing capability: 
+
+> SkyWalking provides solutions for observing and monitoring distributed systems, in many different scenarios.
+>
+> We have introduced SkyWalking (go2sky) for OpenFunction as a distributed tracing solution for Go language functions. 
+
+You can find the method to enable SkyWalking tracing for Go functions in [tracing sample](https://github.com/OpenFunction/samples/blob/main/functions/tracing/README.md).
+
+![](docs/images/tracing-topology.gif)
+
 You can also run the following command to make a quick demo:
 
 ```shell
@@ -164,6 +174,10 @@ ofn uninstall --all
 
 For more information about how to use the `ofn uninstall` command, refer to [ofn uninstall document](https://github.com/OpenFunction/cli/blob/main/docs/uninstall.md).
 
+### FAQ
+
+When you encounter any problems when using OpenFunction, you can refer to the [FAQ](docs/faq/README.md) for help.
+
 ## 💻 Development
 
 See the [Development Guide](docs/development/README.md) to get started with developing this project.
@@ -174,7 +188,7 @@ Learn more about OpenFunction [roadmap](docs/roadmap.md).
 
 ## 🏘️ Community
 
-### Community Call
+### Community Call and Events
 
 Meeting time：15:00-16:00(GMT+08:00), Thursday every two weeks starting from March 17th, 2022
 
@@ -184,6 +198,7 @@ Tencent Meeting Number: 443-6181-3052
 
 Check out the [meeting calendar](https://kubesphere.io/contribution/) and [meeting notes](https://docs.google.com/document/d/1bh5-kVPegjNlIjjq_e37mS3ZhyXWhmmUaysFgeI9_-o/edit?usp=sharing).
 
+OpenFunction team has presented OpenFunction project in some community events including [CNCF TAG-runtime meeting](https://youtu.be/qDH_LbagrVA?t=821), [Dapr community meeting](https://youtu.be/S9e3ol7JCDA?t=183), and [OpenFunction community call](https://space.bilibili.com/438908638/channel/seriesdetail?sid=495452). You can watch the recording videos and ask us anything.
 ### Contact Us
 
 OpenFunction is sponsored and open-sourced by the [KubeSphere](http://kubesphere.io/) Team and maintained by the OpenFunction community.

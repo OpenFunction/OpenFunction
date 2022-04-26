@@ -101,7 +101,7 @@ func main() {
 		setupLog.Error(err, "unable to create function controller")
 		os.Exit(1)
 	}
-	if err = core.NewBuilderReconciler(mgr).SetupWithManager(mgr, builder.Registry()); err != nil {
+	if err = core.NewBuilderReconciler(mgr).SetupWithManager(mgr, builder.Registry(mgr)); err != nil {
 		setupLog.Error(err, "unable to create builder controller")
 		os.Exit(1)
 	}

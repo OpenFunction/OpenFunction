@@ -40,6 +40,7 @@ type ServingsGetter interface {
 type ServingInterface interface {
 	Create(ctx context.Context, serving *v1alpha2.Serving, opts v1.CreateOptions) (*v1alpha2.Serving, error)
 	Update(ctx context.Context, serving *v1alpha2.Serving, opts v1.UpdateOptions) (*v1alpha2.Serving, error)
+	UpdateStatus(ctx context.Context, serving *v1alpha2.Serving, opts v1.UpdateOptions) (*v1alpha2.Serving, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
 	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha2.Serving, error)
@@ -128,6 +129,22 @@ func (c *servings) Update(ctx context.Context, serving *v1alpha2.Serving, opts v
 		Namespace(c.ns).
 		Resource("servings").
 		Name(serving.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Body(serving).
+		Do(ctx).
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *servings) UpdateStatus(ctx context.Context, serving *v1alpha2.Serving, opts v1.UpdateOptions) (result *v1alpha2.Serving, err error) {
+	result = &v1alpha2.Serving{}
+	err = c.client.Put().
+		Namespace(c.ns).
+		Resource("servings").
+		Name(serving.Name).
+		SubResource("status").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(serving).
 		Do(ctx).

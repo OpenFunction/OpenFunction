@@ -20,7 +20,7 @@ IMG ?= openfunction/openfunction:$(VERSION)
 IMG_DEV ?= openfunctiondev/openfunction:$(VERSION)
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 #CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
-CRD_OPTIONS ?= "crd:preserveUnknownFields=false"
+CRD_OPTIONS ?= "crd:preserveUnknownFields=false,maxDescLen=0"
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -55,12 +55,10 @@ help: ## Display this help.
 
 ##@ Development
 
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+manifests: generate fmt vet controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 	kubectl kustomize config/default | sed -e '/creationTimestamp: null/d' | sed -e 's/openfunction-system/openfunction/g' | sed -e 's/openfunction\:latest/openfunction\:$(VERSION)/g' | sed -e 's/app.kubernetes.io\/version\: latest/app.kubernetes.io\/version\: $(VERSION)/g' > config/bundle.yaml
-	cat config/strategy/strategy.yaml >> config/bundle.yaml
 	cat config/configmap/openfunction-config.yaml >> config/bundle.yaml
-	cat config/domain/default-domain.yaml >> config/bundle.yaml
 
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
@@ -77,14 +75,14 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
-test: manifests generate fmt vet ## Run tests.
+test: manifests ## Run tests.
 	mkdir -p ${ENVTEST_ASSETS_DIR}
 	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.8.3/hack/setup-envtest.sh
 	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./pkg/... ./controllers/... -coverprofile cover.out
 
 verify: verify-crds
 
-verify-crds: generate
+verify-crds: manifests
 	@if !(git diff --quiet HEAD config/crd); then \
 		echo "generated files are out of date, run make generate"; exit 1; \
 	fi
@@ -97,7 +95,7 @@ binary: ## Build openfunction binary without test.
 build: generate fmt vet ## Build openfunction binary.
 	go build -o bin/openfunction main.go
 
-run: manifests generate fmt vet ## Run a controller from your host.
+run: manifests ## Run a controller from your host.
 	go run ./main.go
 
 docker-build: all ## Build docker image with the openfunction.
@@ -135,6 +133,23 @@ clean:
 	rm -rf config/samples/function-sample-dev.yaml
 	docker rmi `docker image ls | sed -e 's/[ ][ ]*/\t/g' | cut -f 2,3 | grep none | cut -f 2 | tr "\n" " "`  2>/dev/null
 
+##@ E2E test
+
+e2e: skywalking-e2e yq
+	$(E2E) run -c test/e2e.yaml
+
+e2e-knative: skywalking-e2e yq
+	$(E2E) run -c test/knative-runtime/e2e.yaml
+
+e2e-async: skywalking-e2e yq
+	$(E2E) run -c test/async-runtime/e2e.yaml
+
+e2e-plugin: skywalking-e2e yq
+	$(E2E) run -c test/plugin/e2e.yaml
+
+e2e-events: skywalking-e2e yq
+	$(E2E) run -c test/events/e2e.yaml
+
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
 	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.4.1)
@@ -142,6 +157,14 @@ controller-gen: ## Download controller-gen locally if necessary.
 KUSTOMIZE = $(shell pwd)/bin/kustomize
 kustomize: ## Download kustomize locally if necessary.
 	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.8.7)
+
+E2E = $(shell pwd)/bin/e2e
+skywalking-e2e: ## Download skywalking-e2e locally if necessary.
+	$(call go-get-tool,$(E2E),github.com/apache/skywalking-infra-e2e/cmd/e2e@2a33478)
+
+YQ = $(shell pwd)/bin/yq
+yq: ## Download yq locally if necessary.
+	$(call go-get-tool,$(YQ),github.com/mikefarah/yq/v4@latest)
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))

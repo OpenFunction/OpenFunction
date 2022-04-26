@@ -51,6 +51,10 @@ type EventSourceSpec struct {
 	Sink *SinkSpec `json:"sink,omitempty"`
 	// Information needed to build a function. The build step will be skipped if Build is nil.
 	Build *openfunction.BuildImpl `json:"build,omitempty"`
+	// The logging level of the event source handler, e.g. "1", "2", "3".
+	// The level increases as the value increases, default is "1".
+	// +optional
+	LogLevel *string `json:"logLevel,omitempty"`
 }
 
 // SinkSpec specifies the receiver of the events an EventSource received, sinks in the Uri format have higher priority than sinks in Reference format.
@@ -83,12 +87,11 @@ type EventSourceStatus struct {
 }
 
 //+genclient
-//+genclient:noStatus
 //+kubebuilder:object:root=true
 //+kubebuilder:resource:shortName=es
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="EventBus",type=string,JSONPath=`.spec.eventBus`
-//+kubebuilder:printcolumn:name="Sink",type=string,JSONPath=`.spec.sink.ref.name`
+//+kubebuilder:printcolumn:name="Sink",type=string,JSONPath=`.spec.sink.uri`
 //+kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[-1].type"
 
 // EventSource is the Schema for the eventsources API

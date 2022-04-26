@@ -99,7 +99,6 @@ type BuilderStatus struct {
 }
 
 //+genclient
-//+genclient:noStatus
 //+kubebuilder:object:root=true
 //+kubebuilder:resource:shortName=fb
 //+kubebuilder:subresource:status

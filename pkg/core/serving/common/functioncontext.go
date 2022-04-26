@@ -36,22 +36,22 @@ type functionContext struct {
 }
 
 type functionInput struct {
-	Uri       string            `json:"uri,omitempty"`
-	Component string            `json:"component,omitempty"`
-	Type      string            `json:"type"`
-	Metadata  map[string]string `json:"metadata,omitempty"`
+	Uri           string            `json:"uri,omitempty"`
+	ComponentName string            `json:"componentName"`
+	ComponentType string            `json:"componentType"`
+	Metadata      map[string]string `json:"metadata,omitempty"`
 }
 
 type functionOutput struct {
-	Uri       string            `json:"uri,omitempty"`
-	Component string            `json:"component,omitempty"`
-	Type      string            `json:"type"`
-	Metadata  map[string]string `json:"metadata,omitempty"`
-	Operation string            `json:"operation,omitempty"`
+	Uri           string            `json:"uri,omitempty"`
+	ComponentName string            `json:"componentName"`
+	ComponentType string            `json:"componentType"`
+	Metadata      map[string]string `json:"metadata,omitempty"`
+	Operation     string            `json:"operation,omitempty"`
 }
 
 type functionPluginsTracing struct {
-	Enable   bool              `json:"enable" yaml:"enable"`
+	Enabled  bool              `json:"enabled" yaml:"enabled"`
 	Provider *tracingProvider  `json:"provider" yaml:"provider"`
 	Tags     map[string]string `json:"tags,omitempty" yaml:"tags,omitempty"`
 	Baggage  map[string]string `json:"baggage" yaml:"baggage"`

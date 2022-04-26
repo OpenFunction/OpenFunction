@@ -89,10 +89,6 @@ type DaprIO struct {
 	Name string `json:"name"`
 	// Component indicates the name of components in Dapr
 	Component string `json:"component"`
-	// Input type, known values are bindings, pubsub.
-	// bindings: Indicates that the input is the Dapr bindings component.
-	// pubsub: Indicates that the input is the Dapr pubsub component.
-	Type string `json:"type,omitempty"`
 	// Topic name of mq, required when type is pubsub
 	// +optional
 	Topic string `json:"topic,omitempty"`
@@ -188,7 +184,6 @@ type ServingStatus struct {
 }
 
 //+genclient
-//+genclient:noStatus
 //+kubebuilder:object:root=true
 //+kubebuilder:storageversion
 //+kubebuilder:subresource:status

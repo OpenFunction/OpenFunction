@@ -102,6 +102,18 @@ func (c *FakeBuilders) Update(ctx context.Context, builder *v1alpha2.Builder, op
 	return obj.(*v1alpha2.Builder), err
 }
 
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeBuilders) UpdateStatus(ctx context.Context, builder *v1alpha2.Builder, opts v1.UpdateOptions) (*v1alpha2.Builder, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateSubresourceAction(buildersResource, "status", c.ns, builder), &v1alpha2.Builder{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha2.Builder), err
+}
+
 // Delete takes name of the builder and deletes it. Returns an error if one occurs.
 func (c *FakeBuilders) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.

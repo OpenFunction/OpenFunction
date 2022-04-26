@@ -40,6 +40,7 @@ type BuildersGetter interface {
 type BuilderInterface interface {
 	Create(ctx context.Context, builder *v1beta1.Builder, opts v1.CreateOptions) (*v1beta1.Builder, error)
 	Update(ctx context.Context, builder *v1beta1.Builder, opts v1.UpdateOptions) (*v1beta1.Builder, error)
+	UpdateStatus(ctx context.Context, builder *v1beta1.Builder, opts v1.UpdateOptions) (*v1beta1.Builder, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
 	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.Builder, error)
@@ -128,6 +129,22 @@ func (c *builders) Update(ctx context.Context, builder *v1beta1.Builder, opts v1
 		Namespace(c.ns).
 		Resource("builders").
 		Name(builder.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Body(builder).
+		Do(ctx).
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *builders) UpdateStatus(ctx context.Context, builder *v1beta1.Builder, opts v1.UpdateOptions) (result *v1beta1.Builder, err error) {
+	result = &v1beta1.Builder{}
+	err = c.client.Put().
+		Namespace(c.ns).
+		Resource("builders").
+		Name(builder.Name).
+		SubResource("status").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(builder).
 		Do(ctx).

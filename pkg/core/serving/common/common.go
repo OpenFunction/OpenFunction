@@ -89,16 +89,16 @@ func GenOpenFunctionContext(
 			for _, input := range s.Spec.Inputs {
 				i := input.DeepCopy()
 				c, _ := components[i.Component]
-				componentType := strings.Split(c.Type, ".")[0]
+				buildingBlockType := strings.Split(c.Type, ".")[0]
 				uri := i.Topic
-				if componentType == bindings {
+				if buildingBlockType == bindings {
 					uri = i.Component
 				}
 				fnInput := functionInput{
-					Uri:       uri,
-					Component: getComponentName(s, i.Component, componentName),
-					Type:      componentType,
-					Metadata:  i.Params,
+					Uri:           uri,
+					ComponentName: getComponentName(s, i.Component, componentName),
+					ComponentType: c.Type,
+					Metadata:      i.Params,
 				}
 				fc.Inputs[i.Name] = &fnInput
 			}
@@ -110,17 +110,17 @@ func GenOpenFunctionContext(
 			for _, output := range s.Spec.Outputs {
 				o := output.DeepCopy()
 				c, _ := components[o.Component]
-				componentType := strings.Split(c.Type, ".")[0]
+				buildingBlockType := strings.Split(c.Type, ".")[0]
 				uri := o.Topic
-				if componentType == bindings {
+				if buildingBlockType == bindings {
 					uri = o.Component
 				}
 				fnOutput := functionOutput{
-					Uri:       uri,
-					Component: getComponentName(s, o.Component, componentName),
-					Type:      componentType,
-					Metadata:  o.Params,
-					Operation: o.Operation,
+					Uri:           uri,
+					ComponentName: getComponentName(s, o.Component, componentName),
+					ComponentType: c.Type,
+					Metadata:      o.Params,
+					Operation:     o.Operation,
 				}
 				fc.Outputs[o.Name] = &fnOutput
 			}
@@ -132,17 +132,17 @@ func GenOpenFunctionContext(
 			for _, output := range s.Spec.Outputs {
 				o := output.DeepCopy()
 				c, _ := components[o.Component]
-				componentType := strings.Split(c.Type, ".")[0]
+				buildingBlockType := strings.Split(c.Type, ".")[0]
 				uri := o.Topic
-				if componentType == bindings {
+				if buildingBlockType == bindings {
 					uri = o.Component
 				}
 				fnOutput := functionOutput{
-					Uri:       uri,
-					Component: getComponentName(s, o.Component, componentName),
-					Type:      componentType,
-					Metadata:  o.Params,
-					Operation: o.Operation,
+					Uri:           uri,
+					ComponentName: getComponentName(s, o.Component, componentName),
+					ComponentType: c.Type,
+					Metadata:      o.Params,
+					Operation:     o.Operation,
 				}
 				fc.Outputs[o.Name] = &fnOutput
 			}
@@ -350,7 +350,7 @@ func parsePluginsCfg(s *openfunction.Serving, cm map[string]string, fc *function
 		}
 	}
 
-	if tcCfg != nil && tcCfg.Enable {
+	if tcCfg != nil && tcCfg.Enabled {
 		prePlugins = append(prePlugins, tcCfg.Provider.Name)
 		postPlugins = append([]string{tcCfg.Provider.Name}, postPlugins...)
 	}

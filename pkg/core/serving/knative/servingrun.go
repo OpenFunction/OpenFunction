@@ -56,7 +56,7 @@ type servingRun struct {
 }
 
 func Registry(rm meta.RESTMapper) []client.Object {
-	if _, err := rm.ResourceFor(schema.GroupVersionResource{Group: "serving.knative.dev", Version: "v1", Resource: "services"}); err != nil {
+	if _, err := rm.ResourcesFor(schema.GroupVersionResource{Group: "serving.knative.dev", Version: "v1", Resource: "services"}); err != nil {
 		return nil
 	}
 	return []client.Object{&kservingv1.Service{}}

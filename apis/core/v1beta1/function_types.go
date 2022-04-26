@@ -220,7 +220,6 @@ type FunctionStatus struct {
 }
 
 //+genclient
-//+genclient:noStatus
 //+kubebuilder:object:root=true
 //+kubebuilder:storageversion
 //+kubebuilder:resource:shortName=fn
