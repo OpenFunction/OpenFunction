@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-<b>Cloud Native FaaS platform for running Serverless workloads with ease</b>
+<b>Cloud native FaaS platform for running Serverless workloads with ease</b>
 </p>
 
 <p align=center>
@@ -188,7 +188,7 @@ Learn more about OpenFunction [roadmap](docs/roadmap.md).
 
 ## 🏘️ Community
 
-### Community Call
+### Community Call and Events
 
 Meeting time：15:00-16:00(GMT+08:00), Thursday every two weeks starting from March 17th, 2022
 
@@ -198,6 +198,7 @@ Tencent Meeting Number: 443-6181-3052
 
 Check out the [meeting calendar](https://kubesphere.io/contribution/) and [meeting notes](https://docs.google.com/document/d/1bh5-kVPegjNlIjjq_e37mS3ZhyXWhmmUaysFgeI9_-o/edit?usp=sharing).
 
+OpenFunction team has presented OpenFunction project in some community events including [CNCF TAG-runtime meeting](https://youtu.be/qDH_LbagrVA?t=821), [Dapr community meeting](https://youtu.be/S9e3ol7JCDA?t=183), and [OpenFunction community call](https://space.bilibili.com/438908638/channel/seriesdetail?sid=495452). You can watch the recording videos and ask us anything.
 ### Contact Us
 
 OpenFunction is sponsored and open-sourced by the [KubeSphere](http://kubesphere.io/) Team and maintained by the OpenFunction community.
