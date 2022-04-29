@@ -20,6 +20,24 @@ with_knative=false
 with_openFuncAsync=false
 region_cn=false
 
+# add help information
+if [[ ${1} = "--help" ]] || [[ ${1} = "-h" ]]
+then
+  clear
+  echo "-----------------------------------------------------------------------------------------------"
+  echo "This shell script used to delete OpenFunction components from your Cluster"
+  echo "Delete version: v0.26.0"
+  echo "--all Will delete cert_manager shipwright knative openFuncAsync all components from your cluster"
+  echo "--with-cert-manager Will delete cert-manager component"
+  echo "--with-shipwright Will delete shipwright component"
+  echo "--with-knative Will delete knative component"
+  echo "--with-openFuncAsync Will delete dapr and keda components"
+  echo "-p If you can't access the github repo"
+  echo "-----------------------------------------------------------------------------------------------"
+  exit 0
+fi
+
+
 if [ $? != 0 ]; then
   echo "Terminating..." >&2
   exit 1
@@ -50,15 +68,15 @@ while test $# -gt 0; do
   shift
 done
 
-if [ "$all" = "true" ]; then
+if [ "${all}" = "true" ]; then
   with_shipwright=true
   with_knative=true
   with_openFuncAsync=true
   with_ingress=true
 fi
 
-if [ "$with_shipwright" = "true" ]; then
-  if [ "$region_cn" = "false" ]; then
+if [ "${with_shipwright}" = "true" ]; then
+  if [ "${region_cn}" = "false" ]; then
     kubectl delete --filename https://github.com/tektoncd/pipeline/releases/download/v0.28.1/release.yaml
     kubectl delete --filename https://github.com/shipwright-io/build/releases/download/v0.6.0/release.yaml
   else
@@ -67,8 +85,8 @@ if [ "$with_shipwright" = "true" ]; then
   fi
 fi
 
-if [ "$with_knative" = "true" ]; then
-  if [ "$region_cn" = "false" ]; then
+if [ "${with_knative}" = "true" ]; then
+  if [ "${region_cn}" = "false" ]; then
     kubectl delete -f https://github.com/knative/serving/releases/download/v0.26.0/serving-crds.yaml
     kubectl delete -f https://github.com/knative/serving/releases/download/v0.26.0/serving-core.yaml
     kubectl delete -f https://github.com/knative/net-kourier/releases/download/v0.26.0/kourier.yaml
@@ -81,8 +99,8 @@ if [ "$with_knative" = "true" ]; then
   fi
 fi
 
-if [ "$with_openFuncAsync" = "true" ]; then
-  if [ "$region_cn" = "false" ]; then
+if [ "${with_openFuncAsync}" = "true" ]; then
+  if [ "${region_cn}" = "false" ]; then
     # Installs the latest Dapr CLI.
     wget -q https://raw.githubusercontent.com/dapr/cli/master/install/install.sh -O - | /bin/bash -s 1.4.0
     # Init dapr
@@ -101,8 +119,8 @@ if [ "$with_openFuncAsync" = "true" ]; then
   fi
 fi
 
-if [ "$with_ingress" = "true" ]; then
-  if [ "$region_cn" = "false" ]; then
+if [ "${with_ingress}" = "true" ]; then
+  if [ "${region_cn}" = "false" ]; then
     kubectl delete -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/cloud/deploy.yaml
   else
     kubectl delete -f https://openfunction.sh1a.qingstor.com/ingress-nginx/deploy/static/provider/cloud/deploy.yaml
