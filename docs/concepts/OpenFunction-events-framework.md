@@ -43,6 +43,7 @@ The **EventSource** contains descriptions of these event producers. It also cont
 - Kafka
 - Cron (scheduler)
 - Redis
+- MQTT
 
 ## EventBus(ClusterEventBus)
 
