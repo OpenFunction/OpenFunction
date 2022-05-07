@@ -203,8 +203,8 @@ OpenFunction team has presented OpenFunction project in some community events in
 
 OpenFunction is sponsored and open-sourced by the [KubeSphere](http://kubesphere.io/) Team and maintained by the OpenFunction community.
 
-- Slack: [#sig-serverless](https://kubesphere.slack.com/archives/C021XAR3CG3)
-- Wechat: join the OpenFunction user group by following the KubeSphere WeChat subscription
+- Slack: Create an account at [#CNCF Slack](https://slack.cncf.io/) and then search `#openfunction` to join or click [#openfunction](https://cloud-native.slack.com/archives/C03ETDMD3LZ) to join if you already have an [#CNCF Slack](https://slack.cncf.io/) account.
+- Wechat: join the OpenFunction user group by following the `kubesphere` WeChat subscription and then reply `openfunction`
 
 ## Landscape
 
