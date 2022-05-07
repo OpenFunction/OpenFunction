@@ -59,18 +59,24 @@
 
 ## v0.7.0+, 2022 Q2 ~ Q4
 
+- [x] Nodejs async functions frameworks.
+- [ ] Python functions frameworks & builder.
+- [ ] Java functions frameworks & builder.
+- [ ] .NET frameworks & builder.
+- [ ] Compile Java code to native binary and run Java functions in Quarkus
+- [ ] Add KEDA http-add-on as another sync function runtime.
+- [ ] Add helm chart for OpenFunction and its dependencies.
+- [ ] Support more EventSources like Github.
+- [ ] OpenFunction API & Console.
 - [ ] Add the ability to control concurrent access to functions.
+- [ ] Use helm in ofn cli to replace the original yaml installation method.
 - [ ] Add function invoking ability to ofn cli.
 - [ ] Use Contour as Knative network layer and K8s Ingress & Gateway.
-- [ ] Support more EventSources.
-- [ ] Add OpenFunction sync function.
-- [ ] Nodejs async functions frameworks.
-- [ ] Python functions frameworks & builder.
-- [ ] OpenFunction API & Console.
 - [ ] [Serverless workflow](https://serverlessworkflow.io/) support, refer to [Serverless Workflow Project Deep Dive](https://www.youtube.com/watch?v=dsuo1VQQZ2E&list=PLj6h78yzYM2MqBm19mRz9SYLsw4kfQBrC&index=166) for more info. Reference implementations include [
 SYNAPSE](https://github.com/serverlessworkflow/synapse), [FunctionGraph](https://www.huaweicloud.com/en-us/product/functiongraph.html), [Kogito](https://kogito.kie.org/), [Automatiko](https://automatiko.io/).
 - [ ] Use [ShipWright](https://github.com/shipwright-io/build) to build functions with Dockerfile.
 - [ ] Function tracing: support using OpenTelemetry for tracing.
+- [ ] Better support for Functions running in Edge
 - [ ] Support Rust functions & WebAssembly runtime.
 
 For more information, please refer to [OpenFunction Roadmap](https://github.com/orgs/OpenFunction/projects/3)
