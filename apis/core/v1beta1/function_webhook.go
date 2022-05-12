@@ -20,8 +20,9 @@ import (
 	"fmt"
 	"regexp"
 
+	shipwrightv1alpha1 "github.com/shipwright-io/build/pkg/apis/build/v1alpha1"
 	"k8s.io/api/autoscaling/v2beta2"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -30,10 +31,15 @@ import (
 )
 
 var (
-	shipwrightStrategies           = map[string]bool{"BuildStrategy": true, "ClusterBuildStrategy": true}
-	shipwrightStrategiesSlice      = convertMapKeysToStringSlice(shipwrightStrategies)
+	shipwrightStrategies = map[shipwrightv1alpha1.BuildStrategyKind]bool{
+		shipwrightv1alpha1.NamespacedBuildStrategyKind: true,
+		shipwrightv1alpha1.ClusterBuildStrategyKind:    true}
+	shipwrightStrategiesSlice = []string{
+		string(shipwrightv1alpha1.NamespacedBuildStrategyKind),
+		string(shipwrightv1alpha1.ClusterBuildStrategyKind),
+	}
 	funcRuntimes                   = map[Runtime]bool{Knative: true, Async: true}
-	funRuntimesSlice               = []string{"knative", "async"}
+	funRuntimesSlice               = []string{string(Knative), string(Async)}
 	scaledObjectWorkloadTypes      = map[string]bool{"Deployment": true, "StatefulSet": true}
 	scaledObjectWorkloadTypesSlice = convertMapKeysToStringSlice(scaledObjectWorkloadTypes)
 	scaleJobRestartPolices         = map[v1.RestartPolicy]bool{
@@ -41,8 +47,12 @@ var (
 		v1.RestartPolicyOnFailure: true,
 		v1.RestartPolicyNever:     true,
 	}
-	scaleJobRestartPolicesSlice = []string{"Always", "OnFailure", "Never"}
-	pubsubComponentTypes        = map[string]bool{
+	scaleJobRestartPolicesSlice = []string{
+		string(v1.RestartPolicyAlways),
+		string(v1.RestartPolicyOnFailure),
+		string(v1.RestartPolicyNever),
+	}
+	pubsubComponentTypes = map[string]bool{
 		"pubsub.kafka":            true,
 		"pubsub.snssqs":           true,
 		"pubsub.azure.eventhubs":  true,
@@ -108,16 +118,16 @@ var (
 		v2beta2.MinPolicySelect:      true,
 		v2beta2.DisabledPolicySelect: true,
 	}
-	scaleSelectPoliciesSlice = []string{"Max", "min", "Disabled"}
+	scaleSelectPoliciesSlice = []string{string(v2beta2.MaxPolicySelect), string(v2beta2.MinPolicySelect), string(v2beta2.DisabledPolicySelect)}
 	scalePoliciesTypes       = map[v2beta2.HPAScalingPolicyType]bool{
 		v2beta2.PodsScalingPolicy:    true,
 		v2beta2.PercentScalingPolicy: true,
 	}
-	scalePoliciesTypesSlice = []string{"Pods", "Percent"}
+	scalePoliciesTypesSlice = []string{string(v2beta2.PodsScalingPolicy), string(v2beta2.PercentScalingPolicy)}
 	scalingStrategies       = map[string]bool{"default": true, "custom": true, "accurate": true}
 	scalingStrategiesSlice  = convertMapKeysToStringSlice(scalingStrategies)
 	targetKinds             = map[ScaleTargetKind]bool{ScaledObject: true, ScaledJob: true}
-	targetKindsSlice        = []string{"object", "job"}
+	targetKindsSlice        = []string{string(ScaledObject), string(ScaledJob)}
 	triggerTypes            = map[string]bool{
 		"activemq":               true,
 		"artemis-queue":          true,
@@ -277,7 +287,7 @@ func (r *Function) ValidateBuild() error {
 
 	if r.Spec.Build.Shipwright != nil {
 		if r.Spec.Build.Shipwright.Strategy != nil && r.Spec.Build.Shipwright.Strategy.Kind != nil {
-			if _, ok := shipwrightStrategies[*r.Spec.Build.Shipwright.Strategy.Kind]; !ok {
+			if _, ok := shipwrightStrategies[shipwrightv1alpha1.BuildStrategyKind(*r.Spec.Build.Shipwright.Strategy.Kind)]; !ok {
 				return field.NotSupported(field.NewPath("spec", "build", "shipwright", "strategy", "kind"),
 					r.Spec.Build.Shipwright.Strategy.Kind, shipwrightStrategiesSlice)
 			}
