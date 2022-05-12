@@ -1017,7 +1017,7 @@ func Test_Validate(t *testing.T) {
 					Serving: &ServingImpl{
 						Runtime: Runtime("knative"),
 						Pubsub: map[string]*componentsv1alpha1.ComponentSpec{
-							"test": {Type: "pubsub.test"},
+							"test": {Type: "pubsubtest"},
 						},
 					},
 				},
@@ -1068,7 +1068,7 @@ func Test_Validate(t *testing.T) {
 					Serving: &ServingImpl{
 						Runtime: Runtime("knative"),
 						Bindings: map[string]*componentsv1alpha1.ComponentSpec{
-							"test": {Type: "pubsub.test"},
+							"test": {Type: "bindingstest"},
 						},
 					},
 				},

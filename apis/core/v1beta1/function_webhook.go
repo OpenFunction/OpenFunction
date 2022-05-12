@@ -32,148 +32,37 @@ import (
 )
 
 var (
-	shipwrightStrategies = map[shipwrightv1alpha1.BuildStrategyKind]bool{
+	shipwrightBuildStrategyKinds = map[shipwrightv1alpha1.BuildStrategyKind]bool{
 		shipwrightv1alpha1.NamespacedBuildStrategyKind: true,
 		shipwrightv1alpha1.ClusterBuildStrategyKind:    true}
-	shipwrightStrategiesSlice      = convertMapKeysToStringSlice(shipwrightStrategies)
-	funcRuntimes                   = map[Runtime]bool{Knative: true, Async: true}
-	funcRuntimesSlice              = convertMapKeysToStringSlice(funcRuntimes)
-	scaledObjectWorkloadTypes      = map[string]bool{"Deployment": true, "StatefulSet": true}
-	scaledObjectWorkloadTypesSlice = convertMapKeysToStringSlice(scaledObjectWorkloadTypes)
-	scaleJobRestartPolices         = map[v1.RestartPolicy]bool{
+	shipwrightBuildStrategyKindsSlice  = convertMapKeysToStringSlice(shipwrightBuildStrategyKinds)
+	funcRuntimes                       = map[Runtime]bool{Knative: true, Async: true}
+	funcRuntimesSlice                  = convertMapKeysToStringSlice(funcRuntimes)
+	kedaScaledObjectWorkloadTypes      = map[string]bool{"Deployment": true, "StatefulSet": true}
+	kedaScaledObjectWorkloadTypesSlice = convertMapKeysToStringSlice(kedaScaledObjectWorkloadTypes)
+	kedaScaledJobRestartPolices        = map[v1.RestartPolicy]bool{
 		v1.RestartPolicyAlways:    true,
 		v1.RestartPolicyOnFailure: true,
 		v1.RestartPolicyNever:     true,
 	}
-	scaleJobRestartPolicesSlice = convertMapKeysToStringSlice(scaleJobRestartPolices)
-	pubsubComponentTypes        = map[string]bool{
-		"pubsub.kafka":            true,
-		"pubsub.snssqs":           true,
-		"pubsub.azure.eventhubs":  true,
-		"pubsub.azure.servicebus": true,
-		"pubsub.gcp.pubsub":       true,
-		"pubsub.hazelcast":        true,
-		"pubsub.in-memory":        true,
-		"pubsub.jetstream":        true,
-		"pubsub.mqtt":             true,
-		"pubsub.natsstreaming":    true,
-		"pubsub.pulsar":           true,
-		"pubsub.rabbitmq":         true,
-		"pubsub.redis":            true,
-	}
-	pubsubComponentTypesSlice = convertMapKeysToStringSlice(pubsubComponentTypes)
-	bindingsComponentTypes    = map[string]bool{
-		"bindings.dingtalk.webhook":          true,
-		"bindings.alicloud.oss":              true,
-		"bindings.alicloud.tablestore":       true,
-		"bindings.apns":                      true,
-		"bindings.aws.dynamodb":              true,
-		"bindings.aws.kinesis":               true,
-		"bindings.aws.s3":                    true,
-		"bindings.aws.ses":                   true,
-		"bindings.aws.sns":                   true,
-		"bindings.aws.sqs":                   true,
-		"bindings.azure.blobstorage":         true,
-		"bindings.azure.cosmosdb.gremlinapi": true,
-		"bindings.azure.cosmosdb":            true,
-		"bindings.azure.eventgrid":           true,
-		"bindings.azure.eventhubs":           true,
-		"bindings.azure.servicebusqueues":    true,
-		"bindings.azure.signalr":             true,
-		"bindings.azure.storagequeues":       true,
-		"bindings.cron":                      true,
-		"bindings.gcp.pubsub":                true,
-		"bindings.gcp.bucket":                true,
-		"bindings.graphql":                   true,
-		"bindings.http":                      true,
-		"bindings.influx":                    true,
-		"bindings.kafka":                     true,
-		"bindings.kubernetes":                true,
-		"bindings.localstorage":              true,
-		"bindings.mqtt":                      true,
-		"bindings.mysql":                     true,
-		"bindings.postgres":                  true,
-		"bindings.postmark":                  true,
-		"bindings.rabbitmq":                  true,
-		"bindings.redis":                     true,
-		"bindings.rethinkdb.statechange":     true,
-		"bindings.smtp":                      true,
-		"bindings.twilio.sendgrid":           true,
-		"bindings.twilio.sms":                true,
-		"bindings.twitter":                   true,
-		"bindings.zeebe.command":             true,
-		"bindings.zeebe.jobworker":           true,
-	}
-	bindingsComponentTypesSlice = convertMapKeysToStringSlice(bindingsComponentTypes)
-	authenticationRefKind       = map[string]bool{"TriggerAuthentication": true, "ClusterTriggerAuthentication": true}
-	authenticationRefKindSlice  = convertMapKeysToStringSlice(authenticationRefKind)
-	scaleSelectPolicies         = map[v2beta2.ScalingPolicySelect]bool{
+	kedaScaledJobRestartPolicesSlice  = convertMapKeysToStringSlice(kedaScaledJobRestartPolices)
+	kedaScaledObjectAuthRefKinds      = map[string]bool{"TriggerAuthentication": true, "ClusterTriggerAuthentication": true}
+	kedaScaledObjectAuthRefKindsSlice = convertMapKeysToStringSlice(kedaScaledObjectAuthRefKinds)
+	scalingPolicySelects              = map[v2beta2.ScalingPolicySelect]bool{
 		v2beta2.MaxPolicySelect:      true,
 		v2beta2.MinPolicySelect:      true,
 		v2beta2.DisabledPolicySelect: true,
 	}
-	scaleSelectPoliciesSlice = convertMapKeysToStringSlice(scaleSelectPolicies)
-	scalePoliciesTypes       = map[v2beta2.HPAScalingPolicyType]bool{
+	scalingPolicySelectsSlice = convertMapKeysToStringSlice(scalingPolicySelects)
+	HPAScalingPolicyTypes     = map[v2beta2.HPAScalingPolicyType]bool{
 		v2beta2.PodsScalingPolicy:    true,
 		v2beta2.PercentScalingPolicy: true,
 	}
-	scalePoliciesTypesSlice = convertMapKeysToStringSlice(scalePoliciesTypes)
-	scalingStrategies       = map[string]bool{"default": true, "custom": true, "accurate": true}
-	scalingStrategiesSlice  = convertMapKeysToStringSlice(scalingStrategies)
-	targetKinds             = map[ScaleTargetKind]bool{ScaledObject: true, ScaledJob: true}
-	targetKindsSlice        = convertMapKeysToStringSlice(targetKinds)
-	triggerTypes            = map[string]bool{
-		"activemq":               true,
-		"artemis-queue":          true,
-		"kafka":                  true,
-		"aws-cloudwatch":         true,
-		"aws-kinesis-stream":     true,
-		"aws-sqs-queue":          true,
-		"azure-app-insights":     true,
-		"azure-blob":             true,
-		"azure-eventhub":         true,
-		"azure-log-analytics":    true,
-		"azure-monitor":          true,
-		"azure-pipelines":        true,
-		"azure-servicebus":       true,
-		"azure-queue":            true,
-		"cassandra":              true,
-		"cpu":                    true,
-		"cron":                   true,
-		"datadog":                true,
-		"elasticsearch":          true,
-		"external":               true,
-		"external-push":          true,
-		"gcp-pubsub":             true,
-		"graphite":               true,
-		"huawei-cloudeye":        true,
-		"ibmmq":                  true,
-		"influxdb":               true,
-		"kubernetes-workload":    true,
-		"liiklus":                true,
-		"memory":                 true,
-		"metrics-api":            true,
-		"mongodb":                true,
-		"mssql":                  true,
-		"mysql":                  true,
-		"stan":                   true,
-		"new-relic":              true,
-		"openstack-metric":       true,
-		"openstack-swift":        true,
-		"postgresql":             true,
-		"predictkube":            true,
-		"prometheus":             true,
-		"rabbitmq":               true,
-		"redis":                  true,
-		"redis-cluster":          true,
-		"redis-sentinel":         true,
-		"redis-streams":          true,
-		"redis-cluster-streams":  true,
-		"redis-sentinel-streams": true,
-		"selenium-grid":          true,
-		"solace-event-queue":     true,
-	}
-	triggerTypesSlice = convertMapKeysToStringSlice(triggerTypes)
+	HPAScalingPolicyTypesSlice          = convertMapKeysToStringSlice(HPAScalingPolicyTypes)
+	kedaScaledJobScalingStrategies      = map[string]bool{"default": true, "custom": true, "accurate": true}
+	kedaScaledJobScalingStrategiesSlice = convertMapKeysToStringSlice(kedaScaledJobScalingStrategies)
+	scaleTargetKinds                    = map[ScaleTargetKind]bool{ScaledObject: true, ScaledJob: true}
+	scaleTargetKindsSlice               = convertMapKeysToStringSlice(scaleTargetKinds)
 )
 
 // log is for logging in this package.
@@ -281,9 +170,9 @@ func (r *Function) ValidateBuild() error {
 
 	if r.Spec.Build.Shipwright != nil {
 		if r.Spec.Build.Shipwright.Strategy != nil && r.Spec.Build.Shipwright.Strategy.Kind != nil {
-			if _, ok := shipwrightStrategies[shipwrightv1alpha1.BuildStrategyKind(*r.Spec.Build.Shipwright.Strategy.Kind)]; !ok {
+			if _, ok := shipwrightBuildStrategyKinds[shipwrightv1alpha1.BuildStrategyKind(*r.Spec.Build.Shipwright.Strategy.Kind)]; !ok {
 				return field.NotSupported(field.NewPath("spec", "build", "shipwright", "strategy", "kind"),
-					r.Spec.Build.Shipwright.Strategy.Kind, shipwrightStrategiesSlice)
+					r.Spec.Build.Shipwright.Strategy.Kind, shipwrightBuildStrategyKindsSlice)
 			}
 		}
 
@@ -329,7 +218,7 @@ func (r *Function) ValidateServing() error {
 				minReplicas, "cannot be greater than maxReplicas")
 		}
 		if scaleOptions.Keda != nil {
-			if scaleOptions.Keda.ScaledJob == nil && scaleOptions.Keda.ScaledObject == nil {
+			if scaleOptions.Keda.ScaledJob != nil && scaleOptions.Keda.ScaledObject != nil {
 				return field.Required(
 					field.NewPath("spec", "serving", "scaleOptions", "keda", "scaledObject"),
 					"scaledJob and scaledObject have at most one enabled")
@@ -337,11 +226,11 @@ func (r *Function) ValidateServing() error {
 			if scaleOptions.Keda.ScaledObject != nil {
 				scaledObject := scaleOptions.Keda.ScaledObject
 				if scaledObject.WorkloadType != "" {
-					if _, ok := scaledObjectWorkloadTypes[scaledObject.WorkloadType]; !ok {
+					if _, ok := kedaScaledObjectWorkloadTypes[scaledObject.WorkloadType]; !ok {
 						return field.NotSupported(
 							field.NewPath("spec", "serving", "scaleOptions", "keda", "scaledObject", "workloadType"),
 							scaledObject.WorkloadType,
-							scaledObjectWorkloadTypesSlice)
+							kedaScaledObjectWorkloadTypesSlice)
 					}
 				}
 				if scaledObject.PollingInterval != nil && *scaledObject.PollingInterval < 0 {
@@ -393,11 +282,11 @@ func (r *Function) ValidateServing() error {
 			if scaleOptions.Keda.ScaledJob != nil {
 				scaleJob := scaleOptions.Keda.ScaledJob
 				if scaleJob.RestartPolicy != nil {
-					if _, ok := scaleJobRestartPolices[*scaleJob.RestartPolicy]; !ok {
+					if _, ok := kedaScaledJobRestartPolices[*scaleJob.RestartPolicy]; !ok {
 						return field.NotSupported(
 							field.NewPath("spec", "serving", "scaleOptions", "keda", "scaleJob", "restartPolicy"),
 							scaleJob.RestartPolicy,
-							scaleJobRestartPolicesSlice)
+							kedaScaledJobRestartPolicesSlice)
 					}
 				}
 				if scaleJob.PollingInterval != nil && *scaleJob.PollingInterval < 0 {
@@ -486,10 +375,11 @@ func (r *Function) ValidateServing() error {
 				return field.Required(field.NewPath("spec", "serving", "pubsub", key, "type"),
 					"must be specified")
 			}
-			if _, ok := pubsubComponentTypes[componentSpec.Type]; !ok {
-				return field.NotSupported(field.NewPath("spec", "serving", "pubsub", key, "type"),
+			reg := regexp.MustCompile(`^pubsub\..*$`)
+			if !reg.MatchString(componentSpec.Type) {
+				return field.Invalid(field.NewPath("spec", "serving", "pubsub", key, "type"),
 					componentSpec.Type,
-					pubsubComponentTypesSlice)
+					"the prefix should be pubsub.")
 			}
 		}
 	}
@@ -507,10 +397,11 @@ func (r *Function) ValidateServing() error {
 				return field.Required(field.NewPath("spec", "serving", "bindings", key, "type"),
 					"must be specified")
 			}
-			if _, ok := bindingsComponentTypes[componentSpec.Type]; !ok {
-				return field.NotSupported(field.NewPath("spec", "serving", "bindings", key, "type"),
+			reg := regexp.MustCompile(`^bindings\..*$`)
+			if !reg.MatchString(componentSpec.Type) {
+				return field.Invalid(field.NewPath("spec", "serving", "bindings", key, "type"),
 					componentSpec.Type,
-					bindingsComponentTypesSlice)
+					"the prefix should be bindings.")
 			}
 		}
 	}
@@ -521,21 +412,16 @@ func (r *Function) ValidateServing() error {
 				return field.Required(field.NewPath("spec", "serving", "triggers", fmt.Sprintf("[%d]", index), "type"),
 					"must be specified")
 			}
-			if _, ok := triggerTypes[trigger.Type]; !ok {
-				return field.NotSupported(field.NewPath("spec", "serving", "triggers", fmt.Sprintf("[%d]", index), "type"),
-					trigger.Type,
-					triggerTypesSlice)
-			}
 			if trigger.Metadata == nil {
 				return field.Required(field.NewPath("spec", "serving", "triggers", fmt.Sprintf("[%d]", index), "metadata"),
 					"must be specified")
 			}
 			if trigger.AuthenticationRef != nil {
 				if trigger.AuthenticationRef.Kind != "" {
-					if _, ok := authenticationRefKind[trigger.AuthenticationRef.Kind]; !ok {
+					if _, ok := kedaScaledObjectAuthRefKinds[trigger.AuthenticationRef.Kind]; !ok {
 						return field.NotSupported(field.NewPath("spec", "serving", "triggers", fmt.Sprintf("[%d]", index), "authenticationRef", "kind"),
 							trigger.AuthenticationRef.Kind,
-							authenticationRefKindSlice)
+							kedaScaledObjectAuthRefKindsSlice)
 					}
 				}
 			}
@@ -547,10 +433,10 @@ func (r *Function) ValidateServing() error {
 			}
 
 			if trigger.TargetKind != nil {
-				if _, ok := targetKinds[*trigger.TargetKind]; !ok {
+				if _, ok := scaleTargetKinds[*trigger.TargetKind]; !ok {
 					return field.NotSupported(field.NewPath("spec", "serving", "triggers", fmt.Sprintf("[%d]", index), "targetKind"),
 						trigger.TargetKind,
-						targetKindsSlice)
+						scaleTargetKindsSlice)
 				}
 			}
 		}
@@ -572,20 +458,20 @@ func (r *Function) ValidateKedaScaledObjectAdvanced() error {
 					"must be greater than or equal to 0 less than 3600")
 			}
 			if scaleUp.SelectPolicy != nil {
-				if _, ok := scaleSelectPolicies[*scaleUp.SelectPolicy]; !ok {
+				if _, ok := scalingPolicySelects[*scaleUp.SelectPolicy]; !ok {
 					return field.NotSupported(field.NewPath("spec", "serving", "scaleOptions",
 						"keda", "scaleObject", "advanced", "horizontalPodAutoscalerConfig", "behavior", "scaleUp", "selectPolicy"),
 						scaleUp.SelectPolicy,
-						scaleSelectPoliciesSlice)
+						scalingPolicySelectsSlice)
 				}
 			}
 			for index, policy := range scaleUp.Policies {
-				if _, ok := scalePoliciesTypes[policy.Type]; !ok {
+				if _, ok := HPAScalingPolicyTypes[policy.Type]; !ok {
 					return field.NotSupported(field.NewPath("spec", "serving", "scaleOptions",
 						"keda", "scaleObject", "advanced", "horizontalPodAutoscalerConfig", "behavior", "scaleUp",
 						"policies", fmt.Sprintf("[%d]", index), "type"),
 						policy.Type,
-						scalePoliciesTypesSlice)
+						HPAScalingPolicyTypesSlice)
 				}
 				if policy.PeriodSeconds < 0 {
 					return field.Invalid(field.NewPath("spec", "serving", "scaleOptions",
@@ -607,20 +493,20 @@ func (r *Function) ValidateKedaScaledObjectAdvanced() error {
 					"must be greater than or equal to 0 less than 3600")
 			}
 			if scaleDown.SelectPolicy != nil {
-				if _, ok := scaleSelectPolicies[*scaleDown.SelectPolicy]; !ok {
+				if _, ok := scalingPolicySelects[*scaleDown.SelectPolicy]; !ok {
 					return field.NotSupported(field.NewPath("spec", "serving", "scaleOptions",
 						"keda", "scaleObject", "advanced", "horizontalPodAutoscalerConfig", "behavior", "scaleDown", "selectPolicy"),
 						scaleDown.SelectPolicy,
-						scaleSelectPoliciesSlice)
+						scalingPolicySelectsSlice)
 				}
 			}
 			for index, policy := range scaleDown.Policies {
-				if _, ok := scalePoliciesTypes[policy.Type]; !ok {
+				if _, ok := HPAScalingPolicyTypes[policy.Type]; !ok {
 					return field.NotSupported(field.NewPath("spec", "serving", "scaleOptions",
 						"keda", "scaleObject", "advanced", "horizontalPodAutoscalerConfig", "behavior", "scaleDown",
 						"policies", fmt.Sprintf("[%d]", index), "type"),
 						policy.Type,
-						scalePoliciesTypesSlice)
+						HPAScalingPolicyTypesSlice)
 				}
 				if policy.PeriodSeconds < 0 {
 					return field.Invalid(field.NewPath("spec", "serving", "scaleOptions",
@@ -638,11 +524,11 @@ func (r *Function) ValidateKedaScaledObjectAdvanced() error {
 func (r *Function) ValidateKedaScaledJobScalingStrategy() error {
 	strategy := r.Spec.Serving.ScaleOptions.Keda.ScaledJob.ScalingStrategy
 	if strategy.Strategy != "" {
-		if _, ok := scalingStrategies[strategy.Strategy]; !ok {
+		if _, ok := kedaScaledJobScalingStrategies[strategy.Strategy]; !ok {
 			return field.NotSupported(field.NewPath("spec", "serving", "scaleOptions",
 				"keda", "scaleJob", "scalingStrategy", "strategy"),
 				strategy.Strategy,
-				scalingStrategiesSlice)
+				kedaScaledJobScalingStrategiesSlice)
 		}
 		if strategy.Strategy == "custom" && strategy.CustomScalingQueueLengthDeduction == nil {
 			return field.Required(field.NewPath("spec", "serving", "scaleOptions",
