@@ -18,6 +18,7 @@ package v1beta1
 
 import (
 	"fmt"
+	"reflect"
 	"regexp"
 
 	shipwrightv1alpha1 "github.com/shipwright-io/build/pkg/apis/build/v1alpha1"
@@ -34,12 +35,9 @@ var (
 	shipwrightStrategies = map[shipwrightv1alpha1.BuildStrategyKind]bool{
 		shipwrightv1alpha1.NamespacedBuildStrategyKind: true,
 		shipwrightv1alpha1.ClusterBuildStrategyKind:    true}
-	shipwrightStrategiesSlice = []string{
-		string(shipwrightv1alpha1.NamespacedBuildStrategyKind),
-		string(shipwrightv1alpha1.ClusterBuildStrategyKind),
-	}
+	shipwrightStrategiesSlice      = convertMapKeysToStringSlice(shipwrightStrategies)
 	funcRuntimes                   = map[Runtime]bool{Knative: true, Async: true}
-	funRuntimesSlice               = []string{string(Knative), string(Async)}
+	funcRuntimesSlice              = convertMapKeysToStringSlice(funcRuntimes)
 	scaledObjectWorkloadTypes      = map[string]bool{"Deployment": true, "StatefulSet": true}
 	scaledObjectWorkloadTypesSlice = convertMapKeysToStringSlice(scaledObjectWorkloadTypes)
 	scaleJobRestartPolices         = map[v1.RestartPolicy]bool{
@@ -47,12 +45,8 @@ var (
 		v1.RestartPolicyOnFailure: true,
 		v1.RestartPolicyNever:     true,
 	}
-	scaleJobRestartPolicesSlice = []string{
-		string(v1.RestartPolicyAlways),
-		string(v1.RestartPolicyOnFailure),
-		string(v1.RestartPolicyNever),
-	}
-	pubsubComponentTypes = map[string]bool{
+	scaleJobRestartPolicesSlice = convertMapKeysToStringSlice(scaleJobRestartPolices)
+	pubsubComponentTypes        = map[string]bool{
 		"pubsub.kafka":            true,
 		"pubsub.snssqs":           true,
 		"pubsub.azure.eventhubs":  true,
@@ -118,16 +112,16 @@ var (
 		v2beta2.MinPolicySelect:      true,
 		v2beta2.DisabledPolicySelect: true,
 	}
-	scaleSelectPoliciesSlice = []string{string(v2beta2.MaxPolicySelect), string(v2beta2.MinPolicySelect), string(v2beta2.DisabledPolicySelect)}
+	scaleSelectPoliciesSlice = convertMapKeysToStringSlice(scaleSelectPolicies)
 	scalePoliciesTypes       = map[v2beta2.HPAScalingPolicyType]bool{
 		v2beta2.PodsScalingPolicy:    true,
 		v2beta2.PercentScalingPolicy: true,
 	}
-	scalePoliciesTypesSlice = []string{string(v2beta2.PodsScalingPolicy), string(v2beta2.PercentScalingPolicy)}
+	scalePoliciesTypesSlice = convertMapKeysToStringSlice(scalePoliciesTypes)
 	scalingStrategies       = map[string]bool{"default": true, "custom": true, "accurate": true}
 	scalingStrategiesSlice  = convertMapKeysToStringSlice(scalingStrategies)
 	targetKinds             = map[ScaleTargetKind]bool{ScaledObject: true, ScaledJob: true}
-	targetKindsSlice        = []string{string(ScaledObject), string(ScaledJob)}
+	targetKindsSlice        = convertMapKeysToStringSlice(targetKinds)
 	triggerTypes            = map[string]bool{
 		"activemq":               true,
 		"artemis-queue":          true,
@@ -309,7 +303,7 @@ func (r *Function) ValidateServing() error {
 
 	if _, ok := funcRuntimes[r.Spec.Serving.Runtime]; !ok {
 		return field.NotSupported(field.NewPath("spec", "serving", "runtime"),
-			r.Spec.Serving.Runtime, funRuntimesSlice)
+			r.Spec.Serving.Runtime, funcRuntimesSlice)
 	}
 
 	if r.Spec.Serving.ScaleOptions != nil {
@@ -680,10 +674,29 @@ func (r *Function) ValidateKedaScaledJobScalingStrategy() error {
 	return nil
 }
 
-func convertMapKeysToStringSlice(m map[string]bool) []string {
-	keys := make([]string, 0, len(m))
-	for key := range m {
-		keys = append(keys, key)
+func convertMapKeysToStringSlice(m interface{}) []string {
+	v := reflect.ValueOf(m)
+	if v.Kind() == reflect.Map {
+		keys := make([]string, 0, len(v.MapKeys()))
+		for _, key := range v.MapKeys() {
+			switch key.Interface().(type) {
+			case string:
+				keys = append(keys, key.Interface().(string))
+			case shipwrightv1alpha1.BuildStrategyKind:
+				keys = append(keys, string(key.Interface().(shipwrightv1alpha1.BuildStrategyKind)))
+			case Runtime:
+				keys = append(keys, string(key.Interface().(Runtime)))
+			case v1.RestartPolicy:
+				keys = append(keys, string(key.Interface().(v1.RestartPolicy)))
+			case v2beta2.ScalingPolicySelect:
+				keys = append(keys, string(key.Interface().(v2beta2.ScalingPolicySelect)))
+			case v2beta2.HPAScalingPolicyType:
+				keys = append(keys, string(key.Interface().(v2beta2.HPAScalingPolicyType)))
+			case ScaleTargetKind:
+				keys = append(keys, string(key.Interface().(ScaleTargetKind)))
+			}
+		}
+		return keys
 	}
-	return keys
+	return nil
 }
