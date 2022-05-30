@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-deployment
+  labels:
+    app.kubernetes.io/part-of: knative-serving
+    app.kubernetes.io/version: 1.0.1
+    serving.knative.dev/release: v1.0.1
+  {{- include "knative-serving.labels" . | nindent 4 }}
+  annotations:
+    knative.dev/example-checksum: dd7ee769
+data:
+  _example: {{ .Values.configDeployment.Example | quote }}
+  queueSidecarImage: {{ .Values.configDeployment.queueSidecarImage.repository}}@{{ .Values.configDeployment.queueSidecarImage.digest}}

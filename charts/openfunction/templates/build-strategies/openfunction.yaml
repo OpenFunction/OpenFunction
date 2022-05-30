@@ -1,0 +1,116 @@
+apiVersion: shipwright.io/v1alpha1
+kind: ClusterBuildStrategy
+metadata:
+  name: openfunction
+  labels:
+  {{- include "openfunction.labels" . | nindent 4 }}
+spec:
+  buildSteps:
+  - args:
+    - -c
+    - |
+      #!/usr/bin/env bash
+      set -e
+
+      for path in "/cache" "/tekton/home" "/layers" "/workspace/source"; do
+        echo "> Setting permissions on '$path'..."
+        chown -R "$(params.USER_ID):$(params.GROUP_ID)" "$path"
+      done
+
+      echo "> Processing any environment variables..."
+      ENV_DIR="/platform/env"
+
+      echo "--> Creating 'env' directory: $ENV_DIR"
+      mkdir -p "$ENV_DIR"
+
+      envs=(`echo $(params.ENV_VARS) | tr '#' ' '`)
+
+      for env in "${envs[@]}"; do
+          IFS='=' read -r key value string <<< "$env"
+          if [[ "$key" != "" && "$value" != "" ]]; then
+              path="${ENV_DIR}/${key}"
+              echo "--> Writing ${path}..."
+              echo -n "$value" > "$path"
+          fi
+      done
+    command:
+    - /usr/local/bin/bash
+    image: docker.io/library/bash:5.1.4@sha256:b208215a4655538be652b2769d82e576bc4d0a2bb132144c060efc5be8c3f5d6
+    name: prepare
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - mountPath: /cache
+      name: cache
+    - mountPath: /layers
+      name: layers-dir
+    - mountPath: /platform
+      name: $(params.PLATFORM_DIR)
+  - args:
+    - -app=/workspace/source/$(params.CONTEXT_DIR)
+    - -cache-dir=/cache
+    - -uid=$(params.USER_ID)
+    - -gid=$(params.GROUP_ID)
+    - -layers=/layers
+    - -platform=/platform
+    - -report=/layers/report.toml
+    - -process-type=$(params.PROCESS_TYPE)
+    - -skip-restore=$(params.SKIP_RESTORE)
+    - -previous-image=$(params.shp-output-image)
+    - -run-image=$(params.RUN_IMAGE)
+    - $(params.shp-output-image)
+    command:
+    - /cnb/lifecycle/creator
+    image: $(params.BUILDER_IMAGE)
+    imagePullPolicy: Always
+    name: create
+    securityContext:
+      runAsGroup: 1000
+      runAsUser: 1000
+    volumeMounts:
+    - mountPath: /cache
+      name: cache
+    - mountPath: /layers
+      name: layers-dir
+    - mountPath: /platform
+      name: $(params.PLATFORM_DIR)
+  - args:
+    - -c
+    - |
+      #!/usr/bin/env bash
+      set -e
+      cat /layers/report.toml | grep "digest" | cut -d'"' -f2 | cut -d'"' -f2 | tr -d '\n' | tee $(results.shp-image-digest.path)
+    command:
+    - /bin/sh
+    image: docker.io/library/bash:5.1.4@sha256:b208215a4655538be652b2769d82e576bc4d0a2bb132144c060efc5be8c3f5d6
+    name: results
+    volumeMounts:
+    - mountPath: /layers
+      name: layers-dir
+  parameters:
+  - default: web
+    description: The default process type to set on the image.
+    name: PROCESS_TYPE
+  - default: ""
+    description: Reference to a run image to use.
+    name: RUN_IMAGE
+  - default: ""
+    description: The name of the persistent app cache image (if no cache workspace
+      is provided).
+    name: CACHE_IMAGE
+  - default: "false"
+    description: Do not write layer metadata or restore cached layers.
+    name: SKIP_RESTORE
+  - default: "1000"
+    description: The user ID of the builder image user.
+    name: USER_ID
+  - default: "1000"
+    description: The group ID of the builder image user.
+    name: GROUP_ID
+  - default: empty-dir
+    description: The name of the platform directory.
+    name: PLATFORM_DIR
+  - default: ""
+    description: Environment variables to set during _build-time_. The formate is
+      `key1=value1,key2=value2`.
+    name: ENV_VARS

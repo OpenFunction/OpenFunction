@@ -1,0 +1,191 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: domainmapping-webhook
+  labels:
+    app.kubernetes.io/name: domainmapping-webhook
+    app.kubernetes.io/part-of: knative-serving
+    app.kubernetes.io/version: 1.0.1
+    serving.knative.dev/release: v1.0.1
+  {{- include "knative-serving.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: domainmapping-webhook
+      role: domainmapping-webhook
+    {{- include "knative-serving.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app: domainmapping-webhook
+        app.kubernetes.io/name: domainmapping-webhook
+        app.kubernetes.io/part-of: knative-serving
+        app.kubernetes.io/version: 1.0.1
+        role: domainmapping-webhook
+        serving.knative.dev/release: v1.0.1
+      {{- include "knative-serving.selectorLabels" . | nindent 8 }}
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "false"
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: domainmapping-webhook
+                topologyKey: kubernetes.io/hostname
+              weight: 100
+      containers:
+        - env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: SYSTEM_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: CONFIG_LOGGING_NAME
+              value: config-logging
+            - name: CONFIG_OBSERVABILITY_NAME
+              value: config-observability
+            - name: WEBHOOK_PORT
+              value: "8443"
+            - name: METRICS_DOMAIN
+              value: knative.dev/serving
+          image: {{ .Values.domainmappingWebhook.domainmappingWebhook.image.repository }}@{{
+          .Values.domainmappingWebhook.domainmappingWebhook.image.digest }}
+          livenessProbe:
+            failureThreshold: 6
+            httpGet:
+              httpHeaders:
+                - name: k-kubelet-probe
+                  value: webhook
+              port: 8443
+              scheme: HTTPS
+            initialDelaySeconds: 20
+            periodSeconds: 1
+          name: domainmapping-webhook
+          ports:
+            - containerPort: 9090
+              name: metrics
+            - containerPort: 8008
+              name: profiling
+            - containerPort: 8443
+              name: https-webhook
+          readinessProbe:
+            httpGet:
+              httpHeaders:
+                - name: k-kubelet-probe
+                  value: webhook
+              port: 8443
+              scheme: HTTPS
+            periodSeconds: 1
+          resources: {{- toYaml .Values.domainmappingWebhook.domainmappingWebhook.resources
+          | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - all
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+      serviceAccountName: controller
+      terminationGracePeriodSeconds: 300
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webhook
+  labels:
+    app.kubernetes.io/name: webhook
+    app.kubernetes.io/part-of: knative-serving
+    app.kubernetes.io/version: 1.0.1
+    serving.knative.dev/release: v1.0.1
+  {{- include "knative-serving.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: webhook
+      role: webhook
+    {{- include "knative-serving.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app: webhook
+        app.kubernetes.io/name: webhook
+        app.kubernetes.io/part-of: knative-serving
+        app.kubernetes.io/version: 1.0.1
+        role: webhook
+        serving.knative.dev/release: v1.0.1
+      {{- include "knative-serving.selectorLabels" . | nindent 8 }}
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "false"
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: webhook
+                topologyKey: kubernetes.io/hostname
+              weight: 100
+      containers:
+        - env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: SYSTEM_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: CONFIG_LOGGING_NAME
+              value: config-logging
+            - name: CONFIG_OBSERVABILITY_NAME
+              value: config-observability
+            - name: WEBHOOK_NAME
+              value: webhook
+            - name: WEBHOOK_PORT
+              value: "8443"
+            - name: METRICS_DOMAIN
+              value: knative.dev/internal/serving
+          image: {{ .Values.webhook.webhook.image.repository }}@{{ .Values.webhook.webhook.image.digest }}
+          livenessProbe:
+            failureThreshold: 6
+            httpGet:
+              httpHeaders:
+                - name: k-kubelet-probe
+                  value: webhook
+              port: 8443
+              scheme: HTTPS
+            initialDelaySeconds: 20
+            periodSeconds: 1
+          name: webhook
+          ports:
+            - containerPort: 9090
+              name: metrics
+            - containerPort: 8008
+              name: profiling
+            - containerPort: 8443
+              name: https-webhook
+          readinessProbe:
+            httpGet:
+              httpHeaders:
+                - name: k-kubelet-probe
+                  value: webhook
+              port: 8443
+              scheme: HTTPS
+            periodSeconds: 1
+          resources: {{- toYaml .Values.webhook.webhook.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - all
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+      serviceAccountName: controller
+      terminationGracePeriodSeconds: 300

@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: domain-mapping
+  labels:
+    app.kubernetes.io/name: domain-mapping
+    app.kubernetes.io/part-of: knative-serving
+    app.kubernetes.io/version: 1.0.1
+    serving.knative.dev/release: v1.0.1
+  {{- include "knative-serving.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: domain-mapping
+    {{- include "knative-serving.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app: domain-mapping
+        app.kubernetes.io/name: domain-mapping
+        app.kubernetes.io/part-of: knative-serving
+        app.kubernetes.io/version: 1.0.1
+        serving.knative.dev/release: v1.0.1
+      {{- include "knative-serving.selectorLabels" . | nindent 8 }}
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: domain-mapping
+                topologyKey: kubernetes.io/hostname
+              weight: 100
+      containers:
+        - env:
+            - name: SYSTEM_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: CONFIG_LOGGING_NAME
+              value: config-logging
+            - name: CONFIG_OBSERVABILITY_NAME
+              value: config-observability
+            - name: METRICS_DOMAIN
+              value: knative.dev/serving
+          image: {{ .Values.domainMapping.domainMapping.image.repository }}@{{ .Values.domainMapping.domainMapping.image.digest }}
+          name: domain-mapping
+          ports:
+            - containerPort: 9090
+              name: metrics
+            - containerPort: 8008
+              name: profiling
+          resources: {{- toYaml .Values.domainMapping.domainMapping.resources | nindent 12
+          }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - all
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+      serviceAccountName: controller

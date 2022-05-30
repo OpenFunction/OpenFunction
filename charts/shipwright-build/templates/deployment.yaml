@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "shipwright-build.fullname" . }}-controller
+  labels:
+  {{- include "shipwright-build.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.shipwrightBuildController.replicas }}
+  selector:
+    matchLabels:
+      name: shipwright-build
+    {{- include "shipwright-build.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        name: shipwright-build
+      {{- include "shipwright-build.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: BUILD_CONTROLLER_LEADER_ELECTION_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: CONTROLLER_NAME
+              value: shipwright-build
+            {{- with .Values.shipwrightBuildController.shipwrightBuild}}
+            - name: GIT_CONTAINER_IMAGE
+              value: {{ .GIT_CONTAINER_IMAGE.repository }}:{{ .GIT_CONTAINER_IMAGE.tag }}@{{ .GIT_CONTAINER_IMAGE.digest }}
+            - name: MUTATE_IMAGE_CONTAINER_IMAGE
+              value: {{ .MUTATE_IMAGE_CONTAINER_IMAGE.repository }}:{{ .MUTATE_IMAGE_CONTAINER_IMAGE.tag }}@{{ .MUTATE_IMAGE_CONTAINER_IMAGE.digest }}
+            - name: BUNDLE_CONTAINER_IMAGE
+              value: {{ .BUNDLE_CONTAINER_IMAGE.repository }}:{{ .BUNDLE_CONTAINER_IMAGE.tag }}@{{ .BUNDLE_CONTAINER_IMAGE.digest }}
+            {{- end }}
+            - name: KUBERNETES_CLUSTER_DOMAIN
+              value: {{ .Values.kubernetesClusterDomain }}
+          image: {{ .Values.shipwrightBuildController.shipwrightBuild.image.repository }}:{{ .Values.shipwrightBuildController.shipwrightBuild.image.tag
+          | default .Chart.AppVersion }}@{{.Values.shipwrightBuildController.shipwrightBuild.image.digest}}
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: metrics-port
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          name: shipwright-build
+          ports:
+            - containerPort: 8383
+              name: metrics-port
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: metrics-port
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources: {}
+      serviceAccountName: {{ include "shipwright-build.fullname" . }}-controller

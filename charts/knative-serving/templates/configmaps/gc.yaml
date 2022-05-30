@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-gc
+  labels:
+    app.kubernetes.io/part-of: knative-serving
+    app.kubernetes.io/version: 1.0.1
+    serving.knative.dev/release: v1.0.1
+  {{- include "knative-serving.labels" . | nindent 4 }}
+  annotations:
+    knative.dev/example-checksum: 51b4d68a
+data:
+  _example: {{ .Values.configGc.Example | quote }}

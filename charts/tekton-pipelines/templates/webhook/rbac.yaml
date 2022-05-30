@@ -1,0 +1,82 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "tekton-pipelines.fullname" . }}-webhook
+  labels:
+    app.kubernetes.io/component: webhook
+  {{- include "tekton-pipelines.labels" . | nindent 4 }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resourceNames:
+      - config-logging
+      - config-observability
+      - config-leader-election
+      - feature-flags
+    resources:
+      - configmaps
+    verbs:
+      - get
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resourceNames:
+      - webhook-certs
+    resources:
+      - secrets
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - policy
+    resourceNames:
+      - tekton-pipelines
+    resources:
+      - podsecuritypolicies
+    verbs:
+      - use
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "tekton-pipelines.fullname" . }}-webhook
+  labels:
+    app.kubernetes.io/component: webhook
+  {{- include "tekton-pipelines.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: '{{ include "tekton-pipelines.fullname" . }}-webhook'
+subjects:
+  - kind: ServiceAccount
+    name: '{{ include "tekton-pipelines.fullname" . }}-webhook'
+    namespace: '{{ .Release.Namespace }}'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "tekton-pipelines.fullname" . }}-webhook-leaderelection
+  labels:
+    app.kubernetes.io/component: webhook
+  {{- include "tekton-pipelines.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: '{{ include "tekton-pipelines.fullname" . }}-leader-election'
+subjects:
+  - kind: ServiceAccount
+    name: '{{ include "tekton-pipelines.fullname" . }}-webhook'
+    namespace: '{{ .Release.Namespace }}'

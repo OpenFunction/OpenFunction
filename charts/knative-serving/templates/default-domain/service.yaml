@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: default-domain-service
+  labels:
+    app: default-domain
+    app.kubernetes.io/name: default-domain
+    app.kubernetes.io/part-of: knative-serving
+    app.kubernetes.io/version: 1.0.1
+    serving.knative.dev/release: v1.0.1
+  {{- include "knative-serving.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.defaultDomain.type }}
+  selector:
+    app: default-domain
+  {{- include "knative-serving.selectorLabels" . | nindent 4 }}
+  ports:
+	{{- .Values.defaultDomain.ports | toYaml | nindent 2 -}}

@@ -1,0 +1,61 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: default-domain
+  labels:
+    app: default-domain
+    app.kubernetes.io/name: default-domain
+    app.kubernetes.io/part-of: knative-serving
+    app.kubernetes.io/version: 1.0.1
+    serving.knative.dev/release: v1.0.1
+  {{- include "knative-serving.labels" . | nindent 4 }}
+spec:
+  backoffLimit: 10
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "false"
+      labels:
+        app: default-domain
+        app.kubernetes.io/name: default-domain
+        app.kubernetes.io/part-of: knative-serving
+        app.kubernetes.io/version: 1.0.1
+        {{- include "knative-serving.labels" . | nindent 8 }}
+    spec:
+      containers:
+      - args:
+        - -magic-dns=sslip.io
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: SYSTEM_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        image: {{ .Values.defaultDomain.job.image.repository }}@{{ .Values.defaultDomain.job.image.digest }}
+        livenessProbe:
+          failureThreshold: 6
+          httpGet:
+            port: 8080
+        name: default-domain
+        ports:
+        - containerPort: 8080
+          name: http
+        readinessProbe:
+          httpGet:
+            port: 8080
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 1000Mi
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+      restartPolicy: Never
+      serviceAccountName: controller

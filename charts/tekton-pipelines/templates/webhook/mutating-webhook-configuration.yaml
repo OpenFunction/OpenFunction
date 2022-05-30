@@ -1,0 +1,16 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: webhook.pipeline.tekton.dev
+  labels:
+  {{- include "tekton-pipelines.labels" . | nindent 4 }}
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: '{{ include "tekton-pipelines.fullname" . }}-webhook'
+      namespace: '{{ .Release.Namespace }}'
+  failurePolicy: Fail
+  name: webhook.pipeline.tekton.dev
+  sideEffects: None

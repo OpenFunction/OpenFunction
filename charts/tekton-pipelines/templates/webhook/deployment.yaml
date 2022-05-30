@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tekton-pipelines.fullname" . }}-webhook
+  labels:
+    app.kubernetes.io/component: webhook
+    pipeline.tekton.dev/release: v0.30.0
+    version: v0.30.0
+  {{- include "tekton-pipelines.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.webhook.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: webhook
+    {{- include "tekton-pipelines.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app: tekton-pipelines-webhook
+        app.kubernetes.io/component: webhook
+        pipeline.tekton.dev/release: v0.30.0
+        version: v0.30.0
+      {{- include "tekton-pipelines.selectorLabels" . | nindent 8 }}
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/os
+                    operator: NotIn
+                    values:
+                      - windows
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/component: webhook
+                    app.kubernetes.io/instance: default
+                    app.kubernetes.io/name: webhook
+                    app.kubernetes.io/part-of: tekton-pipelines
+                topologyKey: kubernetes.io/hostname
+              weight: 100
+      containers:
+        - env:
+            - name: SYSTEM_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: CONFIG_LOGGING_NAME
+              value: config-logging
+            - name: CONFIG_OBSERVABILITY_NAME
+              value: config-observability
+            - name: CONFIG_LEADERELECTION_NAME
+              value: config-leader-election
+            - name: CONFIG_FEATURE_FLAGS_NAME
+              value: feature-flags
+            - name: WEBHOOK_SERVICE_NAME
+              value: tekton-pipelines-webhook
+            - name: WEBHOOK_SECRET_NAME
+              value: webhook-certs
+            - name: METRICS_DOMAIN
+              value: tekton.dev/pipeline
+
+          image: {{ .Values.webhook.webhook.image.repository }}:{{ .Values.webhook.webhook.image.tag
+            | default .Chart.AppVersion }}@{{.Values.webhook.webhook.image.digest}}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: probes
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+          name: webhook
+          ports:
+            - containerPort: 9090
+              name: metrics
+            - containerPort: 8008
+              name: profiling
+            - containerPort: 8443
+              name: https-webhook
+            - containerPort: 8080
+              name: probes
+          readinessProbe:
+            httpGet:
+              path: /readiness
+              port: probes
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources: {{- toYaml .Values.webhook.webhook.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - all
+            runAsGroup: 65532
+            runAsUser: 65532
+      serviceAccountName: {{ include "tekton-pipelines.fullname" . }}-webhook

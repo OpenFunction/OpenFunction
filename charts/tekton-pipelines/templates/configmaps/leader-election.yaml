@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-leader-election
+  labels:
+  {{- include "tekton-pipelines.labels" . | nindent 4 }}
+data:
+  lease-duration: {{ .Values.configLeaderElection.leaseDuration | quote }}
+  renew-deadline: {{ .Values.configLeaderElection.renewDeadline | quote }}
+  retry-period: {{ .Values.configLeaderElection.retryPeriod | quote }}

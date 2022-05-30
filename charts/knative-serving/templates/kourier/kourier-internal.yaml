@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kourier-internal
+  namespace: kourier-system
+  labels:
+    networking.knative.dev/ingress-provider: kourier
+    serving.knative.dev/release: v1.0.1
+  {{- include "knative-serving.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.kourierInternal.type }}
+  selector:
+    app: 3scale-kourier-gateway
+  {{- include "knative-serving.selectorLabels" . | nindent 4 }}
+  ports:
+ {{- .Values.kourierInternal.ports | toYaml | nindent 2 -}}

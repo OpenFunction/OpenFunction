@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: activator
+  labels:
+    app.kubernetes.io/name: activator
+    app.kubernetes.io/part-of: knative-serving
+    app.kubernetes.io/version: 1.0.1
+    serving.knative.dev/release: v1.0.1
+  {{- include "knative-serving.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: activator
+      role: activator
+    {{- include "knative-serving.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app: activator
+        app.kubernetes.io/name: activator
+        app.kubernetes.io/part-of: knative-serving
+        app.kubernetes.io/version: 1.0.1
+        role: activator
+        serving.knative.dev/release: v1.0.1
+      {{- include "knative-serving.selectorLabels" . | nindent 8 }}
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "false"
+    spec:
+      containers:
+        - env:
+            - name: GOGC
+              value: "500"
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: SYSTEM_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: CONFIG_LOGGING_NAME
+              value: config-logging
+            - name: CONFIG_OBSERVABILITY_NAME
+              value: config-observability
+            - name: METRICS_DOMAIN
+              value: knative.dev/internal/serving
+          image: {{ .Values.activator.activator.image.repository }}@{{ .Values.activator.activator.image.digest}}
+          livenessProbe:
+            failureThreshold: 12
+            httpGet:
+              httpHeaders:
+                - name: k-kubelet-probe
+                  value: activator
+              port: 8012
+            initialDelaySeconds: 15
+          name: activator
+          ports:
+            - containerPort: 9090
+              name: metrics
+            - containerPort: 8008
+              name: profiling
+            - containerPort: 8012
+              name: http1
+            - containerPort: 8013
+              name: h2c
+          readinessProbe:
+            failureThreshold: 12
+            httpGet:
+              httpHeaders:
+                - name: k-kubelet-probe
+                  value: activator
+              port: 8012
+          resources: {{- toYaml .Values.activator.activator.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - all
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+      serviceAccountName: controller
+      terminationGracePeriodSeconds: 600

@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pipelines-info
+  labels:
+  {{- include "tekton-pipelines.labels" . | nindent 4 }}
+data:
+  version: {{ .Values.pipelinesInfo.version | quote }}

@@ -1,0 +1,21 @@
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "tekton-pipelines.fullname" . }}-webhook
+  labels:
+    app.kubernetes.io/component: webhook
+    pipeline.tekton.dev/release: {{ .Values.pipelinesInfo.version }}
+    version: {{ .Values.pipelinesInfo.version }}
+  {{- include "tekton-pipelines.labels" . | nindent 4 }}
+spec:
+  maxReplicas: 5
+  metrics:
+  - resource:
+      name: cpu
+      targetAverageUtilization: 100
+    type: Resource
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: tekton-pipelines-webhook

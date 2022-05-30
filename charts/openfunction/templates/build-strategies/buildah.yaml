@@ -1,0 +1,82 @@
+apiVersion: shipwright.io/v1alpha1
+kind: ClusterBuildStrategy
+metadata:
+  name: buildah
+  labels:
+  {{- include "openfunction.labels" . | nindent 4 }}
+spec:
+  buildSteps:
+    - args:
+        - -c
+        - |
+          set -eo pipefail
+
+          echo "[INFO] Creating registries config file..."
+
+          format(){
+              array=(`echo $1 | tr ',' ' '`)
+              str=""
+              for m in "${array[@]}"; do
+                  str=$str"'${m}', "
+              done
+
+              echo ${str%??}
+          }
+
+          cat <<EOF >/tmp/registries.conf
+          [registries.search]
+          registries = [$(format "$(params.registry-search)")]
+
+          [registries.insecure]
+          registries = [$(format "$(params.registry-insecure)")]
+
+          [registries.block]
+          registries = [$(format "$(params.registry-block)")]
+
+          EOF
+
+          # Building the image
+          echo '[INFO] Building image $(params.shp-output-image)'
+          buildah bud \
+            --registries-conf='/tmp/registries.conf' \
+            --tag='$(params.shp-output-image)' \
+            --file='$(build.dockerfile)' \
+            '$(params.shp-source-context)'
+
+          # Push the image
+          echo '[INFO] Pushing image $(params.shp-output-image)'
+          buildah push \
+            --tls-verify=false \
+            '$(params.shp-output-image)' \
+            'docker://$(params.shp-output-image)'
+
+          # Store the digest result
+          buildah images \
+            --format='{{.Digest}}' \
+            '$(params.shp-output-image)' | tr -d "\n" > '$(results.shp-image-digest.path)'
+      command:
+        - /bin/bash
+      image: $(params.BUILDER_IMAGE)
+      name: build-and-push
+      resources:
+        limits:
+          cpu: 500m
+          memory: 1Gi
+        requests:
+          cpu: 250m
+          memory: 65Mi
+      securityContext:
+        privileged: true
+      workingDir: $(params.shp-source-root)
+  parameters:
+    - default: docker.io,quay.io
+      description: The registries for searching short name images such as `golang:latest`,
+        separated by commas.
+      name: registry-search
+    - default: ""
+      description: The fully-qualified name of insecure registries. An insecure registry
+        is one that does not have a valid SSL certificate or only does HTTP.
+      name: registry-insecure
+    - default: ""
+      description: The registries that need to block pull access.
+      name: registry-block

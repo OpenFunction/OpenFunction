@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: controller
+  labels:
+    app: controller
+    app.kubernetes.io/name: controller
+    app.kubernetes.io/part-of: knative-serving
+    app.kubernetes.io/version: 1.0.1
+    serving.knative.dev/release: v1.0.1
+  {{- include "knative-serving.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.controller.type }}
+  selector:
+    app: controller
+  {{- include "knative-serving.selectorLabels" . | nindent 4 }}
+  ports:
+ {{- .Values.controller.ports | toYaml | nindent 2 -}}

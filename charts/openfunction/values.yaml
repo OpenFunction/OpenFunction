@@ -1,0 +1,95 @@
+config:
+  Example: |
+    knative-serving.namespace: "knative-serving"
+    knative-serving.config-features.name: "config-features"
+    # Configuration of the order of the plugins
+    plugins: |
+      pre:
+      - plugin1
+      - plugin2
+      post:
+      - plugin2
+      - plugin1
+    plugins.tracing: |
+      # Switch for tracing, default to false
+      enabled: true
+      # Provider name can be set to "skywalking", "opentelemetry"
+      # A valid provider must be set if tracing is enabled.
+      provider:
+        name: "skywalking"
+        oapServer: "localhost:xxx"
+      # Custom tags to add to tracing
+      tags:
+        func: function-with-tracing
+        layer: faas
+        tag1: value1
+        tag2: value2
+      baggage:
+      # baggage key is `sw8-correlation` for skywalking and `baggage` for opentelemetry
+      # Correlation context for skywalking: https://skywalking.apache.org/docs/main/latest/en/protocols/skywalking-cross-process-correlation-headers-protocol-v1/
+      # baggage for opentelemetry: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/baggage/api.md
+      # W3C Baggage Specification/: https://w3c.github.io/baggage/
+        key: sw8-correlation # key should be baggage for opentelemetry
+        value: "base64(string key):base64(string value),base64(string key2):base64(string value2)"
+  knativeServingConfigFeaturesName: config-features
+  knativeServingNamespace: knative-serving
+  pluginsTracing: |
+    enabled: false
+    # Provider name can be set to "skywalking", "opentelemetry"
+    # A valid provider must be set if tracing is enabled.
+    provider:
+      name: "skywalking"
+      oapServer: "localhost:xxx"
+    # Custom tags to add to tracing
+    tags:
+      func: function-with-tracing
+      layer: faas
+      tag1: value1
+      tag2: value2
+    baggage:
+    # baggage key is `sw8-correlation` for skywalking and `baggage` for opentelemetry
+    # Correlation context for skywalking: https://skywalking.apache.org/docs/main/latest/en/protocols/skywalking-cross-process-correlation-headers-protocol-v1/
+    # baggage for opentelemetry: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/baggage/api.md
+    # W3C Baggage Specification/: https://w3c.github.io/baggage/
+      key: sw8-correlation # key should be baggage for opentelemetry
+      value: "base64(string key):base64(string value),base64(string key2):base64(string value2)"
+controllerManager:
+  kubeRbacProxy:
+    image:
+      repository: openfunction/kube-rbac-proxy
+      tag: v0.8.0
+  openfunction:
+    image:
+      repository: openfunction/openfunction
+      tag: v0.6.0
+    resources:
+      limits:
+        cpu: 500m
+        memory: 500Mi
+      requests:
+        cpu: 100m
+        memory: 20Mi
+  replicas: 1
+kubernetesClusterDomain: cluster.local
+managerConfig:
+  controllerManagerConfigYaml:
+    health:
+      healthProbeBindAddress: :8081
+    leaderElection:
+      leaderElect: true
+      resourceName: 79f0111e.openfunction.io
+    metrics:
+      bindAddress: 127.0.0.1:8080
+    webhook:
+      port: 9443
+metricsService:
+  ports:
+  - name: https
+    port: 8443
+    targetPort: https
+  type: ClusterIP
+webhookService:
+  ports:
+  - port: 443
+    targetPort: 9443
+  type: ClusterIP

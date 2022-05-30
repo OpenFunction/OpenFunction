@@ -1,0 +1,39 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: webhook.serving.knative.dev
+  labels:
+  {{- include "knative-serving.labels" . | nindent 4 }}
+webhooks:
+  - admissionReviewVersions:
+      - v1
+      - v1beta1
+    clientConfig:
+      service:
+        name: 'webhook'
+        namespace: '{{ .Release.Namespace }}'
+    failurePolicy: Fail
+    name: webhook.serving.knative.dev
+    rules:
+      - apiGroups:
+          - autoscaling.internal.knative.dev
+          - networking.internal.knative.dev
+          - serving.knative.dev
+        apiVersions:
+          - '*'
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - metrics
+          - podautoscalers
+          - certificates
+          - ingresses
+          - serverlessservices
+          - configurations
+          - revisions
+          - routes
+          - services
+        scope: '*'
+    sideEffects: None
+    timeoutSeconds: 10

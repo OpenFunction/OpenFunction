@@ -1,0 +1,20 @@
+kubernetesClusterDomain: cluster.local
+shipwrightBuildController:
+  replicas: 1
+  shipwrightBuild:
+    image:
+      repository: quay.io/shipwright/shipwright-build-controller
+      tag: v0.6.0
+      digest: sha256:7e9dce636fcedcdb4e18cc8d3ccb6bdd4e21fa0c7551efef63aa5464e1b9745b
+    GIT_CONTAINER_IMAGE:
+      repository: ghcr.io/shipwright-io/build/git
+      tag: v0.7.0
+      digest: sha256:2cff62f102e495e95081cd4b56d94c0e001cfc999228ad249d4b9b099d0c0ff2
+    MUTATE_IMAGE_CONTAINER_IMAGE:
+      repository: quay.io/shipwright/mutate-image
+      tag: v0.6.0
+      digest: sha256:b4af89749dfa2659b1a828b06c17b6d77cb9221abdc52a99795c13ae3cf50753
+    BUNDLE_CONTAINER_IMAGE:
+      repository: quay.io/shipwright/bundle
+      tag: v0.6.0
+      digest: sha256:8677e34c97966921fbf34ba084bc6582c2fdb244afed19aeea51cbc5466dbd1b

@@ -1,0 +1,134 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tekton-pipelines.fullname" . }}-controller
+  labels:
+    app.kubernetes.io/component: controller
+    pipeline.tekton.dev/release: v0.30.0
+    version: v0.30.0
+  {{- include "tekton-pipelines.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.controller.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: controller
+    {{- include "tekton-pipelines.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app: tekton-pipelines-controller
+        app.kubernetes.io/component: controller
+        pipeline.tekton.dev/release: v0.30.0
+        version: v0.30.0
+      {{- include "tekton-pipelines.selectorLabels" . | nindent 8 }}
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/os
+                    operator: NotIn
+                    values:
+                      - windows
+      containers:
+        - args:
+          {{- with .Values.controller.tektonPipelinesController}}
+          - -kubeconfig-writer-image
+          - {{ .kubeconfigWriterImage.repository }}:{{ .kubeconfigWriterImage.tag | default $.Chart.AppVersion }}@{{.kubeconfigWriterImage.digest}}
+          - -git-image
+          - {{ .gitImage.repository }}:{{ .gitImage.tag | default $.Chart.AppVersion }}@{{.gitImage.digest}}
+          - -entrypoint-image
+          - {{ .entrypointImage.repository }}:{{ .entrypointImage.tag | default $.Chart.AppVersion }}@{{.entrypointImage.digest}}
+          - -nop-image
+          - {{ .nopImage.repository }}:{{ .nopImage.tag | default $.Chart.AppVersion }}@{{.nopImage.digest}}
+          - -imagedigest-exporter-image
+          - {{ .imagedigestExporterImage.repository }}:{{ .imagedigestExporterImage.tag | default $.Chart.AppVersion }}@{{.imagedigestExporterImage.digest}}
+          - -pr-image
+          - {{ .prImage.repository }}:{{ .prImage.tag | default $.Chart.AppVersion }}@{{.prImage.digest}}
+          - -gsutil-image
+          - {{ .gsutilImage.repository }}@{{.gsutilImage.digest}}
+          - -shell-image
+          - {{ .shellImage.repository }}@{{.shellImage.digest}}
+          - -shell-image-win
+          - {{ .shellImageWin.repository }}@{{.shellImageWin.digest}}
+          {{- end }}
+          env:
+            - name: SYSTEM_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: AWS_ACCESS_KEY_ID
+              value: foobarbaz
+            - name: AWS_SECRET_ACCESS_KEY
+              value: foobarbaz
+            - name: AWS_DEFAULT_REGION
+              value: foobarbaz
+            - name: CONFIG_DEFAULTS_NAME
+              value: config-defaults
+            - name: CONFIG_LOGGING_NAME
+              value: config-logging
+            - name: CONFIG_OBSERVABILITY_NAME
+              value: config-observability
+            - name: CONFIG_ARTIFACT_BUCKET_NAME
+              value: config-artifact-bucket
+            - name: CONFIG_ARTIFACT_PVC_NAME
+              value: config-artifact-pvc
+            - name: CONFIG_FEATURE_FLAGS_NAME
+              value: feature-flags
+            - name: CONFIG_LEADERELECTION_NAME
+              value: config-leader-election
+            - name: SSL_CERT_FILE
+              value: /etc/config-registry-cert/cert
+            - name: SSL_CERT_DIR
+              value: /etc/ssl/certs
+            - name: METRICS_DOMAIN
+              value: tekton.dev/pipeline
+
+          image: {{ .Values.controller.tektonPipelinesController.image.repository }}:{{ .Values.controller.tektonPipelinesController.image.tag
+          | default .Chart.AppVersion }}@{{.Values.controller.tektonPipelinesController.image.digest}}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: probes
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+          name: tekton-pipelines-controller
+          ports:
+            - containerPort: 9090
+              name: metrics
+            - containerPort: 8008
+              name: profiling
+            - containerPort: 8080
+              name: probes
+          readinessProbe:
+            httpGet:
+              path: /readiness
+              port: probes
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - all
+            runAsGroup: 65532
+            runAsUser: 65532
+          volumeMounts:
+            - mountPath: /etc/config-logging
+              name: config-logging
+            - mountPath: /etc/config-registry-cert
+              name: config-registry-cert
+      serviceAccountName: {{ include "tekton-pipelines.fullname" . }}-controller
+      volumes:
+        - configMap:
+            name: config-logging
+          name: config-logging
+        - configMap:
+            name: config-registry-cert
+          name: config-registry-cert

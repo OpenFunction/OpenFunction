@@ -1,0 +1,14 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "openfunction.fullname" . }}-serving-cert
+  labels:
+  {{- include "openfunction.labels" . | nindent 4 }}
+spec:
+  dnsNames:
+  - '{{ include "openfunction.fullname" . }}-webhook-service.openfunction.svc'
+  - '{{ include "openfunction.fullname" . }}-webhook-service.openfunction.svc.{{ .Values.kubernetesClusterDomain }}'
+  issuerRef:
+    kind: Issuer
+    name: '{{ include "openfunction.fullname" . }}-selfsigned-issuer'
+  secretName: webhook-server-cert

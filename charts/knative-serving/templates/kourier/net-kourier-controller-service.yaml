@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: net-kourier-controller
+  labels:
+    networking.knative.dev/ingress-provider: kourier
+    serving.knative.dev/release: v1.0.1
+  {{- include "knative-serving.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.netKourierController.type }}
+  selector:
+    app: net-kourier-controller
+  {{- include "knative-serving.selectorLabels" . | nindent 4 }}
+  ports:
+ {{- .Values.netKourierController.ports | toYaml | nindent 2 -}}

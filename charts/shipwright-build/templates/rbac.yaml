@@ -1,0 +1,155 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "shipwright-build.fullname" . }}-controller
+  labels:
+  {{- include "shipwright-build.labels" . | nindent 4 }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - create
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "shipwright-build.fullname" . }}-controller
+  labels:
+  {{- include "shipwright-build.labels" . | nindent 4 }}
+rules:
+  - apiGroups:
+      - shipwright.io
+    resources:
+      - buildruns
+    verbs:
+      - get
+      - list
+      - watch
+      - update
+      - delete
+  - apiGroups:
+      - shipwright.io
+    resources:
+      - buildruns/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - shipwright.io
+    resources:
+      - buildruns/status
+    verbs:
+      - update
+  - apiGroups:
+      - shipwright.io
+    resources:
+      - builds
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - shipwright.io
+    resources:
+      - builds/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - shipwright.io
+    resources:
+      - builds/status
+    verbs:
+      - update
+  - apiGroups:
+      - shipwright.io
+    resources:
+      - buildstrategies
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - shipwright.io
+    resources:
+      - clusterbuildstrategies
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - tekton.dev
+    resources:
+      - taskruns
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - delete
+      - patch
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - serviceaccounts
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "shipwright-build.fullname" . }}-controller
+  labels:
+  {{- include "shipwright-build.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: '{{ include "shipwright-build.fullname" . }}-controller'
+subjects:
+  - kind: ServiceAccount
+    name: '{{ include "shipwright-build.fullname" . }}-controller'
+    namespace: '{{ .Release.Namespace }}'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "shipwright-build.fullname" . }}-controller
+  labels:
+  {{- include "shipwright-build.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: '{{ include "shipwright-build.fullname" . }}-controller'
+subjects:
+  - kind: ServiceAccount
+    name: '{{ include "shipwright-build.fullname" . }}-controller'
+    namespace: '{{ .Release.Namespace }}'

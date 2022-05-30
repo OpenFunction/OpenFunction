@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: feature-flags
+  labels:
+  {{- include "tekton-pipelines.labels" . | nindent 4 }}
+data:
+  disable-affinity-assistant: {{ .Values.featureFlags.disableAffinityAssistant |
+    quote }}
+  disable-creds-init: {{ .Values.featureFlags.disableCredsInit | quote }}
+  disable-home-env-overwrite: {{ .Values.featureFlags.disableHomeEnvOverwrite | quote
+    }}
+  disable-working-directory-overwrite: {{ .Values.featureFlags.disableWorkingDirectoryOverwrite
+    | quote }}
+  enable-api-fields: {{ .Values.featureFlags.enableApiFields | quote }}
+  enable-custom-tasks: {{ .Values.featureFlags.enableCustomTasks | quote }}
+  enable-tekton-oci-bundles: {{ .Values.featureFlags.enableTektonOciBundles | quote
+    }}
+  require-git-ssh-secret-known-hosts: {{ .Values.featureFlags.requireGitSshSecretKnownHosts
+    | quote }}
+  running-in-environment-with-injected-sidecars: {{ .Values.featureFlags.runningInEnvironmentWithInjectedSidecars
+    | quote }}
+  scope-when-expressions-to-task: {{ .Values.featureFlags.scopeWhenExpressionsToTask
+    | quote }}

@@ -1,0 +1,26 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: config.webhook.serving.knative.dev
+  labels:
+    serving.knative.dev/release: "v1.0.1"
+    app.kubernetes.io/name: configmap-validation-webhook
+    app.kubernetes.io/version: "1.0.1"
+    app.kubernetes.io/part-of: knative-serving
+  {{- include "knative-serving.labels" . | nindent 4 }}
+webhooks:
+  - admissionReviewVersions:
+      - v1
+      - v1beta1
+    clientConfig:
+      service:
+        name: webhook
+        namespace: '{{ .Release.Namespace }}'
+    failurePolicy: Fail
+    name: config.webhook.serving.knative.dev
+    namespaceSelector:
+      matchExpressions:
+        - key: serving.knative.dev/release
+          operator: Exists
+    sideEffects: None
+    timeoutSeconds: 10

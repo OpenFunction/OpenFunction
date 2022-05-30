@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-logging
+  labels:
+  {{- include "tekton-pipelines.labels" . | nindent 4 }}
+data:
+  loglevel.controller: {{ .Values.configLogging.loglevelController | quote }}
+  loglevel.webhook: {{ .Values.configLogging.loglevelWebhook | quote }}
+  zap-logger-config: {{ .Values.configLogging.zapLoggerConfig | quote }}

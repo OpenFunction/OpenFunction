@@ -1,0 +1,24 @@
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: webhook
+  labels:
+    app.kubernetes.io/name: webhook
+    app.kubernetes.io/part-of: knative-serving
+    app.kubernetes.io/version: 1.0.1
+    serving.knative.dev/release: v1.0.1
+  {{- include "knative-serving.labels" . | nindent 4 }}
+spec:
+  maxReplicas: 5
+  metrics:
+    - resource:
+        name: cpu
+        target:
+          averageUtilization: 100
+          type: Utilization
+      type: Resource
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: webhook

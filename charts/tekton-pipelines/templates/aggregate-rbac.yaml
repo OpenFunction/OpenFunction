@@ -1,0 +1,49 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tekton-aggregate-edit
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-admin: "true"
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+  {{- include "tekton-pipelines.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - tekton.dev
+  resources:
+  - tasks
+  - taskruns
+  - pipelines
+  - pipelineruns
+  - pipelineresources
+  - conditions
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tekton-aggregate-view
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
+  {{- include "tekton-pipelines.labels" . | nindent 4 }}
+rules:
+  - apiGroups:
+      - tekton.dev
+    resources:
+      - tasks
+      - taskruns
+      - pipelines
+      - pipelineruns
+      - pipelineresources
+      - conditions
+    verbs:
+      - get
+      - list
+      - watch

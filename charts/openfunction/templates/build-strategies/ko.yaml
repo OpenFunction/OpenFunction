@@ -1,0 +1,99 @@
+apiVersion: shipwright.io/v1alpha1
+kind: ClusterBuildStrategy
+metadata:
+  name: ko
+  labels:
+  {{- include "openfunction.labels" . | nindent 4 }}
+spec:
+  buildSteps:
+    - args:
+        - -R
+        - 1000:1000
+        - /tekton/home
+      command:
+        - chown
+      image: $(params.BUILDER_IMAGE)
+      imagePullPolicy: Always
+      name: prepare
+      resources:
+        limits:
+          cpu: 100m
+          memory: 128Mi
+        requests:
+          cpu: 100m
+          memory: 128Mi
+      securityContext:
+        capabilities:
+          add:
+            - CHOWN
+        runAsUser: 0
+    - args:
+        - -c
+        - "set -euo pipefail\n\n# Parse image URL to extract repository and tag, must
+      work with\n# - a URL without a tag and a port: registry/image\n# - a URL without
+      a tag but a port: registry:port/image\n# - a URL with a tag but without a port:
+      registry/image:tag\n# - a URL with both a tag and a port: registry:port/image:tag\n\nIMAGE=$(params.shp-output-image)\n\nREPO=\nTAG=\n\nIFS=':'
+      read -ra PARTS <<< \"${IMAGE}\"\nfor PART in \"${PARTS[@]}\"; do\n  if [ \"${REPO}\"
+      == \"\" ]; then\n    REPO=\"${PART}\"\n\telif [[ \"${PART}\" == *\"/\"* ]];
+      then\n    REPO=\"${REPO}:${PART}\"\n  elif [ \"${TAG}\" == \"\" ]; then\n    TAG=\"${PART}\"\n
+      \ else\n    REPO=\"${REPO}:${TAG}\"\n    TAG=\"${PART}\"\n  fi\ndone\n\n# Determine
+      the ko version\nKO_VERSION='$(params.ko-version)'\nif [ \"${KO_VERSION}\" ==
+      \"latest\" ]; then\n  KO_VERSION=$(curl --silent \"https://api.github.com/repos/google/ko/releases/latest\"
+      | grep '\"tag_name\":' | sed -E 's/.*\"([^\"]+)\".*/\\1/')\nfi\n\n# Create one
+      variable with v-suffix and one without as we need both for the download URL\nif
+      [[ ${KO_VERSION} = v* ]]; then\n  KO_VERSION_WITH_V=${KO_VERSION}\n  KO_VERSION_WITHOUT_V=${KO_VERSION:1}\nelse\n
+      \ KO_VERSION_WITH_V=v${KO_VERSION}\n  KO_VERSION_WITHOUT_V=${KO_VERSION}\nfi\n\n#
+      Download ko to the temp directory\ncurl -f -s -L \"https://github.com/google/ko/releases/download/${KO_VERSION_WITH_V}/ko_${KO_VERSION_WITHOUT_V}_$(uname)_$(uname
+      -m | sed 's/aarch64/arm64/').tar.gz\" | tar xzf - -C /tmp ko\n\n# Determine
+      the platform\nPLATFORM='$(params.target-platform)'\nif [ \"${PLATFORM}\" ==
+      \"current\" ]; then\n  PLATFORM=\"$(uname | tr '[:upper:]' '[:lower:]')/$(uname
+      -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/')\"\nfi\n\n# Print version
+      information\ngo version\necho \"ko version $(/tmp/ko version)\"\n\n# Run ko\n\nexport
+      GOROOT=$(go env GOROOT)\nexport KO_DOCKER_REPO=\"${REPO}\"\n\npushd '$(params.shp-source-context)'
+      > /dev/null\n  if [ \"${TAG}\" == \"\" ]; then\n    /tmp/ko publish '$(params.package-directory)'
+      --bare --oci-layout-path=/tmp/layout --platform=\"${PLATFORM}\"\n  else\n    /tmp/ko
+      publish '$(params.package-directory)' --bare --oci-layout-path=/tmp/layout --platform=\"${PLATFORM}\"
+      --tags=\"${TAG}\"\n  fi\npopd > /dev/null\n\n# Store the image digest\ngrep
+      digest /tmp/layout/index.json | sed -E 's/.*sha256([^\"]*).*/sha256\\1/' | tr
+      -d '\\n' > '$(results.shp-image-digest.path)'\n\n# Store the image size\ndu
+      -b -c /tmp/layout/blobs/sha256/* | tail -1 | sed 's/\\s*total//' | tr -d '\\n'
+      > '$(results.shp-image-size.path)'\n"
+      command:
+        - /bin/bash
+      env:
+        - name: DOCKER_CONFIG
+          value: /tekton/home/.docker
+        - name: HOME
+          value: /tekton/home
+        - name: GOFLAGS
+          value: $(params.go-flags)
+      image: $(params.BUILDER_IMAGE)
+      imagePullPolicy: Always
+      name: build-and-push
+      resources:
+        limits:
+          cpu: 500m
+          memory: 1Gi
+        requests:
+          cpu: 250m
+          memory: 65Mi
+      securityContext:
+        runAsGroup: 1000
+        runAsUser: 1000
+      workingDir: $(params.shp-source-root)
+  parameters:
+    - default: ""
+      description: Value for the GOFLAGS environment variable.
+      name: go-flags
+    - default: latest
+      description: Version of ko, must be either 'latest', or a release name from https://github.com/google/ko/releases
+      name: ko-version
+    - default: .
+      description: The directory inside the context directory containing the main package.
+      name: package-directory
+    - default: current
+      description: 'Target platform to be built. For example: ''linux/arm64''. Multiple
+      platforms can be provided separated by comma, for example: ''linux/arm64,linux/amd64''.
+      The value ''all'' will build all platforms supported by the base image. The
+      value ''current'' will build the platform on which the build runs.'
+      name: target-platform

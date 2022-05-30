@@ -1,0 +1,15 @@
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: activator-pdb
+  labels:
+    app.kubernetes.io/name: activator
+    app.kubernetes.io/part-of: knative-serving
+    app.kubernetes.io/version: 1.0.1
+    serving.knative.dev/release: v1.0.1
+  {{- include "knative-serving.labels" . | nindent 4 }}
+spec:
+  minAvailable: 80%
+  selector:
+    matchLabels:
+      app: activator

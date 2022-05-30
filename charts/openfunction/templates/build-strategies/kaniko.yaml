@@ -1,0 +1,75 @@
+apiVersion: shipwright.io/v1alpha1
+kind: ClusterBuildStrategy
+metadata:
+  name: kaniko
+  labels:
+  {{- include "openfunction.labels" . | nindent 4 }}
+spec:
+  buildSteps:
+    - args:
+        - --skip-tls-verify=true
+        - --dockerfile=$(build.dockerfile)
+        - --context=$(params.shp-source-context)
+        - --destination=$(params.shp-output-image)
+        - --oci-layout-path=/kaniko/oci-image-layout
+        - --snapshotMode=redo
+        - --push-retry=3
+      command:
+        - /kaniko/executor
+      env:
+        - name: HOME
+          value: /tekton/home
+        - name: DOCKER_CONFIG
+          value: /tekton/home/.docker
+        - name: AWS_ACCESS_KEY_ID
+          value: NOT_SET
+        - name: AWS_SECRET_KEY
+          value: NOT_SET
+      image: $(params.BUILDER_IMAGE)
+      name: build-and-push
+      resources:
+        limits:
+          cpu: 1
+          memory: 1Gi
+        requests:
+          cpu: 250m
+          memory: 65Mi
+      securityContext:
+        capabilities:
+          add:
+            - CHOWN
+            - DAC_OVERRIDE
+            - FOWNER
+            - SETGID
+            - SETUID
+            - SETFCAP
+            - KILL
+        runAsUser: 0
+      volumeMounts:
+        - mountPath: /kaniko/oci-image-layout
+          name: layout
+      workingDir: $(params.shp-source-root)
+    - args:
+        - -c
+        - |
+          set -euo pipefail
+
+          # Store the image digest
+          grep digest /kaniko/oci-image-layout/index.json | sed -E 's/.*sha256([^"]*).*/sha256\1/' | tr -d '\n' > "$(results.shp-image-digest.path)"
+
+          # Store the image size
+          du -b -c /kaniko/oci-image-layout/blobs/sha256/* | tail -1 | sed 's/\s*total//' | tr -d '\n' > "$(results.shp-image-size.path)"
+      command:
+        - /bin/bash
+      image: golang:latest
+      name: results
+      resources:
+        limits:
+          cpu: 100m
+          memory: 128Mi
+        requests:
+          cpu: 100m
+          memory: 128Mi
+      volumeMounts:
+        - mountPath: /kaniko/oci-image-layout
+          name: layout

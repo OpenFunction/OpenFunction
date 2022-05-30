@@ -1,0 +1,31 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: validation.webhook.domainmapping.serving.knative.dev
+  labels:
+  {{- include "knative-serving.labels" . | nindent 4 }}
+webhooks:
+  - admissionReviewVersions:
+      - v1
+      - v1beta1
+    clientConfig:
+      service:
+        name: 'domainmapping-webhook'
+        namespace: '{{ .Release.Namespace }}'
+    failurePolicy: Fail
+    name: validation.webhook.domainmapping.serving.knative.dev
+    rules:
+      - apiGroups:
+          - serving.knative.dev
+        apiVersions:
+          - v1alpha1
+          - v1beta1
+        operations:
+          - CREATE
+          - UPDATE
+          - DELETE
+        resources:
+          - domainmappings
+        scope: '*'
+    sideEffects: None
+    timeoutSeconds: 10

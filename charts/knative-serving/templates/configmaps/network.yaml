@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-network
+  labels:
+    serving.knative.dev/release: v1.0.1
+  {{- include "knative-serving.labels" . | nindent 4 }}
+  annotations:
+    knative.dev/example-checksum: 6e2033e0
+data:
+  ingress-class: "kourier.ingress.networking.knative.dev"
+  _example: {{ .Values.configNetwork.Example | quote }}

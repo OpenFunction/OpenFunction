@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: autoscaler
+  labels:
+    app.kubernetes.io/name: autoscaler
+    app.kubernetes.io/part-of: knative-serving
+    app.kubernetes.io/version: 1.0.1
+    serving.knative.dev/release: v1.0.1
+  {{- include "knative-serving.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.autoscaler.replicas }}
+  selector:
+    matchLabels:
+      app: autoscaler
+    {{- include "knative-serving.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app: autoscaler
+        app.kubernetes.io/name: autoscaler
+        app.kubernetes.io/part-of: knative-serving
+        app.kubernetes.io/version: 1.0.1
+        serving.knative.dev/release: v1.0.1
+      {{- include "knative-serving.selectorLabels" . | nindent 8 }}
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "false"
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: autoscaler
+                topologyKey: kubernetes.io/hostname
+              weight: 100
+      containers:
+        - env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: SYSTEM_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: CONFIG_LOGGING_NAME
+              value: config-logging
+            - name: CONFIG_OBSERVABILITY_NAME
+              value: config-observability
+            - name: METRICS_DOMAIN
+              value: knative.dev/serving
+          image: {{ .Values.autoscaler.autoscaler.image.repository }}@{{ .Values.autoscaler.autoscaler.image.digest }}
+          livenessProbe:
+            failureThreshold: 6
+            httpGet:
+              httpHeaders:
+                - name: k-kubelet-probe
+                  value: autoscaler
+              port: 8080
+          name: autoscaler
+          ports:
+            - containerPort: 9090
+              name: metrics
+            - containerPort: 8008
+              name: profiling
+            - containerPort: 8080
+              name: websocket
+          readinessProbe:
+            httpGet:
+              httpHeaders:
+                - name: k-kubelet-probe
+                  value: autoscaler
+              port: 8080
+          resources: {{- toYaml .Values.autoscaler.autoscaler.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - all
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+      serviceAccountName: controller

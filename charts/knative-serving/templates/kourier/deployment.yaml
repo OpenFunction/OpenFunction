@@ -1,0 +1,129 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: net-kourier-controller
+  labels:
+    networking.knative.dev/ingress-provider: kourier
+    serving.knative.dev/release: v1.0.1
+  {{- include "knative-serving.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.netKourierController.replicas }}
+  selector:
+    matchLabels:
+      app: net-kourier-controller
+    {{- include "knative-serving.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app: net-kourier-controller
+      {{- include "knative-serving.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - env:
+            - name: CERTS_SECRET_NAMESPACE
+            - name: CERTS_SECRET_NAME
+            - name: SYSTEM_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: METRICS_DOMAIN
+              value: knative.dev/samples
+            - name: KOURIER_GATEWAY_NAMESPACE
+              value: kourier-system
+          image: {{ .Values.netKourierController.controller.image.repository }}@{{ .Values.netKourierController.controller.image.digest }}
+          name: controller
+          ports:
+            - containerPort: 18000
+              name: http2-xds
+              protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+                - /ko-app/kourier
+                - -probe-addr=:18000
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - all
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+      restartPolicy: Always
+      serviceAccountName: net-kourier
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: 3scale-kourier-gateway
+  namespace: kourier-system
+  labels:
+    networking.knative.dev/ingress-provider: kourier
+    serving.knative.dev/release: v1.0.1
+  {{- include "knative-serving.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: 3scale-kourier-gateway
+    {{- include "knative-serving.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app: 3scale-kourier-gateway
+      {{- include "knative-serving.selectorLabels" . | nindent 8 }}
+      annotations:
+        networking.knative.dev/poke: v0.26
+    spec:
+      containers:
+        - args:
+            - --base-id 1
+            - -c /tmp/config/envoy-bootstrap.yaml
+            - --log-level info
+          command:
+            - /usr/local/bin/envoy
+          image: {{ .Values.ScaleKourierGateway.kourierGateway.image.repository }}:{{ .Values.ScaleKourierGateway.kourierGateway.image.tag }}
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - /bin/sh
+                  - -c
+                  - curl -X POST --unix /tmp/envoy.admin http://localhost/healthcheck/fail;
+                    sleep 15
+          name: kourier-gateway
+          ports:
+            - containerPort: 8080
+              name: http2-external
+              protocol: TCP
+            - containerPort: 8081
+              name: http2-internal
+              protocol: TCP
+            - containerPort: 8443
+              name: https-external
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              httpHeaders:
+                - name: Host
+                  value: internalkourier
+              path: /ready
+              port: 8081
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - all
+            readOnlyRootFilesystem: false
+            runAsNonRoot: false
+          volumeMounts:
+            - mountPath: /tmp/config
+              name: config-volume
+      restartPolicy: Always
+      volumes:
+        - configMap:
+            name: kourier-bootstrap
+          name: config-volume

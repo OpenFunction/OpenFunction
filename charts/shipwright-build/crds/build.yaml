@@ -1,0 +1,345 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: builds.shipwright.io
+spec:
+  group: shipwright.io
+  names:
+    kind: Build
+    listKind: BuildList
+    plural: builds
+    singular: build
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - description: The register status of the Build
+          jsonPath: .status.registered
+          name: Registered
+          type: string
+        - description: The reason of the registered Build, either an error or succeed message
+          jsonPath: .status.reason
+          name: Reason
+          type: string
+        - description: The BuildStrategy type which is used for this Build
+          jsonPath: .spec.strategy.kind
+          name: BuildStrategyKind
+          type: string
+        - description: The BuildStrategy name which is used for this Build
+          jsonPath: .spec.strategy.name
+          name: BuildStrategyName
+          type: string
+        - description: The create time of this Build
+          jsonPath: .metadata.creationTimestamp
+          name: CreationTime
+          type: date
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: Build is the Schema representing a Build definition
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: BuildSpec defines the desired state of Build
+              properties:
+                builder:
+                  description: Builder refers to the image containing the build tools
+                    inside which the source code would be built.
+                  properties:
+                    annotations:
+                      additionalProperties:
+                        type: string
+                      description: Annotations references the additional annotations to
+                        be applied on the image
+                      type: object
+                    credentials:
+                      description: Credentials references a Secret that contains credentials
+                        to access the image registry.
+                      properties:
+                        name:
+                          description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                          type: string
+                      type: object
+                    image:
+                      description: Image is the reference of the image.
+                      type: string
+                    labels:
+                      additionalProperties:
+                        type: string
+                      description: Labels references the additional labels to be applied
+                        on the image
+                      type: object
+                  required:
+                    - image
+                  type: object
+                dockerfile:
+                  description: Dockerfile is the path to the Dockerfile to be used for
+                    build strategies which bank on the Dockerfile for building an image.
+                  type: string
+                env:
+                  description: Env contains additional environment variables that should
+                    be passed to the build container
+                  items:
+                    description: EnvVar represents an environment variable present in
+                      a Container.
+                    properties:
+                      name:
+                        description: Name of the environment variable. Must be a C_IDENTIFIER.
+                        type: string
+                      value:
+                        description: 'Variable references $(VAR_NAME) are expanded using
+                        the previous defined environment variables in the container
+                        and any service environment variables. If a variable cannot
+                        be resolved, the reference in the input string will be unchanged.
+                        The $(VAR_NAME) syntax can be escaped with a double $$, ie:
+                        $$(VAR_NAME). Escaped references will never be expanded, regardless
+                        of whether the variable exists or not. Defaults to "".'
+                        type: string
+                      valueFrom:
+                        description: Source for the environment variable's value. Cannot
+                          be used if value is not empty.
+                        properties:
+                          configMapKeyRef:
+                            description: Selects a key of a ConfigMap.
+                            properties:
+                              key:
+                                description: The key to select.
+                                type: string
+                              name:
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                TODO: Add other useful fields. apiVersion, kind, uid?'
+                                type: string
+                              optional:
+                                description: Specify whether the ConfigMap or its key
+                                  must be defined
+                                type: boolean
+                            required:
+                              - key
+                            type: object
+                          fieldRef:
+                            description: 'Selects a field of the pod: supports metadata.name,
+                            metadata.namespace, `metadata.labels[''<KEY>'']`, `metadata.annotations[''<KEY>'']`,
+                            spec.nodeName, spec.serviceAccountName, status.hostIP, status.podIP,
+                            status.podIPs.'
+                            properties:
+                              apiVersion:
+                                description: Version of the schema the FieldPath is written
+                                  in terms of, defaults to "v1".
+                                type: string
+                              fieldPath:
+                                description: Path of the field to select in the specified
+                                  API version.
+                                type: string
+                            required:
+                              - fieldPath
+                            type: object
+                          resourceFieldRef:
+                            description: 'Selects a resource of the container: only resources
+                            limits and requests (limits.cpu, limits.memory, limits.ephemeral-storage,
+                            requests.cpu, requests.memory and requests.ephemeral-storage)
+                            are currently supported.'
+                            properties:
+                              containerName:
+                                description: 'Container name: required for volumes, optional
+                                for env vars'
+                                type: string
+                              divisor:
+                                anyOf:
+                                  - type: integer
+                                  - type: string
+                                description: Specifies the output format of the exposed
+                                  resources, defaults to "1"
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                              resource:
+                                description: 'Required: resource to select'
+                                type: string
+                            required:
+                              - resource
+                            type: object
+                          secretKeyRef:
+                            description: Selects a key of a secret in the pod's namespace
+                            properties:
+                              key:
+                                description: The key of the secret to select from.  Must
+                                  be a valid secret key.
+                                type: string
+                              name:
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                TODO: Add other useful fields. apiVersion, kind, uid?'
+                                type: string
+                              optional:
+                                description: Specify whether the Secret or its key must
+                                  be defined
+                                type: boolean
+                            required:
+                              - key
+                            type: object
+                        type: object
+                    required:
+                      - name
+                    type: object
+                  type: array
+                output:
+                  description: Output refers to the location where the built image would
+                    be pushed.
+                  properties:
+                    annotations:
+                      additionalProperties:
+                        type: string
+                      description: Annotations references the additional annotations to
+                        be applied on the image
+                      type: object
+                    credentials:
+                      description: Credentials references a Secret that contains credentials
+                        to access the image registry.
+                      properties:
+                        name:
+                          description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                          type: string
+                      type: object
+                    image:
+                      description: Image is the reference of the image.
+                      type: string
+                    labels:
+                      additionalProperties:
+                        type: string
+                      description: Labels references the additional labels to be applied
+                        on the image
+                      type: object
+                  required:
+                    - image
+                  x-kubernetes-preserve-unknown-fields: true
+                paramValues:
+                  description: Params is a list of key/value that could be used to set
+                    strategy parameters
+                  items:
+                    description: ParamValue is a key/value that populates a strategy parameter
+                      used in the execution of the strategy steps
+                    properties:
+                      name:
+                        type: string
+                      value:
+                        type: string
+                    required:
+                      - name
+                      - value
+                    type: object
+                  type: array
+                source:
+                  description: Source refers to the Git repository containing the source
+                    code to be built.
+                  properties:
+                    bundleContainer:
+                      description: BundleContainer
+                      properties:
+                        image:
+                          description: Image reference, i.e. quay.io/org/image:tag
+                          type: string
+                      required:
+                        - image
+                      x-kubernetes-preserve-unknown-fields: true
+                    contextDir:
+                      description: ContextDir is a path to subfolder in the repo. Optional.
+                      type: string
+                    credentials:
+                      description: Credentials references a Secret that contains credentials
+                        to access the repository.
+                      properties:
+                        name:
+                          description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                          type: string
+                      type: object
+                    revision:
+                      description: "Revision describes the Git revision (e.g., branch,
+                      tag, commit SHA, etc.) to fetch. \n If not defined, it will fallback
+                      to the repository's default branch."
+                      type: string
+                    url:
+                      description: URL describes the URL of the Git repository.
+                      type: string
+                  x-kubernetes-preserve-unknown-fields: true
+                sources:
+                  description: Sources slice of BuildSource, defining external build artifacts
+                    complementary to VCS (`.spec.source`) data.
+                  items:
+                    description: BuildSource remote artifact definition, also known as
+                      "sources". Simple "name" and "url" pairs, initially without "credentials"
+                      (authentication) support yet.
+                    properties:
+                      name:
+                        description: Name instance entry.
+                        type: string
+                      url:
+                        description: URL remote artifact location.
+                        type: string
+                    required:
+                      - name
+                      - url
+                    type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                strategy:
+                  description: Strategy references the BuildStrategy to use to build the
+                    container image.
+                  properties:
+                    apiVersion:
+                      description: API version of the referent
+                      type: string
+                    kind:
+                      description: BuildStrategyKind indicates the kind of the buildstrategy,
+                        namespaced or cluster scoped.
+                      type: string
+                    name:
+                      description: 'Name of the referent; More info: http://kubernetes.io/docs/user-guide/identifiers#names'
+                      type: string
+                  required:
+                    - name
+                  type: object
+                timeout:
+                  description: Timeout defines the maximum amount of time the Build should
+                    take to execute.
+                  format: duration
+                  type: string
+              required:
+                - output
+                - source
+                - strategy
+              type: object
+            status:
+              description: BuildStatus defines the observed state of Build
+              properties:
+                message:
+                  description: The message of the registered Build, either an error or
+                    succeed message
+                  type: string
+                reason:
+                  description: The reason of the registered Build, it's an one-word camelcase
+                  type: string
+                registered:
+                  description: The Register status of the Build
+                  type: string
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
