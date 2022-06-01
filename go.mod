@@ -12,7 +12,7 @@ require (
 	github.com/onsi/gomega v1.15.0
 	github.com/shipwright-io/build v0.6.0
 	go.uber.org/zap v1.19.0
-	gopkg.in/yaml.v2 v2.4.0
+	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.21.4
 	k8s.io/apimachinery v0.21.4
 	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
