@@ -18,7 +18,7 @@ spec:
       FUNC_CLEAR_SOURCE: "true"
     srcRepo:
       url: "https://github.com/OpenFunction/samples.git"
-      sourceSubPath: "functions/Knative/hello-world-go"
+      sourceSubPath: "functions/knative/hello-world-go"
   serving:
     timeout: 5m
     runtime: knative
