@@ -23,11 +23,16 @@
 
 OpenFunction features include:
 
-- Converting business-related function source code to application source code.
-- Generating ready-to-run container images from the converted application source code.
-- Deploying generated container images to any underlying runtime environments such as Kubernetes, and automatically scaling up and down from 0 to N according to business traffic.
-- Providing event management functions for trigger functions.
-- Providing additional functions for function version management, ingress management, etc.
+- Cloud agnostic and decoupled with cloud providers' BaaS
+- Pluggable architecture that allows multiple function runtimes
+- Support both sync and async functions
+- Unique async functions support that can consume events directly from event sources
+- Support generating OCI-Compliant container images directly from function source code.
+- Flexible autoscaling between 0 and N
+- Advanced async function autoscaling based on event sources' specific metrics
+- Simplified BaaS integration for both sync and async functions by introducing [Dapr](https://dapr.io/) 
+- Advanced function ingress & traffic management powered by [K8s Gateway API](https://gateway-api.sigs.k8s.io/) (In Progress)
+- Flexible and easy-to-use events management framework
 
 ## ☸ Architecture
 
@@ -37,7 +42,7 @@ OpenFunction manages resources in the form of Custom Resource Definitions (CRD) 
 
 <div align=center><img src=docs/images/OpenFunction-events-architecture.svg></div>
 
-OpenFunction Events is OpenFunction's events framework, you can refer to [OpenFunction Events](https://github.com/OpenFunction/OpenFunction/blob/main/docs/concepts/OpenFunction-events-framework.md) for more infomation.
+OpenFunction Events is OpenFunction's events framework, you can refer to [OpenFunction Events](https://github.com/OpenFunction/OpenFunction/blob/main/docs/concepts/OpenFunction-events-framework.md) for more information.
 ## ✔️ Compatibility
 
 ### Kubernetes compatibility matrix
@@ -111,7 +116,7 @@ func HelloWorld(w http.ResponseWriter, r *http.Request) {
 curl http://<domain-name>.<domain-namespace>/<function-namespace>/<function-name>
 ```
 
-Here is an example of asynchronous function:
+Here is an example of an async function:
 
 > This function receives a greeting message and then send it to "another-target". Refer to [here](https://github.com/OpenFunction/samples/tree/main/functions/Async) to find more samples of asynchronous functions.
 
