@@ -45,7 +45,6 @@ import (
 const (
 	knativeService           = "serving.knative.dev/service"
 	componentName            = "Knative/component"
-	knativeAutoscalingPrefix = "autoscaling.knative.dev"
 )
 
 type servingRun struct {
@@ -234,14 +233,19 @@ func (r *servingRun) createService(s *openfunction.Serving, cm map[string]string
 	labels = util.AppendLabels(s.Spec.Labels, labels)
 
 	// Handle the scale options, which have the following priority relationship:
-	// Annotations["autoscaling.knative.dev/max-scale" ("autoscaling.knative.dev/min-scale")] >
-	// ScaleOptions.Knative["max-scale" ("min-scale")] >
+	// ScaleOptions.Knative["autoscaling.knative.dev/max-scale" ("autoscaling.knative.dev/min-scale")] >
 	// ScaleOptions.maxScale (minScale) >
+	// Annotations["autoscaling.knative.dev/max-scale" ("autoscaling.knative.dev/min-scale")] >
 	// And in Knative Serving v1.1, the scale bounds' name were changed from "maxScale" ("minScale") to "max-scale" ("min-scale"),
 	// we need to support both of these layouts.
 	if s.Spec.ScaleOptions != nil {
 		maxScale := ""
 		minScale := ""
+
+		if s.Spec.Annotations == nil {
+			s.Spec.Annotations = map[string]string{}
+		}
+
 		if s.Spec.ScaleOptions.MaxReplicas != nil {
 			maxScale = strconv.Itoa(int(*s.Spec.ScaleOptions.MaxReplicas))
 		}
@@ -251,31 +255,22 @@ func (r *servingRun) createService(s *openfunction.Serving, cm map[string]string
 		if s.Spec.ScaleOptions.Knative != nil {
 			for k, v := range *s.Spec.ScaleOptions.Knative {
 				switch k {
-				case "max-scale", "maxScale":
+				case "autoscaling.knative.dev/max-scale", "autoscaling.knative.dev/maxScale":
 					maxScale = v
-				case "min-scale", "minScale":
+				case "autoscaling.knative.dev/min-scale", "autoscaling.knative.dev/minScale":
 					minScale = v
-				}
-				if _, exist := s.Spec.Annotations[fmt.Sprintf("%s/%s", knativeAutoscalingPrefix, k)]; !exist {
-					s.Spec.Annotations[k] = v
 				}
 			}
 		}
-		maxScaleAnnotationOld := fmt.Sprintf("%s/%s", knativeAutoscalingPrefix, "maxScale")
-		maxScaleAnnotation := fmt.Sprintf("%s/%s", knativeAutoscalingPrefix, "max-scale")
-		minScaleAnnotationOld := fmt.Sprintf("%s/%s", knativeAutoscalingPrefix, "minScale")
-		minScaleAnnotation := fmt.Sprintf("%s/%s", knativeAutoscalingPrefix, "min-scale")
 
-		if s.Spec.Annotations == nil {
-			s.Spec.Annotations = map[string]string{}
+		if maxScale != "" {
+			s.Spec.Annotations["autoscaling.knative.dev/maxScale"] = maxScale
+			s.Spec.Annotations["autoscaling.knative.dev/max-scale"] = maxScale
 		}
-		if _, exist := s.Spec.Annotations[maxScaleAnnotation]; !exist && maxScale != "" {
-			s.Spec.Annotations[maxScaleAnnotationOld] = maxScale
-			s.Spec.Annotations[maxScaleAnnotation] = maxScale
-		}
-		if _, exist := s.Spec.Annotations[minScaleAnnotation]; !exist && minScale != "" {
-			s.Spec.Annotations[minScaleAnnotationOld] = minScale
-			s.Spec.Annotations[minScaleAnnotation] = minScale
+
+		if minScale != "" {
+			s.Spec.Annotations["autoscaling.knative.dev/minScale"] = minScale
+			s.Spec.Annotations["autoscaling.knative.dev/min-scale"] = minScale
 		}
 	}
 
