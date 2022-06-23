@@ -181,7 +181,7 @@ For more information about how to use the `ofn uninstall` command, refer to [ofn
 
 ### FAQ
 
-When you encounter any problems when using OpenFunction, you can refer to the [FAQ](docs/faq/README.md) for help.
+When you encounter any problems when using OpenFunction, you can refer to the [FAQ](https://openfunction.dev/docs/reference/faq/) for help.
 
 ## 💻 Development
 
@@ -189,7 +189,7 @@ See the [Development Guide](docs/development/README.md) to get started with deve
 
 ## 🛣️ Roadmap
 
-Learn more about OpenFunction [roadmap](docs/roadmap.md).
+Learn more about OpenFunction [roadmap](https://github.com/orgs/OpenFunction/projects/3/views/1?layout=board).
 
 ## 🏘️ Community
 
