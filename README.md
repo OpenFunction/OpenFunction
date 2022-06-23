@@ -64,30 +64,7 @@ The following Kubernetes versions are supported as we tested against these versi
 ## 🚀 QuickStart
 
 ### Install OpenFunction
-
-Visit [ofn releases page](https://github.com/OpenFunction/cli/releases) to download the latest version of `ofn`, the CLI of OpenFunction, to install OpenFunction and its dependencies on your Kubernetes cluster.
-
-Besides, you can perform the following steps to install the latest version of OpenFunction.
-
-1. Run the following command to download `ofn`.
-
-   ```
-   wget -c  https://github.com/OpenFunction/cli/releases/latest/download/ofn_linux_amd64.tar.gz -O - | tar -xz
-   ```
-
-2. Run the following commands to make `ofn` executable and move it to `/usr/local/bin/`.
-
-   ```
-   chmod +x ofn && mv ofn /usr/local/bin/
-   ```
-
-3. Run the following command to install OpenFunction.
-
-   ```
-   ofn install --all
-   ```
-
-You can refer to [ofn install document](https://github.com/OpenFunction/cli/blob/main/docs/install.md) for more information about the `ofn install` command.
+To install OpenFunction, please refer to [Installation Guide](https://openfunction.dev/docs/getting-started/installation/#install-openfunction).
 
 ### Run a function sample
 
@@ -171,13 +148,7 @@ For more information about how to use the `ofn demo` command, refer to [ofn demo
 
 ### Uninstall OpenFunction
 
-Run the following command to uninstall OpenFunction and its dependencies.
-
-```shell
-ofn uninstall --all
-```
-
-For more information about how to use the `ofn uninstall` command, refer to [ofn uninstall document](https://github.com/OpenFunction/cli/blob/main/docs/uninstall.md).
+To uninstall OpenFunction, please refer to [Uninstallation Guide](https://openfunction.dev/docs/getting-started/installation/#uninstall-openfunction).
 
 ### FAQ
 
