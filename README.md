@@ -85,28 +85,15 @@ See the [Development Guide](docs/development/README.md) to get started with deve
 
 ## 🛣️ Roadmap
 
-Learn more about OpenFunction [roadmap](https://github.com/orgs/OpenFunction/projects/3/views/1?layout=board).
+Here you can find OpenFunction [roadmap](https://github.com/orgs/OpenFunction/projects/3/views/1?layout=board).
 
 ## 🏘️ Community
 
-### Community Call and Events
+### [Contact Us](https://github.com/OpenFunction/community#contact-us)
 
-Meeting time：15:00-16:00(GMT+08:00), Thursday every two weeks starting from March 17th, 2022
+### [Community Call](https://github.com/OpenFunction/community#community-call)
 
-Meeting room: [Tencent Meeting](https://meeting.tencent.com/dm/HMec1CjT8F2i)
-
-Tencent Meeting Number: 443-6181-3052
-
-Check out the [meeting calendar](https://kubesphere.io/contribution/) and [meeting notes](https://docs.google.com/document/d/1bh5-kVPegjNlIjjq_e37mS3ZhyXWhmmUaysFgeI9_-o/edit?usp=sharing).
-
-OpenFunction team has presented OpenFunction project in some community events including [CNCF TAG-runtime meeting](https://youtu.be/qDH_LbagrVA?t=821), [Dapr community meeting](https://youtu.be/S9e3ol7JCDA?t=183), and [OpenFunction community call](https://space.bilibili.com/438908638/channel/seriesdetail?sid=495452). You can watch the recording videos and ask us anything.
-### Contact Us
-
-OpenFunction is sponsored and open-sourced by the [KubeSphere](http://kubesphere.io/) Team and maintained by the OpenFunction community.
-
-- Discord: https://discord.gg/hG3yc6uAyC
-- Slack: Create an account at [#CNCF Slack](https://slack.cncf.io/) and then search `#openfunction` to join or click [#openfunction](https://cloud-native.slack.com/archives/C03ETDMD3LZ) to join if you already have an [#CNCF Slack](https://slack.cncf.io/) account.
-- Wechat: join the OpenFunction user group by following the `kubesphere` WeChat subscription and then reply `openfunction`
+### [Events](https://github.com/OpenFunction/community#events)
 
 ## Landscape
  
