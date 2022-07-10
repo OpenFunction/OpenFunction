@@ -43,23 +43,6 @@ OpenFunction manages resources in the form of Custom Resource Definitions (CRD) 
 <div align=center><img src=docs/images/OpenFunction-events-architecture.svg></div>
 
 OpenFunction Events is OpenFunction's events framework, you can refer to [OpenFunction Events](https://github.com/OpenFunction/OpenFunction/blob/main/docs/concepts/OpenFunction-events-framework.md) for more information.
-## ✔️ Compatibility
-
-### Kubernetes compatibility matrix
-
-The following Kubernetes versions are supported as we tested against these versions in their respective branches. Besides, OpenFunction might also work well with other Kubernetes versions!
-
-| OpenFunction                                                 | Kubernetes 1.17 | Kubernetes 1.18 | Kubernetes 1.19 | Kubernetes 1.20+ |
-| ------------------------------------------------------------ | --------------- | --------------- | --------------- | ---------------- |
-| [`release-0.4`](https://github.com/OpenFunction/OpenFunction/tree/v0.4.0) | &radic;         | &radic;         | &radic;         | &radic;          |
-| [`release-0.5`](https://github.com/OpenFunction/OpenFunction/tree/v0.5.0) | &radic; *         | &radic; *         | &radic;         | &radic;          |
-| [`release-0.6`](https://github.com/OpenFunction/OpenFunction/tree/v0.6.0) | &radic; *         | &radic; *         | &radic;         | &radic;          |
-| [`HEAD`](https://github.com/OpenFunction/OpenFunction/tree/main) | &radic; *         | &radic; *         | &radic;         | &radic;          |
-
-\****Note***: OpenFunction has added the [function ingress](docs/concepts/Components.md#domain) feature in *release-0.5*, which means that:
-
-- You have to install OpenFunction in Kuberenetes ***v1.19*** or later if you enable this feature.
-- You can still use OpenFunction in Kubernetes ***v1.17—v1.20+*** without this feature enabled.
 
 ## 🚀 QuickStart
 
