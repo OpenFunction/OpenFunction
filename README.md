@@ -64,87 +64,12 @@ The following Kubernetes versions are supported as we tested against these versi
 ## 🚀 QuickStart
 
 ### Install OpenFunction
+
 To install OpenFunction, please refer to [Installation Guide](https://openfunction.dev/docs/getting-started/installation/#install-openfunction).
 
-### Run a function sample
+### Create functions
 
-After you install OpenFunction, refer to [OpenFunction samples](https://github.com/OpenFunction/samples) to learn more about function samples.
-
-Here is an example of a synchronous function:
-
-> This function writes "Hello, World!" to the HTTP response. Refer to [here](https://github.com/OpenFunction/samples/tree/main/functions/Knative) to find more samples of synchronous functions.
-
-```go
-package hello
-
-import (
-	"fmt"
-	"net/http"
-)
-
-func HelloWorld(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hello, %s!\n", r.URL.Path[1:])
-}
-```
-
-[Function ingress](docs/concepts/Components.md#domain) defines a unified entry point for a synchronous function. You can use it as in below format to access a synchronous function without [configuring LB for Knative](https://github.com/OpenFunction/samples/tree/main/functions/Knative/hello-world-go).
-
-```bash
-curl http://<domain-name>.<domain-namespace>/<function-namespace>/<function-name>
-```
-
-Here is an example of an async function:
-
-> This function receives a greeting message and then send it to "another-target". Refer to [here](https://github.com/OpenFunction/samples/tree/main/functions/Async) to find more samples of asynchronous functions.
-
-```go
-package bindings
-
-import (
-	"encoding/json"
-	"log"
-
-	ofctx "github.com/OpenFunction/functions-framework-go/context"
-)
-
-func BindingsOutput(ctx ofctx.Context, in []byte) (ofctx.Out, error) {
-	var greeting []byte
-	if in != nil {
-		greeting = in
-	} else {
-		greeting, _ = json.Marshal(map[string]string{"message": "Hello"})
-	}
-
-	_, err := ctx.Send("another-target", greeting)
-	if err != nil {
-		log.Printf("Error: %v\n", err)
-		return ctx.ReturnOnInternalError(), err
-	}
-	return ctx.ReturnOnSuccess(), nil
-}
-```
-
-One more example with tracing capability: 
-
-> SkyWalking provides solutions for observing and monitoring distributed systems, in many different scenarios.
->
-> We have introduced SkyWalking (go2sky) for OpenFunction as a distributed tracing solution for Go language functions. 
-
-You can find the method to enable SkyWalking tracing for Go functions in [tracing sample](https://github.com/OpenFunction/samples/blob/main/functions/tracing/README.md).
-
-![](docs/images/tracing-topology.gif)
-
-You can also run the following command to make a quick demo:
-
-```shell
-ofn demo
-```
-
->By default, a demo environment will be deleted when a demo finishes.
->You can keep the demo kind cluster for further exploration by running `ofn demo --auto-prune=false`.
->The demo kind cluster can be deleted by running `kind delete cluster --name openfunction`.
-
-For more information about how to use the `ofn demo` command, refer to [ofn demo document](https://github.com/OpenFunction/cli/blob/main/docs/demo.md).
+You can find guides to create the sync and async functions in different languages [here](https://openfunction.dev/docs/getting-started/quickstarts/)
 
 ### Uninstall OpenFunction
 
@@ -184,12 +109,12 @@ OpenFunction is sponsored and open-sourced by the [KubeSphere](http://kubesphere
 - Wechat: join the OpenFunction user group by following the `kubesphere` WeChat subscription and then reply `openfunction`
 
 ## Landscape
-
+ 
 <p align="center">
 <br/><br/>
 <img src="https://landscape.cncf.io/images/left-logo.svg" width="150"/>&nbsp;&nbsp;<img src="https://landscape.cncf.io/images/right-logo.svg" width="200"/>&nbsp;&nbsp;
 <br/><br/>
-OpenFunction enriches the <a href="https://landscape.cncf.io/serverless?license=apache-license-2-0">CNCF Cloud Native Landscape.
+OpenFunction is a CNCF Sandbox project now which also enriches the <a href="https://landscape.cncf.io/serverless?license=apache-license-2-0">CNCF Cloud Native Landscape.
 </a>
 </p>
 
