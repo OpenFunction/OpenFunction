@@ -56,7 +56,7 @@ help: ## Display this help.
 ##@ Development
 
 manifests: generate fmt vet controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role paths="./..." output:crd:artifacts:config=config/crd/bases
 	kubectl kustomize config/default | sed -e '/creationTimestamp: null/d' | sed -e 's/openfunction-system/openfunction/g' | sed -e 's/openfunction\:latest/openfunction\:$(VERSION)/g' | sed -e 's/app.kubernetes.io\/version\: latest/app.kubernetes.io\/version\: $(VERSION)/g' > config/bundle.yaml
 	cat config/configmap/openfunction-config.yaml >> config/bundle.yaml
 

@@ -5,11 +5,11 @@ resources:
   - bases/core.openfunction.io_functions.yaml
   - bases/core.openfunction.io_servings.yaml
   - bases/core.openfunction.io_builders.yaml
-  - bases/core.openfunction.io_domains.yaml
   - bases/events.openfunction.io_eventsources.yaml
   - bases/events.openfunction.io_eventbus.yaml
   - bases/events.openfunction.io_triggers.yaml
   - bases/events.openfunction.io_clustereventbus.yaml
+  - bases/networking.openfunction.io_gateways.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:
@@ -22,7 +22,7 @@ patchesStrategicMerge:
 #- patches/webhook_in_eventbus.yaml
 #- patches/webhook_in_triggers.yaml
 #- patches/webhook_in_clustereventbus.yaml
-#- patches/webhook_in_domains.yaml
+#- patches/webhook_in_gateways.yaml
 #+kubebuilder:scaffold:crdkustomizewebhookpatch
 
 # [CERTMANAGER] To enable webhook, uncomment all the sections with [CERTMANAGER] prefix.
@@ -36,7 +36,7 @@ patchesStrategicMerge:
 #- patches/cainjection_in_clustereventbus.yaml
 #- patches/cainjection_in_functions.yaml
 #- patches/cainjection_in_servings.yaml
-#- patches/cainjection_in_domains.yaml
+#- patches/cainjection_in_gateways.yaml
 #+kubebuilder:scaffold:crdkustomizecainjectionpatch
 
 patchesJson6902:

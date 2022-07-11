@@ -43,8 +43,8 @@ import (
 )
 
 const (
-	knativeService           = "serving.knative.dev/service"
-	componentName            = "Knative/component"
+	knativeService = "serving.knative.dev/service"
+	componentName  = "Knative/component"
 )
 
 type servingRun struct {

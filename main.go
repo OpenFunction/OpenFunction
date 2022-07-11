@@ -33,12 +33,15 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	k8sgatewayapiv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	corev1alpha2 "github.com/openfunction/apis/core/v1alpha2"
 	corev1beta1 "github.com/openfunction/apis/core/v1beta1"
 	openfunctionevent "github.com/openfunction/apis/events/v1alpha1"
+	networkingv1alpha1 "github.com/openfunction/apis/networking/v1alpha1"
 	"github.com/openfunction/controllers/core"
 	eventcontrollers "github.com/openfunction/controllers/events"
+	networkingcontrollers "github.com/openfunction/controllers/networking"
 	"github.com/openfunction/pkg/core/builder"
 	"github.com/openfunction/pkg/core/serving"
 	//+kubebuilder:scaffold:imports
@@ -56,6 +59,8 @@ func init() {
 	_ = componentsv1alpha1.AddToScheme(scheme)
 	_ = kedav1alpha1.AddToScheme(scheme)
 	_ = openfunctionevent.AddToScheme(scheme)
+	_ = k8sgatewayapiv1alpha2.AddToScheme(scheme)
+	_ = networkingv1alpha1.AddToScheme(scheme)
 	_ = shipwrightv1alpha1.AddToScheme(scheme)
 	utilruntime.Must(corev1beta1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
@@ -109,10 +114,6 @@ func main() {
 		setupLog.Error(err, "unable to create serving controller")
 		os.Exit(1)
 	}
-	if err = core.NewDomainReconciler(mgr).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create domain controller")
-		os.Exit(1)
-	}
 
 	if err = (&eventcontrollers.EventSourceReconciler{
 		Client: mgr.GetClient(),
@@ -130,6 +131,14 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "Trigger")
 		os.Exit(1)
 	}
+	if err = (&networkingcontrollers.GatewayReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("Gateway"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Gateway")
+		os.Exit(1)
+	}
 
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
 		if err = (&corev1beta1.Serving{}).SetupWebhookWithManager(mgr); err != nil {
@@ -138,6 +147,10 @@ func main() {
 		}
 		if err = (&corev1beta1.Function{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Function")
+			os.Exit(1)
+		}
+		if err = (&networkingv1alpha1.Gateway{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Gateway")
 			os.Exit(1)
 		}
 	}

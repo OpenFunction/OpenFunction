@@ -27,6 +27,7 @@ import (
 	corev1alpha2 "github.com/openfunction/pkg/client/clientset/versioned/typed/core/v1alpha2"
 	corev1beta1 "github.com/openfunction/pkg/client/clientset/versioned/typed/core/v1beta1"
 	eventsv1alpha1 "github.com/openfunction/pkg/client/clientset/versioned/typed/events/v1alpha1"
+	networkingv1alpha1 "github.com/openfunction/pkg/client/clientset/versioned/typed/networking/v1alpha1"
 )
 
 type Interface interface {
@@ -34,15 +35,17 @@ type Interface interface {
 	CoreV1alpha2() corev1alpha2.CoreV1alpha2Interface
 	CoreV1beta1() corev1beta1.CoreV1beta1Interface
 	EventsV1alpha1() eventsv1alpha1.EventsV1alpha1Interface
+	NetworkingV1alpha1() networkingv1alpha1.NetworkingV1alpha1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	coreV1alpha2   *corev1alpha2.CoreV1alpha2Client
-	coreV1beta1    *corev1beta1.CoreV1beta1Client
-	eventsV1alpha1 *eventsv1alpha1.EventsV1alpha1Client
+	coreV1alpha2       *corev1alpha2.CoreV1alpha2Client
+	coreV1beta1        *corev1beta1.CoreV1beta1Client
+	eventsV1alpha1     *eventsv1alpha1.EventsV1alpha1Client
+	networkingV1alpha1 *networkingv1alpha1.NetworkingV1alpha1Client
 }
 
 // CoreV1alpha2 retrieves the CoreV1alpha2Client
@@ -58,6 +61,11 @@ func (c *Clientset) CoreV1beta1() corev1beta1.CoreV1beta1Interface {
 // EventsV1alpha1 retrieves the EventsV1alpha1Client
 func (c *Clientset) EventsV1alpha1() eventsv1alpha1.EventsV1alpha1Interface {
 	return c.eventsV1alpha1
+}
+
+// NetworkingV1alpha1 retrieves the NetworkingV1alpha1Client
+func (c *Clientset) NetworkingV1alpha1() networkingv1alpha1.NetworkingV1alpha1Interface {
+	return c.networkingV1alpha1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -93,6 +101,10 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
+	cs.networkingV1alpha1, err = networkingv1alpha1.NewForConfig(&configShallowCopy)
+	if err != nil {
+		return nil, err
+	}
 
 	cs.DiscoveryClient, err = discovery.NewDiscoveryClientForConfig(&configShallowCopy)
 	if err != nil {
@@ -108,6 +120,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 	cs.coreV1alpha2 = corev1alpha2.NewForConfigOrDie(c)
 	cs.coreV1beta1 = corev1beta1.NewForConfigOrDie(c)
 	cs.eventsV1alpha1 = eventsv1alpha1.NewForConfigOrDie(c)
+	cs.networkingV1alpha1 = networkingv1alpha1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -119,6 +132,7 @@ func New(c rest.Interface) *Clientset {
 	cs.coreV1alpha2 = corev1alpha2.New(c)
 	cs.coreV1beta1 = corev1beta1.New(c)
 	cs.eventsV1alpha1 = eventsv1alpha1.New(c)
+	cs.networkingV1alpha1 = networkingv1alpha1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

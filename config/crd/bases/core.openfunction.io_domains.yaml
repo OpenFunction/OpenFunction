@@ -60,53 +60,6 @@ spec:
             type: object
         type: object
     served: true
-    storage: false
-    subresources:
-      status: {}
-  - name: v1beta1
-    schema:
-      openAPIV3Schema:
-        properties:
-          apiVersion:
-            type: string
-          kind:
-            type: string
-          metadata:
-            type: object
-          spec:
-            properties:
-              ingress:
-                properties:
-                  annotations:
-                    additionalProperties:
-                      type: string
-                    type: object
-                  ingressClassName:
-                    type: string
-                  service:
-                    properties:
-                      name:
-                        type: string
-                      namespace:
-                        type: string
-                      port:
-                        format: int32
-                        type: integer
-                    required:
-                    - name
-                    - namespace
-                    type: object
-                required:
-                - ingressClassName
-                - service
-                type: object
-            required:
-            - ingress
-            type: object
-          status:
-            type: object
-        type: object
-    served: true
     storage: true
     subresources:
       status: {}

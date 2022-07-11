@@ -16,6 +16,10 @@ limitations under the License.
 
 package constants
 
+import (
+	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+)
+
 const (
 	FunctionLabel = "openfunction.io/function"
 
@@ -28,4 +32,10 @@ const (
 
 	DefaultKnativeServingNamespace      = "knative-serving"
 	DefaultKnativeServingFeaturesCMName = "config-features"
+
+	DefaultGatewayName             v1alpha2.ObjectName   = "openfunction"
+	DefaultGatewayNamespace        v1alpha2.Namespace    = "openfunction"
+	DefaultGatewayListenerPort     v1alpha2.PortNumber   = 80
+	DefaultGatewayListenerProtocol v1alpha2.ProtocolType = "HTTP"
+	DefaultFunctionServicePort     v1alpha2.PortNumber   = 80
 )

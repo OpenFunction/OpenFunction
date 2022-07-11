@@ -45,6 +45,7 @@ func Test_createSinkComponent(t *testing.T) {
 	}
 
 	uri := "http://test"
+	addressType := ofcore.InternalAddressType
 	resource := &ofevent.EventSource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
@@ -180,7 +181,7 @@ func Test_createSinkComponent(t *testing.T) {
 						Namespace: "test",
 					},
 					Status: ofcore.FunctionStatus{
-						URL: "http://test-of",
+						Addresses: []ofcore.FunctionAddress{{Type: &addressType, Value: "http://test-of"}},
 					},
 				}).Build(),
 				log: &log.TestLogger{
@@ -275,7 +276,7 @@ func Test_createSinkComponent(t *testing.T) {
 						Namespace: "test",
 					},
 					Status: ofcore.FunctionStatus{
-						URL: "http://test-of",
+						Addresses: []ofcore.FunctionAddress{{Type: &addressType, Value: "http://test-of"}},
 					},
 				}).Build(),
 				log: &log.TestLogger{

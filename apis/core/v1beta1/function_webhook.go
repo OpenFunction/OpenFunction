@@ -21,6 +21,8 @@ import (
 	"reflect"
 	"regexp"
 
+	"github.com/openfunction/pkg/constants"
+
 	shipwrightv1alpha1 "github.com/shipwright-io/build/pkg/apis/build/v1alpha1"
 	"k8s.io/api/autoscaling/v2beta2"
 	v1 "k8s.io/api/core/v1"
@@ -84,6 +86,23 @@ func (r *Function) Default() {
 	if r.Spec.Version == nil || *r.Spec.Version == "" {
 		version := "latest"
 		r.Spec.Version = &version
+	}
+
+	if r.Spec.Serving != nil && r.Spec.Serving.Runtime == Knative {
+		namespace := constants.DefaultGatewayNamespace
+		if r.Spec.Route == nil {
+			route := RouteImpl{
+				CommonRouteSpec: CommonRouteSpec{
+					GatewayRef: &GatewayRef{
+						Name:      constants.DefaultGatewayName,
+						Namespace: &namespace,
+					},
+				},
+			}
+			r.Spec.Route = &route
+		} else if r.Spec.Route.GatewayRef == nil {
+			r.Spec.Route.GatewayRef = &GatewayRef{Name: constants.DefaultGatewayName, Namespace: &namespace}
+		}
 	}
 }
 
