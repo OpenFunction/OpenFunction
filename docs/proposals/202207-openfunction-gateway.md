@@ -418,9 +418,9 @@ OpenFunction will install (and can be disabled) a gateway api implementation by 
 
 ### Traffic Mechanisms
 - Orignal
-![](https://i.imgur.com/6qkCwCf.png)
+  ![](https://i.imgur.com/lAzF2nH.png)
 - Gateway
-![](https://i.imgur.com/P1fnQTm.png)
+  ![](https://i.imgur.com/6Ri5F6G.png)
 
 
 ## Action Items
