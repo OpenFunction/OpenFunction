@@ -420,7 +420,7 @@ OpenFunction will install (and can be disabled) a gateway api implementation by 
 - Orignal
 ![](https://i.imgur.com/6qkCwCf.png)
 - Gateway
-![](https://i.imgur.com/XlR9eAf.png)
+![](https://i.imgur.com/P1fnQTm.png)
 
 
 ## Action Items
