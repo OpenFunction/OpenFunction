@@ -221,7 +221,12 @@ func createSinkComponent(ctx context.Context, c client.Client, log logr.Logger, 
 				log.Error(err, "Failed to find OpenFunction", "namespace", sink.Ref.Namespace, "name", sink.Ref.Name)
 				return nil, err
 			}
-			url = of.Status.URL
+			for _, address := range of.Status.Addresses {
+				if *address.Type == ofcore.InternalAddressType {
+					url = address.Value
+					break
+				}
+			}
 		default:
 			return nil, fmt.Errorf("unsupported reference %s", gvk.String())
 		}

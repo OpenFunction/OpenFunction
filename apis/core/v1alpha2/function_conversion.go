@@ -82,6 +82,15 @@ func (src *Function) ConvertTo(dstRaw conversion.Hub) error {
 		}
 	}
 
+	if src.Status.URL != "" {
+		addressType := v1beta1.InternalAddressType
+		address := v1beta1.FunctionAddress{
+			Type:  &addressType,
+			Value: src.Status.URL,
+		}
+		dst.Status.Addresses = []v1beta1.FunctionAddress{address}
+	}
+
 	// +kubebuilder:docs-gen:collapse=rote conversion
 	return nil
 }
@@ -265,6 +274,13 @@ func (dst *Function) ConvertFrom(srcRaw conversion.Hub) error {
 			ResourceRef:               src.Status.Serving.ResourceRef,
 			LastSuccessfulResourceRef: src.Status.Serving.ResourceRef,
 			ResourceHash:              src.Status.Serving.ResourceHash,
+		}
+	}
+
+	for _, address := range src.Status.Addresses {
+		if *address.Type == v1beta1.InternalAddressType {
+			dst.Status.URL = address.Value
+			break
 		}
 	}
 

@@ -44,7 +44,7 @@ chmod +x ${CODEGEN_PKG}/generate-groups.sh
 
 ${CODEGEN_PKG}/generate-groups.sh "client" \
     github.com/openfunction/pkg/client github.com/openfunction/apis \
-    "core:v1alpha2,v1beta1 events:v1alpha1" \
+    "core:v1alpha2,v1beta1 events:v1alpha1 networking:v1alpha1" \
     --output-base "${TEMP_DIR}" \
     --go-header-file ${SCRIPT_ROOT}/hack/boilerplate.go.txt
    

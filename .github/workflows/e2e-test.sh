@@ -16,10 +16,9 @@
 
 function knative_function() {
   kubectl apply -f config/samples/function-sample-serving-only.yaml
-  kubectl proxy &
 
   while /bin/true; do
-    url=$(kubectl get fn function-sample-serving-only -o jsonpath='{.status.url}')
+    url=$(kubectl get fn function-sample-serving-only -o jsonpath='{.status.addresses[?(@.type=="Internal")].value}')
     if [ -z "$url" ]; then
       sleep 1
       continue
@@ -29,9 +28,9 @@ function knative_function() {
     fi
   done
 
-  url="http://localhost:8001/api/v1/namespaces/ingress-nginx/services/ingress-nginx-controller:http/proxy/default/function-sample-serving-only"
+  url="http://function-sample-serving-only.default.svc.cluster.local/world"
   while /bin/true; do
-    res=$(curl -I -m 10 -o /dev/null -s -w %{http_code}"\n" $url)
+    res=$(kubectl exec curl -- curl -I -m 10 -o /dev/null -s -w %{http_code}"\n" $url)
     if test "$res" = "200"; then
       echo "Knative function tested successfully!"
       kubectl delete -f config/samples/function-sample-serving-only.yaml
@@ -39,16 +38,13 @@ function knative_function() {
     fi
     sleep 1
   done
-
-  pkill -9 -f "kubectl proxy"
 }
 
 function knative_function_with_dapr() {
   kubectl apply -f config/samples/function-knative-with-dapr-serving-only.yaml
-  kubectl proxy &
 
   while /bin/true; do
-    url=$(kubectl get fn function-front -o jsonpath='{.status.url}')
+    url=$(kubectl get fn function-front -o jsonpath='{.status.addresses[?(@.type=="Internal")].value}')
     if [ -z "$url" ]; then
       sleep 1
       continue
@@ -58,9 +54,9 @@ function knative_function_with_dapr() {
     fi
   done
 
-  url="http://localhost:8001/api/v1/namespaces/ingress-nginx/services/ingress-nginx-controller:http/proxy/default/function-front"
+  url="http://function-front.default.svc.cluster.local/"
   while /bin/true; do
-    res=$(curl -m 10 -o /dev/null -s -w %{http_code}"\n" -d '{"message":"Awesome OpenFunction!"}' -H "Content-Type: application/json" -X POST $url)
+    res=$(kubectl exec curl -- curl -m 10 -o /dev/null -s -w %{http_code}"\n" -d '{"message":"Awesome OpenFunction!"}' -H "Content-Type: application/json" -X POST $url)
     if test "$res" = "200"; then
       break
     fi
@@ -79,8 +75,6 @@ function knative_function_with_dapr() {
       break
     fi
   done
-
-  pkill -9 -f "kubectl proxy"
 }
 
 function async_function_with_bindings() {

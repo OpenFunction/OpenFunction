@@ -98,6 +98,23 @@ jobs:
       - name: Create kind cluster
         uses: container-tools/kind-action@v1
 
+      - name: Create busybox pod
+        run: |
+          kubectl apply -f - <<EOF
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: curl
+          spec:
+            containers:
+              - name: curl
+                image: radial/busyboxplus:curl
+                command:
+                  - sh
+                  - -c
+                  - while true; do sleep 1; done
+          EOF
+
       - name: Install dependent components
         run: |
           chmod a+x ./hack/deploy.sh
@@ -111,6 +128,7 @@ jobs:
           kubectl patch deployments.apps -n knative-serving webhook -p '{"spec":{"template":{"spec":{"containers":[{"name":"webhook","resources":null}]}}}}'
           kubectl patch deployments.apps -n keda keda-operator -p '{"spec":{"template":{"spec":{"containers":[{"name":"keda-operator","resources":null}]}}}}'
           kubectl patch deployments.apps -n keda keda-metrics-apiserver -p '{"spec":{"template":{"spec":{"containers":[{"name":"keda-metrics-apiserver","resources":null}]}}}}'
+          kubectl patch deployments.apps -n projectcontour contour-gateway-provisioner -p '{"spec":{"template":{"spec":{"containers":[{"name":"contour-gateway-provisioner","resources":null}]}}}}'
           # Install kafka
           helm repo add strimzi https://strimzi.io/charts/
           helm install kafka-operator -n default strimzi/strimzi-kafka-operator
@@ -124,11 +142,11 @@ jobs:
       - name: Install OpenFunction
         run: |
           kubectl apply -f config/bundle.yaml
-          kubectl apply -f config/domain/default-domain.yaml
           kubectl apply -f config/strategy/build-strategy.yaml
           kubectl patch deployments.apps -n openfunction openfunction-controller-manager -p "{\"spec\":{\"template\":{\"spec\":{\"containers\":[{\"name\":\"openfunction\",\"image\":\"kind-registry:5000/openfunction/openfunction:latest\",\"resources\":null}]}}}}"
           kubectl rollout status -n openfunction deployment openfunction-controller-manager --timeout=1m
           sleep 10
+          kubectl apply -f config/gateway/default-gateway.yaml
 
 #      - name: Setup tmate session
 #        uses: mxschmitt/action-tmate@v1
