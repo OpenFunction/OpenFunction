@@ -19,8 +19,6 @@ package v1alpha2
 
 type BuilderExpansion interface{}
 
-type DomainExpansion interface{}
-
 type FunctionExpansion interface{}
 
 type ServingExpansion interface{}

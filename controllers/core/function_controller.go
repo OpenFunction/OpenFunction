@@ -695,7 +695,9 @@ func (r *FunctionReconciler) createOrUpdateHTTPRoute(fn *openfunction.Function) 
 	}
 	log.V(1).Info(fmt.Sprintf("HTTPRoute %s", op))
 
-	r.updateFuncWithHTTPRouteStatus(fn, gateway, httpRoute)
+	if err := r.updateFuncWithHTTPRouteStatus(fn, gateway, httpRoute); err != nil {
+		return err
+	}
 
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{Namespace: fn.Namespace, Name: fn.Name},
@@ -757,22 +759,35 @@ func (r *FunctionReconciler) mutateHTTPRoute(
 			}
 			hostname := k8sgatewayapiv1alpha2.Hostname(hostnameBuffer.String())
 			hostnames = append(hostnames, hostname)
+		} else {
+			hostnames = fn.Spec.Route.Hostnames
 		}
 		if !containsHTTPHostname(fn.Spec.Route.Hostnames, clusterHostname) {
 			hostnames = append(hostnames, clusterHostname)
 		}
 
+		var backendGroup k8sgatewayapiv1alpha2.Group = ""
+		var backendKind k8sgatewayapiv1alpha2.Kind = "Service"
+		var backendWeight int32 = 1
 		if fn.Spec.Route.Rules == nil {
-			var pathBuffer bytes.Buffer
-			pathTemplate := template.Must(template.New("path").Parse(gateway.Spec.PathTemplate))
-			pathInfoObj := struct {
-				Name      string
-				Namespace string
-			}{Name: fn.Name, Namespace: fn.Namespace}
-			if err := pathTemplate.Execute(&pathBuffer, pathInfoObj); err != nil {
-				return err
+			var path string
+			if fn.Spec.Route.Hostnames == nil {
+				path = "/"
+			} else {
+				var pathBuffer bytes.Buffer
+				pathTemplate := template.Must(template.New("path").Parse(gateway.Spec.PathTemplate))
+				pathInfoObj := struct {
+					Name      string
+					Namespace string
+				}{Name: fn.Name, Namespace: fn.Namespace}
+				if err := pathTemplate.Execute(&pathBuffer, pathInfoObj); err != nil {
+					return err
+				}
+				path = pathBuffer.String()
+				if !strings.HasSuffix(path, "/") {
+					path = fmt.Sprintf("/%s", path)
+				}
 			}
-			path := pathBuffer.String()
 			matchType := k8sgatewayapiv1alpha2.PathMatchPathPrefix
 			rule := k8sgatewayapiv1alpha2.HTTPRouteRule{
 				Matches: []k8sgatewayapiv1alpha2.HTTPRouteMatch{{
@@ -782,10 +797,13 @@ func (r *FunctionReconciler) mutateHTTPRoute(
 					{
 						BackendRef: k8sgatewayapiv1alpha2.BackendRef{
 							BackendObjectReference: k8sgatewayapiv1alpha2.BackendObjectReference{
+								Group:     &backendGroup,
+								Kind:      &backendKind,
 								Name:      k8sgatewayapiv1alpha2.ObjectName(knativeService.Status.LatestReadyRevisionName),
 								Namespace: &namespace,
 								Port:      &port,
 							},
+							Weight: &backendWeight,
 						},
 					},
 				},
@@ -797,10 +815,13 @@ func (r *FunctionReconciler) mutateHTTPRoute(
 				rule.BackendRefs = []k8sgatewayapiv1alpha2.HTTPBackendRef{{
 					BackendRef: k8sgatewayapiv1alpha2.BackendRef{
 						BackendObjectReference: k8sgatewayapiv1alpha2.BackendObjectReference{
+							Group:     &backendGroup,
+							Kind:      &backendKind,
 							Name:      k8sgatewayapiv1alpha2.ObjectName(knativeService.Status.LatestReadyRevisionName),
 							Namespace: &namespace,
 							Port:      &port,
 						},
+						Weight: &backendWeight,
 					}}}
 				rule.Filters = append(rule.Filters, filter)
 				rules = append(rules, rule)
@@ -812,8 +833,15 @@ func (r *FunctionReconciler) mutateHTTPRoute(
 		} else {
 			httpRoute.Labels[gateway.Spec.HttpRouteLabelKey] = httpRouteLabelValue
 		}
+		var parentGroup k8sgatewayapiv1alpha2.Group = "gateway.networking.k8s.io"
+		var parentKind k8sgatewayapiv1alpha2.Kind = "Gateway"
 		httpRoute.Spec.ParentRefs = []k8sgatewayapiv1alpha2.ParentRef{
-			{Namespace: &parentRefNamespace, Name: parentRefName},
+			{
+				Group:     &parentGroup,
+				Kind:      &parentKind,
+				Namespace: &parentRefNamespace,
+				Name:      parentRefName,
+			},
 		}
 		httpRoute.Spec.Hostnames = hostnames
 		httpRoute.Spec.Rules = rules
@@ -852,7 +880,7 @@ func (r *FunctionReconciler) mutateService(
 func (r *FunctionReconciler) updateFuncWithHTTPRouteStatus(
 	fn *openfunction.Function,
 	gateway *networkingv1alpha1.Gateway,
-	httpRoute *k8sgatewayapiv1alpha2.HTTPRoute) {
+	httpRoute *k8sgatewayapiv1alpha2.HTTPRoute) error {
 	log := r.Log.WithName("updateFuncWithHTTPRouteStatus")
 	var addresses []openfunction.FunctionAddress
 	var paths []k8sgatewayapiv1alpha2.HTTPPathMatch
@@ -891,14 +919,16 @@ func (r *FunctionReconciler) updateFuncWithHTTPRouteStatus(
 		}
 	}
 	fn.Status.Addresses = addresses
-	if !equality.Semantic.DeepEqual(oldRouteStatus, fn.Status.Route) {
+	if !equality.Semantic.DeepEqual(oldRouteStatus, fn.Status.Route.DeepCopy()) {
 		if err := r.Status().Update(r.ctx, fn); err != nil {
 			log.Error(err, "Failed to update status on function", "namespace", fn.Namespace, "name", fn.Name)
+			return err
 		} else {
 			log.Info("Updated status on function", "namespace", fn.Namespace,
 				"name", fn.Name, "resource version", fn.ResourceVersion)
 		}
 	}
+	return nil
 }
 
 func containsHTTPHostname(hostnames []k8sgatewayapiv1alpha2.Hostname, hostname k8sgatewayapiv1alpha2.Hostname) bool {

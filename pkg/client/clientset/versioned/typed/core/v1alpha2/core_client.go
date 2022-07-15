@@ -27,7 +27,6 @@ import (
 type CoreV1alpha2Interface interface {
 	RESTClient() rest.Interface
 	BuildersGetter
-	DomainsGetter
 	FunctionsGetter
 	ServingsGetter
 }
@@ -39,10 +38,6 @@ type CoreV1alpha2Client struct {
 
 func (c *CoreV1alpha2Client) Builders(namespace string) BuilderInterface {
 	return newBuilders(c, namespace)
-}
-
-func (c *CoreV1alpha2Client) Domains(namespace string) DomainInterface {
-	return newDomains(c, namespace)
 }
 
 func (c *CoreV1alpha2Client) Functions(namespace string) FunctionInterface {
