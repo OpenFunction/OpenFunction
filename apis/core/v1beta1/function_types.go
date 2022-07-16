@@ -117,7 +117,6 @@ type RouteImpl struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
-	// +kubebuilder:default={{matches: {{path: {type: "PathPrefix", value: "/"}}}}}
 	Rules []k8sgatewayapiv1alpha2.HTTPRouteRule `json:"rules,omitempty"`
 }
 

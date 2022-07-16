@@ -32,10 +32,6 @@ func (c *FakeCoreV1alpha2) Builders(namespace string) v1alpha2.BuilderInterface 
 	return &FakeBuilders{c, namespace}
 }
 
-func (c *FakeCoreV1alpha2) Domains(namespace string) v1alpha2.DomainInterface {
-	return &FakeDomains{c, namespace}
-}
-
 func (c *FakeCoreV1alpha2) Functions(namespace string) v1alpha2.FunctionInterface {
 	return &FakeFunctions{c, namespace}
 }
