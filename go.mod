@@ -3,9 +3,10 @@ module github.com/openfunction
 go 1.18
 
 require (
-	github.com/dapr/dapr v1.8.3
-	github.com/go-logr/logr v1.2.3
-	github.com/json-iterator/go v1.1.12
+	github.com/dapr/dapr v1.3.1
+	github.com/dapr/go-sdk v1.7.0
+	github.com/go-logr/logr v1.2.0
+	github.com/json-iterator/go v1.1.11
 	github.com/kedacore/keda/v2 v2.4.0
 	github.com/mitchellh/hashstructure v1.1.0
 	github.com/onsi/ginkgo v1.16.5

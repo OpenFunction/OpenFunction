@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"strings"
 
+	daprsdk "github.com/dapr/go-sdk/service/common"
+
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	"github.com/go-logr/logr"
 	jsoniter "github.com/json-iterator/go"
@@ -121,6 +123,14 @@ func GenOpenFunctionContext(
 					ComponentName: getComponentName(s, i.Component, componentName),
 					ComponentType: c.Type,
 					Metadata:      i.Params,
+				}
+				if i.PubSubRoutingRule != nil {
+					fnInput.PubSubRoutingRule = &daprsdk.Subscription{
+						Metadata:               i.PubSubRoutingRule.Metadata,
+						Match:                  i.PubSubRoutingRule.Match,
+						Priority:               i.PubSubRoutingRule.Priority,
+						DisableTopicValidation: i.PubSubRoutingRule.DisableTopicValidation,
+					}
 				}
 				fc.Inputs[i.Name] = &fnInput
 			}
