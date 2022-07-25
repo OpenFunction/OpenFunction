@@ -18,6 +18,7 @@ package networking
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -414,17 +415,26 @@ func (r *GatewayReconciler) createOrUpdateService(gateway *networkingv1alpha1.Ga
 		address := r.k8sGateway.Status.Addresses[0]
 		externalName = strings.Split(address.Value, ":")[0]
 	} else {
-		serviceName := fmt.Sprintf("%s-%s", networkingv1alpha1.DefaultK8sGatewayServiceName, r.k8sGateway.Name)
-		gatewayService := &corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{Namespace: r.k8sGateway.Namespace, Name: serviceName},
+		targetServices := []string{
+			fmt.Sprintf("%s-%s", r.k8sGateway.Name, networkingv1alpha1.DefaultK8sGatewayServiceName),
+			fmt.Sprintf("%s-%s", networkingv1alpha1.DefaultK8sGatewayServiceName, r.k8sGateway.Name),
+			networkingv1alpha1.DefaultK8sGatewayServiceName,
 		}
-		if err := r.Get(r.ctx, client.ObjectKeyFromObject(gatewayService), gatewayService); err == nil {
-			externalName = fmt.Sprintf("%s.%s.svc.%s",
-				serviceName, r.k8sGateway.Namespace, gateway.Spec.ClusterDomain)
-		} else if util.IsNotFound(err) {
-			externalName = fmt.Sprintf("%s.%s.svc.%s",
-				networkingv1alpha1.DefaultK8sGatewayServiceName, r.k8sGateway.Namespace, gateway.Spec.ClusterDomain)
-		} else {
+		for _, serviceName := range targetServices {
+			gatewayService := &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{Namespace: r.k8sGateway.Namespace, Name: serviceName},
+			}
+			if err := r.Get(r.ctx, client.ObjectKeyFromObject(gatewayService), gatewayService); err == nil {
+				externalName = fmt.Sprintf("%s.%s.svc.%s",
+					serviceName, r.k8sGateway.Namespace, gateway.Spec.ClusterDomain)
+				break
+			} else if !util.IsNotFound(err) {
+				log.Error(err, "Failed to CreateOrUpdate service")
+				return err
+			}
+		}
+		if externalName == "" {
+			err := errors.New(string(metav1.StatusReasonNotFound))
 			log.Error(err, "Failed to CreateOrUpdate service")
 			return err
 		}

@@ -15,7 +15,15 @@ spec:
     namespace: projectcontour
   gatewaySpec:
     listeners:
+      - name: ofn-http-internal
+        hostname: "*.cluster.local"
+        protocol: HTTP
+        port: 80
+        allowedRoutes:
+          namespaces:
+            from: All
       - name: ofn-http-external
+        hostname: "*.ofn.io"
         protocol: HTTP
         port: 80
         allowedRoutes:
