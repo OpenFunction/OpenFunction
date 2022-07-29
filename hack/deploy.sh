@@ -111,7 +111,7 @@ if [ "${with_gateway}" = "true" ]; then
   kubectl apply -f https://projectcontour.io/quickstart/contour-gateway-provisioner.yaml
   # Wait for Gateway provisioner to be ready
   while /bin/true; do
-    admission_status=$(kubectl get deployment -n gateway-api gateway-api-admission-server -o jsonpath='{.status.conditions[?(@.type=="Available")].status}')
+    admission_status=$(kubectl get deployment -n gateway-system gateway-api-admission-server -o jsonpath='{.status.conditions[?(@.type=="Available")].status}')
     if [ "$admission_status" == "True" ]; then
       echo "Contour Gateway provisioner is ready"
       break
