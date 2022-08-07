@@ -305,7 +305,7 @@ type FunctionStatus struct {
 //+kubebuilder:printcolumn:name="ServingState",type=string,JSONPath=`.status.serving.state`
 //+kubebuilder:printcolumn:name="Builder",type=string,JSONPath=`.status.build.resourceRef`
 //+kubebuilder:printcolumn:name="Serving",type=string,JSONPath=`.status.serving.resourceRef`
-//+kubebuilder:printcolumn:name="Address",type=string,JSONPath=`.status.addresses[?(@.type=="External")].value`
+//+kubebuilder:printcolumn:name="Address",type=string,JSONPath=`.status.addresses[?(@.type=="Internal")].value`
 //+kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Function is the Schema for the functions API
