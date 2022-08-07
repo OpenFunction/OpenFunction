@@ -4414,7 +4414,7 @@ spec:
     - jsonPath: .status.serving.resourceRef
       name: Serving
       type: string
-    - jsonPath: .status.addresses[?(@.type=="External")].value
+    - jsonPath: .status.addresses[?(@.type=="Internal")].value
       name: Address
       type: string
     - jsonPath: .metadata.creationTimestamp
