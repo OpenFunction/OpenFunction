@@ -662,6 +662,21 @@ func (r *FunctionReconciler) createOrUpdateHTTPRoute(fn *openfunction.Function) 
 		return nil
 	}
 
+	namespace := constants.DefaultGatewayNamespace
+	if fn.Spec.Route == nil {
+		route := openfunction.RouteImpl{
+			CommonRouteSpec: openfunction.CommonRouteSpec{
+				GatewayRef: &openfunction.GatewayRef{
+					Name:      constants.DefaultGatewayName,
+					Namespace: &namespace,
+				},
+			},
+		}
+		fn.Spec.Route = &route
+	} else if fn.Spec.Route.GatewayRef == nil {
+		fn.Spec.Route.GatewayRef = &openfunction.GatewayRef{Name: constants.DefaultGatewayName, Namespace: &namespace}
+	}
+
 	gateway := &networkingv1alpha1.Gateway{}
 	key := client.ObjectKey{
 		Namespace: string(*fn.Spec.Route.GatewayRef.Namespace),
@@ -1004,8 +1019,9 @@ func (r *FunctionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		fn := rawObj.(*openfunction.Function)
 		if fn.Spec.Route != nil {
 			return []string{fmt.Sprintf("%s,%s", *fn.Spec.Route.GatewayRef.Namespace, fn.Spec.Route.GatewayRef.Name)}
+		} else {
+			return []string{fmt.Sprintf("%s,%s", constants.DefaultGatewayNamespace, constants.DefaultGatewayName)}
 		}
-		return nil
 	}); err != nil {
 		return err
 	}
