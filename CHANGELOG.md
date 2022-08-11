@@ -37,7 +37,7 @@ The `domains.core.openfunction.io` CRD was deprecated and removed.
 - Use fixed strings instead of knativeAutoscalingPrefix. #311
 - Remove domain crd & optimize path-based mode routing. #327
 - Add samples to gateway & improve gateway controller compatibility. #333
-- Compatible with existing old version functions. #344
+- Add the compatibility with v0.6.0 functions. #344
 
 ## 0.6.0 / 2022-03-21
 
