@@ -33,7 +33,7 @@ The `domains.core.openfunction.io` CRD was deprecated and removed.
 - Remove cert-manager, use generate-cert.sh to generate caBundle and tls.* files. #261
 - Remove the crd description to avoid "metadata.annotations too long" error when using "kubectl apply -f". #264
 - Add e2e testing ability for local environments. #266
-- Modify function sample's sourceSubPath & updated kustomize version. #304
+- Change the function sample's sourceSubPath & upgrade kustomize version. #304
 - Use fixed strings instead of knativeAutoscalingPrefix. #311
 - Remove domain crd & optimize path-based mode routing. #327
 - Add samples to gateway & improve gateway controller compatibility. #333
