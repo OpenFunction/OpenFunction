@@ -6,6 +6,8 @@
   * [0.4.0 / 2021-10-19](#040--2021-10-19)
   * [0.5.0 / 2021-12-31](#050--2021-12-31)
   * [0.6.0-rc.0 / 2022-03-08](#060-rc0--2022-03-08)
+  * [0.6.0 / 2022-03-21](#060--2022-03-21)
+  * [0.7.0-rc.0 / 2022-08-11](#070-rc0--2022-08-11)
 - [OpenFunction/samples](#openfunctionsamples)
 - [OpenFunction/website](#openfunctionwebsite)
 - [OpenFunction/builder](#openfunctionbuilder)
@@ -16,6 +18,53 @@
 - [OpenFunction/events-handlers](#openfunctionevents-handlers)
 
 # OpenFunction
+
+## 0.7.0-rc.0 / 2022-08-11
+The ofn CLI install method was deprecated.
+
+The `domains.core.openfunction.io` CRD was deprecated and removed.
+
+### Features
+
+- [Add the parameter validation capabilities for Function](https://github.com/OpenFunction/OpenFunction/issues/274). #290
+- [Add Gateway & Route for OpenFunction](https://github.com/OpenFunction/OpenFunction/blob/main/docs/proposals/202207-openfunction-gateway.md). #321 #327 #333 #342 #344
+
+### Enhancement
+- Remove cert-manager, use generate-cert.sh to generate caBundle and tls.* files. #261
+- Remove the crd description to avoid "metadata.annotations too long" error when using "kubectl apply -f". #264
+- Add e2e testing ability for local environments. #266
+- Modify function sample's sourceSubPath & updated kustomize version. #304
+- Use fixed strings instead of knativeAutoscalingPrefix. #311
+- Remove domain crd & optimize path-based mode routing. #327
+- Add samples to gateway & improve gateway controller compatibility. #333
+- Compatible with existing old version functions. #344
+
+## 0.6.0 / 2022-03-21
+
+The core v1alpha1 API was deprecated and removed.
+
+### Features
+
+- [Refactor OpenFuncAsync runtime definition](https://github.com/OpenFunction/OpenFunction/issues/184) and upgrade the core api to v1beta1. #222
+- [Add HTTP trigger to async function](https://github.com/OpenFunction/OpenFunction/issues/185) by enabling Knative runtime to use Dapr. #222
+- [Add an unified scaleOptions to control the scaling of both the Knative and Async runtime](https://github.com/OpenFunction/OpenFunction/issues/173). #222
+- Add function plugin support as described in the [proposal](https://github.com/OpenFunction/OpenFunction/blob/main/docs/proposals/202112_functions_framework_refactoring.md). #222
+- [Add Skywalking tracing support for both Sync and Async function](https://github.com/OpenFunction/OpenFunction/blob/main/docs/proposals/202112_support_function_tracing.md) as discussed in issue [#146](https://github.com/OpenFunction/OpenFunction/issues/146) and [#9](https://github.com/OpenFunction/functions-framework/issues/9). #222 [#36](https://github.com/OpenFunction/functions-framework-go/pull/36) [#30](https://github.com/OpenFunction/functions-framework-go/pull/30)
+
+### Enhancement
+
+- Move Keda's trigger to the top level of function serving as discussed in [proposal](https://hackmd.io/FW4WAM6CSmuZt6zrpsqWXA?view). #232
+- Add URI to EventSource sink. #207 #216
+- Add more e2e tests. #226
+- Regenerate OpenFunction client. #243
+- Update OpenFunction events docs. #244
+
+### Fixes
+
+- Fix [controller failed because dependent CRD was not found](https://github.com/OpenFunction/OpenFunction/issues/199). #222
+- Fix [function build failure issue after renaming the secret used](https://github.com/OpenFunction/OpenFunction/issues/219). #220
+- Change tracing plugin switch from `Enable` to `Enabled`. #246
+- Fix [Updates to the event api do not trigger updates to the function](https://github.com/OpenFunction/OpenFunction/issues/164). #247
 
 ## 0.6.0-rc.0 / 2022-03-08
 

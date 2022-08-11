@@ -4,16 +4,17 @@ This page describes the release process and the currently planned schedule for u
 
 ## Release schedule
 
-| release series   | date  (year-month-day)                     | release shepherd          |
-|------------------|--------------------------------------------|---------------------------|
-| v0.1.0           | 2021-05-17                                 | Benjamin Huo @benjaminhuo |
-| v0.2.0           | 2021-06-30                                 | Benjamin Huo @benjaminhuo |
-| v0.3.0           | 2021-08-19                                 | Laminar @tpiperatgod      |
-| v0.3.1           | 2021-08-27                                 | Wanjun Lei @wanjunlei     |
-| v0.4.0           | 2021-10-19                                 | Wanjun Lei @wanjunlei     |
-| v0.5.0           | 2021-12-31                                 | Benjamin Huo @benjaminhuo |
-| v0.6.0-rc        | 2022-03-08                                 | Benjamin Huo @benjaminhuo |
-| v0.6.0           | 2022-03-21                                 | Benjamin Huo @benjaminhuo |
+| release series | date  (year-month-day) | release shepherd          |
+|----------------|------------------------|---------------------------|
+| v0.1.0         | 2021-05-17             | Benjamin Huo @benjaminhuo |
+| v0.2.0         | 2021-06-30             | Benjamin Huo @benjaminhuo |
+| v0.3.0         | 2021-08-19             | Laminar @tpiperatgod      |
+| v0.3.1         | 2021-08-27             | Wanjun Lei @wanjunlei     |
+| v0.4.0         | 2021-10-19             | Wanjun Lei @wanjunlei     |
+| v0.5.0         | 2021-12-31             | Benjamin Huo @benjaminhuo |
+| v0.6.0-rc      | 2022-03-08             | Benjamin Huo @benjaminhuo |
+| v0.6.0         | 2022-03-21             | Benjamin Huo @benjaminhuo |
+| v0.7.0-rc      | 2022-08-11             | Wrongerror @wrongerror    |
 
 # How to cut a new release
 
