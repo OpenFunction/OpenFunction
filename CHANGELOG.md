@@ -20,24 +20,103 @@
 # OpenFunction
 
 ## 0.7.0-rc.0 / 2022-08-11
-The ofn CLI install method was deprecated.
 
-The `domains.core.openfunction.io` CRD was deprecated and removed.
+> Note: This release contains a few breaking changes.
+- The ofn CLI install method was deprecated.
+- The `domains.core.openfunction.io` CRD was deprecated and removed.
+- The cert-manager was removed.
+- The Nginx ingress controller was removed.
+- The network layer of knative-serving was replaced from kourier to contour.
 
-### Features
+### OpenFunction
 
-- [Add the parameter validation capabilities for Function](https://github.com/OpenFunction/OpenFunction/issues/274). #290
-- [Add Gateway & Route for OpenFunction](https://github.com/OpenFunction/OpenFunction/blob/main/docs/proposals/202207-openfunction-gateway.md). #321 #327 #333 #342 #344
+#### Features
 
-### Enhancement
-- Remove cert-manager, use generate-cert.sh to generate caBundle and tls.* files. #261
-- Remove the crd description to avoid "metadata.annotations too long" error when using "kubectl apply -f". #264
-- Add e2e testing ability for local environments. #266
-- Change the function sample's sourceSubPath & upgrade kustomize version. #304
-- Use fixed strings instead of knativeAutoscalingPrefix. #311
-- Remove domain crd & optimize path-based mode routing. #327
-- Add samples to gateway & improve gateway controller compatibility. #333
-- Add the compatibility with v0.6.0 functions. #344
+- [Add the parameter validation capabilities for Function](https://github.com/OpenFunction/OpenFunction/issues/274). [OpenFunction#290](https://github.com/OpenFunction/OpenFunction/pull/290)
+- [Add Gateway & Route for OpenFunction](https://github.com/OpenFunction/OpenFunction/blob/main/docs/proposals/202207-openfunction-gateway.md). [OpenFunction#321](https://github.com/OpenFunction/OpenFunction/pull/321)
+
+#### Enhancement
+- Remove cert-manager, use generate-cert.sh to generate caBundle and tls.* files. [OpenFunction#261](https://github.com/OpenFunction/OpenFunction/pull/261)
+- Remove the crd description to avoid "metadata.annotations too long" error when using "kubectl apply -f". [OpenFunction#264](https://github.com/OpenFunction/OpenFunction/pull/264)
+- Add e2e testing ability for local environments. [OpenFunction#266](https://github.com/OpenFunction/OpenFunction/pull/266)
+- Change the function sample's sourceSubPath & upgrade kustomize version. [OpenFunction#304](https://github.com/OpenFunction/OpenFunction/pull/304)
+- Use fixed strings instead of knativeAutoscalingPrefix. [OpenFunction#311](https://github.com/OpenFunction/OpenFunction/pull/311)
+- Remove domain crd & optimize path-based mode routing. [OpenFunction#327](https://github.com/OpenFunction/OpenFunction/pull/327)
+- Add samples to gateway & improve gateway controller compatibility. [OpenFunction#333](https://github.com/OpenFunction/OpenFunction/pull/333)
+- Add the compatibility with v0.6.0 functions. [OpenFunction#344](https://github.com/OpenFunction/OpenFunction/pull/344)
+
+### builder
+
+#### Features
+- Update go builder to support declarative function api. [builder#56](https://github.com/OpenFunction/builder/pull/56)
+- Bump node functions framework to v0.5.0. [builder#57](https://github.com/OpenFunction/builder/pull/57)
+- Add java builder. [builder#58](https://github.com/OpenFunction/builder/pull/58)
+- Add go117 builder & bump function-framework-go to v0.4.0. [builder#60](https://github.com/OpenFunction/builder/pull/60)
+
+### functions-framework-go
+
+#### Features
+- Support declarative multiple functions. [functions-framework-go#48](https://github.com/OpenFunction/functions-framework-go/pull/48)
+- Support defining path-parameters and HTTP method. [functions-framework-go#52](https://github.com/OpenFunction/functions-framework-go/pull/52)
+- Add GetEventInputName func for context interface. [functions-framework-go#55](https://github.com/OpenFunction/functions-framework-go/pull/55)
+
+#### Enhancement
+- Set the exit span before sending the payload to the target. [functions-framework-go#45](https://github.com/OpenFunction/functions-framework-go/pull/45)
+- [Plugin-SkyWalking] Set instance layer to FAAS. [functions-framework-go#46](https://github.com/OpenFunction/functions-framework-go/pull/46)
+- Use innerEvent to encapsulate user data only when the tracing is enabled. [functions-framework-go#49](https://github.com/OpenFunction/functions-framework-go/pull/49)
+- [Plugin-SkyWalking] Report pod name and namespace. [functions-framework-go#50](https://github.com/OpenFunction/functions-framework-go/pull/50)
+- Update cloud event input data to json format. [functions-framework-go#53](https://github.com/OpenFunction/functions-framework-go/pull/53)
+- Upgrade dapr to v1.8.3 & dapr-go-sdk to v1.5.0. [functions-framework-go#56](https://github.com/OpenFunction/functions-framework-go/pull/56) [functions-framework-go#59](https://github.com/OpenFunction/functions-framework-go/pull/59)
+- Combine declarative test cases into one test case. [functions-framework-go#60](https://github.com/OpenFunction/functions-framework-go/pull/60)
+
+### functions-framework-nodejs
+#### Features
+- Initialize openfunction knative and async runtime. [functions-framework-nodejs#4](https://github.com/OpenFunction/functions-framework-nodejs/pull/4)
+- Enable HTTP function trigger async functions. [functions-framework-nodejs#10](https://github.com/OpenFunction/functions-framework-nodejs/pull/10)
+- Enable plugin mechanism for async functions. [functions-framework-nodejs#70](https://github.com/OpenFunction/functions-framework-nodejs/pull/70)
+- Enable skywalking trace for async plugin. [functions-framework-nodejs#74](https://github.com/OpenFunction/functions-framework-nodejs/pull/74)
+- Enable graceful shutdown. [functions-framework-nodejs#75](https://github.com/OpenFunction/functions-framework-nodejs/pull/75)
+
+#### Enhancement
+- Upgrade dapr-nodejs-sdk to v2.3.1 [functions-framework-nodejs#73](https://github.com/OpenFunction/functions-framework-nodejs/pull/73)
+- [Upgrade dapr to v1.8.3](https://github.com/OpenFunction/functions-framework-nodejs/commit/a32fa1c43d0c0872263989b21233f01d28764535).
+- Polish e2e tests. [functions-framework-nodejs#67](https://github.com/OpenFunction/functions-framework-nodejs/pull/67)
+
+### functions-framework-java
+
+OpenFunction currently support java language!
+
+#### Features
+- Support OpenFunction framework. [functions-framework-java#1](https://github.com/OpenFunction/functions-framework-java/pull/1)
+
+### openfunction.dev
+Renaming OpenFunction' website repository to openfunction.dev.
+
+Docs have been refactored and updated with all the new features and changes of this release, see [OpenFunction docs](https://openfunction.dev/docs/).
+
+### charts
+Now you can install OpenFunction and all its dependencies with helm charts.
+#### **TL;DR**
+```shell
+helm repo add openfunction https://openfunction.github.io/charts/
+helm repo update
+helm install openfunction openfunction/openfunction -n openfunction --create-namespace
+```
+
+#### Component Upgrade
+- Upgrade knative-serving from v1.0.1 to v1.3.2
+- Upgrade shipwright-build from v0.6.1 to v0.10.0
+- Upgrade tekton-pipelines from v0.30.0 to v0.37.2
+- Upgrade keda from v2.4.0 to v2.7.1
+- Upgrade dapr from v1.5.1 to v1.8.3
+
+#### Features
+- Add helm chart for openfunction and its dependencies. [charts#1](https://github.com/OpenFunction/charts/pull/1)
+
+#### Enhancement
+- Update helm chart for openfunction v0.7.0. [charts#14](https://github.com/OpenFunction/charts/pull/14)
+- Adjust helm chart for release v0.7.0-rc.0. [charts#22](https://github.com/OpenFunction/charts/pull/22)
+
 
 ## 0.6.0 / 2022-03-21
 
