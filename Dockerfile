@@ -25,7 +25,7 @@ COPY go.mod go.mod
 COPY go.sum go.sum
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
-RUN go env -w GOPROXY=${GOPROXY} && go mod download
+RUN go env -w GOPROXY=${GOPROXY} && go mod tidy
 
 # Copy the go source
 COPY main.go main.go
@@ -34,7 +34,7 @@ COPY controllers/ controllers/
 COPY pkg/ pkg/
 
 # Build
-RUN GOPROXY=${GOPROXY} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o openfunction main.go
+RUN GOPROXY=${GOPROXY} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -ldflags '-s -w' -installsuffix cgo -o openfunction
 
 # Use distroless as minimal base image to package the openfunction binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
