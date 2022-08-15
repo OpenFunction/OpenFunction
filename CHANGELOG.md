@@ -26,7 +26,7 @@
 - The `domains.core.openfunction.io` CRD was deprecated and removed.
 - The cert-manager was removed.
 - The Nginx ingress controller was removed.
-- The network layer of knative-serving was replaced from kourier to contour.
+- Use contour as the network layer of knative-serving instead of kourier.
 
 ### OpenFunction
 
