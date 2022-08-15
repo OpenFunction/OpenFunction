@@ -38,7 +38,7 @@
 #### Enhancement
 - Remove cert-manager, use generate-cert.sh to generate caBundle and tls.* files. [OpenFunction#261](https://github.com/OpenFunction/OpenFunction/pull/261)
 - Remove the crd description to avoid "metadata.annotations too long" error when using "kubectl apply -f". [OpenFunction#264](https://github.com/OpenFunction/OpenFunction/pull/264)
-- Add e2e testing ability for local environments. [OpenFunction#266](https://github.com/OpenFunction/OpenFunction/pull/266)
+- Add e2e testing for local environments. [OpenFunction#266](https://github.com/OpenFunction/OpenFunction/pull/266)
 - Change the function sample's sourceSubPath & upgrade kustomize version. [OpenFunction#304](https://github.com/OpenFunction/OpenFunction/pull/304)
 - Use fixed strings instead of knativeAutoscalingPrefix. [OpenFunction#311](https://github.com/OpenFunction/OpenFunction/pull/311)
 - Remove domain crd & optimize path-based mode routing. [OpenFunction#327](https://github.com/OpenFunction/OpenFunction/pull/327)
