@@ -84,7 +84,7 @@
 
 ### functions-framework-java
 
-OpenFunction currently support java language!
+OpenFunction now supports java!
 
 #### Features
 - Support OpenFunction framework. [functions-framework-java#1](https://github.com/OpenFunction/functions-framework-java/pull/1)
