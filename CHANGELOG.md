@@ -22,11 +22,11 @@
 ## 0.7.0-rc.0 / 2022-08-11
 
 > Note: This release contains a few breaking changes.
-- The ofn CLI install method was deprecated.
+- The `ofn install` and `ofn uninstall` CLI was deprecated.
 - The `domains.core.openfunction.io` CRD was deprecated and removed.
 - The cert-manager was removed.
 - The Nginx ingress controller was removed.
-- The network layer of knative-serving was replaced from kourier to contour.
+- Use contour as the network layer of knative-serving instead of kourier.
 
 ### OpenFunction
 
@@ -38,7 +38,7 @@
 #### Enhancement
 - Remove cert-manager, use generate-cert.sh to generate caBundle and tls.* files. [OpenFunction#261](https://github.com/OpenFunction/OpenFunction/pull/261)
 - Remove the crd description to avoid "metadata.annotations too long" error when using "kubectl apply -f". [OpenFunction#264](https://github.com/OpenFunction/OpenFunction/pull/264)
-- Add e2e testing ability for local environments. [OpenFunction#266](https://github.com/OpenFunction/OpenFunction/pull/266)
+- Add e2e testing for local environments. [OpenFunction#266](https://github.com/OpenFunction/OpenFunction/pull/266)
 - Change the function sample's sourceSubPath & upgrade kustomize version. [OpenFunction#304](https://github.com/OpenFunction/OpenFunction/pull/304)
 - Use fixed strings instead of knativeAutoscalingPrefix. [OpenFunction#311](https://github.com/OpenFunction/OpenFunction/pull/311)
 - Remove domain crd & optimize path-based mode routing. [OpenFunction#327](https://github.com/OpenFunction/OpenFunction/pull/327)
@@ -73,18 +73,10 @@
 #### Features
 - Initialize openfunction knative and async runtime. [functions-framework-nodejs#4](https://github.com/OpenFunction/functions-framework-nodejs/pull/4)
 - Enable HTTP function trigger async functions. [functions-framework-nodejs#10](https://github.com/OpenFunction/functions-framework-nodejs/pull/10)
-- Enable plugin mechanism for async functions. [functions-framework-nodejs#70](https://github.com/OpenFunction/functions-framework-nodejs/pull/70)
-- Enable skywalking trace for async plugin. [functions-framework-nodejs#74](https://github.com/OpenFunction/functions-framework-nodejs/pull/74)
-- Enable graceful shutdown. [functions-framework-nodejs#75](https://github.com/OpenFunction/functions-framework-nodejs/pull/75)
-
-#### Enhancement
-- Upgrade dapr-nodejs-sdk to v2.3.1 [functions-framework-nodejs#73](https://github.com/OpenFunction/functions-framework-nodejs/pull/73)
-- [Upgrade dapr to v1.8.3](https://github.com/OpenFunction/functions-framework-nodejs/commit/a32fa1c43d0c0872263989b21233f01d28764535).
-- Polish e2e tests. [functions-framework-nodejs#67](https://github.com/OpenFunction/functions-framework-nodejs/pull/67)
 
 ### functions-framework-java
 
-OpenFunction currently support java language!
+OpenFunction now supports java!
 
 #### Features
 - Support OpenFunction framework. [functions-framework-java#1](https://github.com/OpenFunction/functions-framework-java/pull/1)
@@ -116,7 +108,6 @@ helm install openfunction openfunction/openfunction -n openfunction --create-nam
 #### Enhancement
 - Update helm chart for openfunction v0.7.0. [charts#14](https://github.com/OpenFunction/charts/pull/14)
 - Adjust helm chart for release v0.7.0-rc.0. [charts#22](https://github.com/OpenFunction/charts/pull/22)
-
 
 ## 0.6.0 / 2022-03-21
 
