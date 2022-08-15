@@ -22,7 +22,7 @@
 ## 0.7.0-rc.0 / 2022-08-11
 
 > Note: This release contains a few breaking changes.
-- The ofn CLI install method was deprecated.
+- The `ofn install` and `ofn uninstall` CLI was deprecated.
 - The `domains.core.openfunction.io` CRD was deprecated and removed.
 - The cert-manager was removed.
 - The Nginx ingress controller was removed.
