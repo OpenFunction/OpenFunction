@@ -73,14 +73,6 @@
 #### Features
 - Initialize openfunction knative and async runtime. [functions-framework-nodejs#4](https://github.com/OpenFunction/functions-framework-nodejs/pull/4)
 - Enable HTTP function trigger async functions. [functions-framework-nodejs#10](https://github.com/OpenFunction/functions-framework-nodejs/pull/10)
-- Enable plugin mechanism for async functions. [functions-framework-nodejs#70](https://github.com/OpenFunction/functions-framework-nodejs/pull/70)
-- Enable skywalking trace for async plugin. [functions-framework-nodejs#74](https://github.com/OpenFunction/functions-framework-nodejs/pull/74)
-- Enable graceful shutdown. [functions-framework-nodejs#75](https://github.com/OpenFunction/functions-framework-nodejs/pull/75)
-
-#### Enhancement
-- Upgrade dapr-nodejs-sdk to v2.3.1 [functions-framework-nodejs#73](https://github.com/OpenFunction/functions-framework-nodejs/pull/73)
-- [Upgrade dapr to v1.8.3](https://github.com/OpenFunction/functions-framework-nodejs/commit/a32fa1c43d0c0872263989b21233f01d28764535).
-- Polish e2e tests. [functions-framework-nodejs#67](https://github.com/OpenFunction/functions-framework-nodejs/pull/67)
 
 ### functions-framework-java
 
