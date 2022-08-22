@@ -59,6 +59,7 @@ type EventSourceReconciler struct {
 	Scheme            *runtime.Scheme
 	EventSourceConfig *EventSourceConfig
 	Function          *ofcore.Function
+	defaultConfig     map[string]string
 }
 
 //+kubebuilder:rbac:groups=events.openfunction.io,resources=eventsources,verbs=get;list;watch;create;update;patch;delete
@@ -91,6 +92,9 @@ func (r *EventSourceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	eventSource := &ofevent.EventSource{}
 	r.EventSourceConfig = &EventSourceConfig{}
 	r.EventSourceConfig.LogLevel = DefaultLogLevel
+
+	// Get default global configuration from ConfigMap
+	r.defaultConfig = getDefaultConfig(ctx, r.Client, log)
 
 	if err := r.Get(ctx, req.NamespacedName, eventSource); err != nil {
 		log.V(1).Info("EventSource deleted", "error", err)
@@ -127,8 +131,12 @@ func (r *EventSourceReconciler) createOrUpdateEventSource(ctx context.Context, l
 		ofevent.Pending, metav1.ConditionUnknown, ofevent.PendingCreation,
 	).SetMessage("Identified EventSource creation signal"))
 
+	image := util.GetConfigOrDefault(r.defaultConfig,
+		"openfunction.eventsource-handler.image",
+		eventSourceHandlerImage,
+	)
 	// Generate the eventsource function instance with image eventSourceHandlerImage.
-	r.Function = InitFunction(eventSourceHandlerImage)
+	r.Function = InitFunction(image)
 
 	if eventSource.Spec.LogLevel != nil {
 		r.EventSourceConfig.LogLevel = *eventSource.Spec.LogLevel

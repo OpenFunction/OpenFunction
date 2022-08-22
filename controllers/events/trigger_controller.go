@@ -56,6 +56,7 @@ type TriggerReconciler struct {
 	Scheme        *runtime.Scheme
 	TriggerConfig *TriggerConfig
 	Function      *ofcore.Function
+	defaultConfig map[string]string
 }
 
 type Subscribers struct {
@@ -99,13 +100,20 @@ func (r *TriggerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	r.TriggerConfig.Subscribers = map[string]*Subscriber{}
 	r.TriggerConfig.LogLevel = DefaultLogLevel
 
+	// Get default global configuration from ConfigMap
+	r.defaultConfig = getDefaultConfig(ctx, r.Client, log)
+
 	if err := r.Get(ctx, req.NamespacedName, trigger); err != nil {
 		log.V(1).Info("Trigger deleted", "error", err)
 		return ctrl.Result{}, util.IgnoreNotFound(err)
 	}
 
+	image := util.GetConfigOrDefault(r.defaultConfig,
+		"openfunction.trigger-handler.image",
+		triggerHandlerImage,
+	)
 	// Generate the trigger function instance with image triggerHandlerImage.
-	r.Function = InitFunction(triggerHandlerImage)
+	r.Function = InitFunction(image)
 
 	if err := r.createOrUpdateTrigger(ctx, log, trigger); err != nil {
 		log.Error(err, "Failed to create or update trigger",
