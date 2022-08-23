@@ -94,7 +94,7 @@ func (r *EventSourceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	r.EventSourceConfig.LogLevel = DefaultLogLevel
 
 	// Get default global configuration from ConfigMap
-	r.defaultConfig = getDefaultConfig(ctx, r.Client, log)
+	r.defaultConfig = util.GetDefaultConfig(ctx, r.Client, r.Log)
 
 	if err := r.Get(ctx, req.NamespacedName, eventSource); err != nil {
 		log.V(1).Info("EventSource deleted", "error", err)

@@ -22,9 +22,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/openfunction/pkg/constants"
-	corev1 "k8s.io/api/core/v1"
-
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -316,21 +313,4 @@ func InitFunction(image string) *ofcore.Function {
 	function.Spec.Serving.Triggers = []ofcore.Triggers{}
 
 	return function
-}
-
-func getDefaultConfig(ctx context.Context, c client.Client, log logr.Logger) map[string]string {
-	cm := &corev1.ConfigMap{}
-
-	if err := c.Get(ctx, client.ObjectKey{
-		Namespace: constants.DefaultControllerNamespace,
-		Name:      constants.DefaultConfigMapName,
-	}, cm); err == nil {
-		if cm != nil {
-			return cm.Data
-		}
-	}
-
-	log.Info(fmt.Sprintf("Unable to get the default global configuration from ConfigMap %s in namespace %s",
-		constants.DefaultConfigMapName, constants.DefaultControllerNamespace))
-	return nil
 }
