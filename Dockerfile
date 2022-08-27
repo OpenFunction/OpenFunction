@@ -13,8 +13,8 @@
 # limitations under the License.
 #
 
-ARG GOPROXY="https://goproxy.cn"
-
+#ARG GOPROXY="https://goproxy.cn"
+ARG GOPROXY="https://goproxy.cn,direct"
 # Build the openfunction binary
 FROM golang:1.16 as builder
 ARG GOPROXY
@@ -25,7 +25,8 @@ COPY go.mod go.mod
 COPY go.sum go.sum
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
-RUN go env -w GOPROXY=${GOPROXY} && go mod tidy
+# Refer to https://go.dev/ref/mod
+RUN go env -w GOPROXY=${GOPROXY} && go mod download
 
 # Copy the go source
 COPY main.go main.go
