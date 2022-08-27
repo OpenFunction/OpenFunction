@@ -17,7 +17,14 @@ limitations under the License.
 package util
 
 import (
+	"context"
+	"fmt"
 	"reflect"
+
+	"github.com/go-logr/logr"
+	"github.com/openfunction/pkg/constants"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func InterfaceIsNil(val interface{}) bool {
@@ -53,4 +60,23 @@ func GetConfigOrDefault(cm map[string]string, key string, defaultVal string) str
 		return val
 	}
 	return defaultVal
+}
+
+func GetDefaultConfig(ctx context.Context, c client.Client, log logr.Logger) map[string]string {
+	log.WithName("Config").WithValues("ConfigMap", constants.DefaultConfigMapName)
+
+	cm := &corev1.ConfigMap{}
+
+	if err := c.Get(ctx, client.ObjectKey{
+		Namespace: constants.DefaultControllerNamespace,
+		Name:      constants.DefaultConfigMapName,
+	}, cm); err == nil {
+		if cm != nil {
+			return cm.Data
+		}
+	}
+
+	log.Info(fmt.Sprintf("Unable to get the default global configuration from ConfigMap %s in namespace %s",
+		constants.DefaultConfigMapName, constants.DefaultControllerNamespace))
+	return nil
 }
