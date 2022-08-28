@@ -16,7 +16,7 @@ ARG GOPROXY="https://goproxy.io,direct"
 # Build the openfunction binary
 FROM golang:1.17 as builder
 # Specify the image maintainer
-MAINTAINER openfuction.group
+MAINTAINER openfuction@admin
 
 # Specify the workspace
 WORKDIR /workspace
