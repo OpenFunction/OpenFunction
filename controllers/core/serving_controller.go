@@ -121,7 +121,7 @@ func (r *ServingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	// Get default global configuration from ConfigMap
-	r.defaultConfig = r.getDefaultConfig()
+	r.defaultConfig = util.GetDefaultConfig(r.ctx, r.Client, r.Log)
 
 	// Start timer if serving is starting.
 	if s.Status.IsStarting() {
@@ -308,26 +308,6 @@ func (r *ServingReconciler) stopTimer(key string) {
 		delete(r.timers, key)
 		log.Info("Timer stopped")
 	}
-}
-
-func (r *ServingReconciler) getDefaultConfig() map[string]string {
-	ctx := r.ctx
-	log := r.Log.WithName("Config").WithValues("ConfigMap", constants.DefaultConfigMapName)
-
-	cm := &corev1.ConfigMap{}
-
-	if err := r.Client.Get(ctx, client.ObjectKey{
-		Namespace: constants.DefaultControllerNamespace,
-		Name:      constants.DefaultConfigMapName,
-	}, cm); err == nil {
-		if cm != nil {
-			return cm.Data
-		}
-	}
-
-	log.Info(fmt.Sprintf("Unable to get the default global configuration from ConfigMap %s in namespace %s",
-		constants.DefaultConfigMapName, constants.DefaultControllerNamespace))
-	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
