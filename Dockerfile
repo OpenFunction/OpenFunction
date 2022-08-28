@@ -12,11 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG GOPROXY="https://goproxy.io,direct"
 # Build the openfunction binary
-FROM golang:1.17 as builder
-# Specify the image maintainer
-MAINTAINER openfuction.group
+FROM golang:1.16 as builder
 
 # Specify the workspace
 WORKDIR /workspace
@@ -26,11 +23,11 @@ ADD . /workspace
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
 # Refer to https://go.dev/ref/mod
-RUN go env -w GOPROXY=https://goproxy.io,direct && \
+RUN go env -w GOPROXY="https://goproxy.cn,direct" && \
     go mod tidy
 
 # Build openfunction binary.
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -ldflags '-s -w' -installsuffix cgo -o openfunction
+RUN GOOS=linux GOARCH=amd64 GO111MODULE=on go build -o openfunction
 
 # Use distroless as minimal base image to package the openfunction binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
