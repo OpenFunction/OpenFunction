@@ -6,6 +6,7 @@
 *.so
 *.dylib
 bin
+__debug_bin
 testbin/*
 
 # Test binary, build with `go test -c`
@@ -24,3 +25,4 @@ testbin/*
 *.swo
 *~
 .vscode
+.nocalhost
