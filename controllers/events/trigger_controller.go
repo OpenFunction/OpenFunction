@@ -46,7 +46,7 @@ import (
 )
 
 const (
-	triggerHandlerImage = "openfunction/trigger-handler:v3"
+	triggerHandlerImage = "openfunction/trigger-handler:v4"
 )
 
 // TriggerReconciler reconciles a Trigger object

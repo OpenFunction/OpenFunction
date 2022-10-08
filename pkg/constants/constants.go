@@ -38,4 +38,5 @@ const (
 	DefaultGatewayListenerPort     v1alpha2.PortNumber   = 80
 	DefaultGatewayListenerProtocol v1alpha2.ProtocolType = "HTTP"
 	DefaultFunctionServicePort     v1alpha2.PortNumber   = 80
+	DefaultFuncPort                v1alpha2.PortNumber   = 8080
 )

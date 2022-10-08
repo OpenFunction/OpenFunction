@@ -360,7 +360,7 @@ func (dst *Function) convertServingFrom(src *v1beta1.Function) error {
 		}
 	}
 
-	if src.Spec.Serving.Annotations != nil {
+	if src.Spec.Serving.Annotations != nil && src.Spec.Serving.Runtime == v1beta1.Async {
 		for k, v := range src.Spec.Serving.Annotations {
 			if strings.HasPrefix(k, "dapr.io") {
 				dst.Spec.Serving.OpenFuncAsync.Dapr.Annotations[k] = v
@@ -419,7 +419,7 @@ func (dst *Function) convertServingFrom(src *v1beta1.Function) error {
 		}
 	}
 
-	if src.Spec.Serving.Inputs != nil {
+	if src.Spec.Serving.Inputs != nil && src.Spec.Serving.Runtime == v1beta1.Async {
 		dst.Spec.Serving.OpenFuncAsync.Dapr.Inputs = []*DaprIO{}
 		for _, input := range src.Spec.Serving.Inputs {
 			in := &DaprIO{
