@@ -15927,7 +15927,7 @@ kind: Deployment
 metadata:
   labels:
     app.kubernetes.io/name: openfunction-controller-manager
-    app.kubernetes.io/version: latest
+    app.kubernetes.io/version: v0.8.0-rc.0
     control-plane: controller-manager
   name: openfunction-controller-manager
   namespace: openfunction
@@ -15948,7 +15948,7 @@ spec:
         - --leader-elect
         command:
         - /openfunction
-        image: openfunction/openfunction:latest
+        image: openfunction/openfunction:v0.8.0-rc.0
         livenessProbe:
           httpGet:
             path: /healthz
@@ -16184,3 +16184,9 @@ data:
       # W3C Baggage Specification/: https://w3c.github.io/baggage/
         key: sw8-correlation # key should be baggage for opentelemetry
         value: "base64(string key):base64(string value),base64(string key2):base64(string value2)"
+    # Config OpenFunction eventsource handler image repo
+    openfunction.eventsource-handler.image: "openfunction/eventsource-handler:v4"
+    # Config OpenFunction trigger handler image repo
+    openfunction.trigger-handler.image: "openfunction/trigger-handler:v4"
+    # Config OpenFunction dapr-proxy image repo
+    openfunction.dapr-proxy.image: "openfunction/dapr-proxy:v0.1.0"
