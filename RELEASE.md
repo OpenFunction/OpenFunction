@@ -15,6 +15,8 @@ This page describes the release process and the currently planned schedule for u
 | v0.6.0-rc      | 2022-03-08             | Benjamin Huo @benjaminhuo |
 | v0.6.0         | 2022-03-21             | Benjamin Huo @benjaminhuo |
 | v0.7.0-rc      | 2022-08-11             | Wrongerror @wrongerror    |
+| v0.7.0         | 2022-08-16             | Wrongerror @wrongerror    |
+| v0.8.0-rc      | 2022-10-14             | Wrongerror @wrongerror    |
 
 # How to cut a new release
 
