@@ -49,7 +49,7 @@ import (
 )
 
 const (
-	eventSourceHandlerImage = "openfunction/eventsource-handler:v3"
+	eventSourceHandlerImage = "openfunction/eventsource-handler:v4"
 )
 
 // EventSourceReconciler reconciles a EventSource object

@@ -66,6 +66,8 @@ data:
         key: sw8-correlation # key should be baggage for opentelemetry
         value: "base64(string key):base64(string value),base64(string key2):base64(string value2)"
     # Config OpenFunction eventsource handler image repo
-    openfunction.eventsource-handler.image: "openfunction/eventsource-handler:v3"
+    openfunction.eventsource-handler.image: "openfunction/eventsource-handler:v4"
     # Config OpenFunction trigger handler image repo
-    openfunction.trigger-handler.image: "openfunction/trigger-handler:v3"
+    openfunction.trigger-handler.image: "openfunction/trigger-handler:v4"
+    # Config OpenFunction dapr-proxy image repo
+    openfunction.dapr-proxy.image: "openfunction/dapr-proxy:v0.1.0"

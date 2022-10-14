@@ -88,6 +88,11 @@ func (r *Function) Default() {
 		r.Spec.Version = &version
 	}
 
+	if r.Spec.Port == nil {
+		port := int32(constants.DefaultFuncPort)
+		r.Spec.Port = &port
+	}
+
 	if r.Spec.Serving != nil && r.Spec.Serving.Runtime == Knative {
 		namespace := constants.DefaultGatewayNamespace
 		if r.Spec.Route == nil {

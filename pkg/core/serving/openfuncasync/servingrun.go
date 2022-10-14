@@ -31,6 +31,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -129,6 +131,15 @@ func (r *servingRun) Run(s *openfunction.Serving, cm map[string]string) error {
 		return err
 	}
 
+	if common.NeedCreateDaprProxy(s) {
+		if err := r.createService(s); err != nil {
+			return err
+		}
+		if err := common.CreateDaprProxy(r.ctx, r.log, r.Client, r.scheme, s, cm, pendingComponents, componentName); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -211,6 +222,10 @@ func (r *servingRun) Clean(s *openfunction.Serving) error {
 		}
 	}
 
+	if err := common.CleanDaprProxy(r.ctx, log, r.Client, s); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -244,6 +259,28 @@ func (r *servingRun) Result(s *openfunction.Serving) (string, error) {
 		}
 	}
 
+	if common.NeedCreateDaprProxy(s) {
+		proxy := &appsv1.Deployment{}
+		if err := r.Get(r.ctx, client.ObjectKey{Name: common.GetProxyName(s), Namespace: s.Namespace}, proxy); err != nil {
+			return "", err
+		}
+
+		for _, cond := range proxy.Status.Conditions {
+			switch cond.Type {
+			case appsv1.DeploymentProgressing:
+				switch cond.Status {
+				case corev1.ConditionUnknown, corev1.ConditionFalse:
+					return "", nil
+				}
+			case appsv1.DeploymentReplicaFailure:
+				switch cond.Status {
+				case corev1.ConditionUnknown, corev1.ConditionTrue:
+					return "", nil
+				}
+			}
+		}
+	}
+
 	return openfunction.Running, nil
 }
 
@@ -260,6 +297,7 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving, cm map[string]str
 		runtimeLabel:                 string(openfunction.Async),
 		constants.CommonLabelVersion: version,
 	}
+
 	labels = util.AppendLabels(s.Spec.Labels, labels)
 
 	selector := &metav1.LabelSelector{
@@ -287,22 +325,25 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving, cm map[string]str
 		}
 	}
 
-	var port int32 = 8080
+	var port = int32(constants.DefaultFuncPort)
 	if s.Spec.Port != nil {
 		port = *s.Spec.Port
 	}
 
 	annotations := make(map[string]string)
-	annotations[common.DaprEnabled] = "true"
-	annotations[common.DaprAppID] = fmt.Sprintf("%s-%s", getFunctionName(s), s.Namespace)
+	annotations[common.DaprAppID] = fmt.Sprintf("%s-%s", common.GetFunctionName(s), s.Namespace)
 	annotations[common.DaprLogAsJSON] = "true"
-
 	// The dapr protocol must equal to the protocol of function framework.
 	annotations[common.DaprAppProtocol] = "grpc"
 	// The dapr port must equal the function port.
 	annotations[common.DaprAppPort] = fmt.Sprintf("%d", port)
-
 	annotations = util.AppendLabels(s.Spec.Annotations, annotations)
+
+	if common.NeedCreateDaprSidecar(s) == false {
+		annotations[common.DaprEnabled] = "false"
+	} else {
+		annotations[common.DaprEnabled] = "true"
+	}
 
 	spec := s.Spec.Template
 	if spec == nil {
@@ -337,10 +378,31 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving, cm map[string]str
 		Protocol:      corev1.ProtocolTCP,
 	})
 
-	container.Env = append(container.Env, corev1.EnvVar{
-		Name:  common.FunctionContextEnvName,
-		Value: common.GenOpenFunctionContext(r.ctx, r.log, s, cm, components, getFunctionName(s), componentName),
-	})
+	container.Env = append(container.Env, []corev1.EnvVar{
+		{
+			Name:  common.FunctionContextEnvName,
+			Value: common.GenOpenFunctionContext(r.ctx, r.log, s, cm, components, common.GetFunctionName(s), componentName),
+		},
+		{
+			Name:  common.DaprProtocolEnvVar,
+			Value: annotations[common.DaprAppProtocol],
+		},
+	}...)
+
+	if common.NeedCreateDaprProxy(s) {
+		funcName := common.GetFunctionName(s)
+		daprServiceName := fmt.Sprintf("%s-%s-dapr", funcName, s.Namespace)
+		container.Env = append(container.Env, []corev1.EnvVar{
+			{
+				Name:  common.DaprHostEnvVar,
+				Value: fmt.Sprintf("%s.%s.svc.cluster.local", daprServiceName, s.Namespace),
+			},
+			{
+				Name:  common.DaprSidecarIPEnvVar,
+				Value: fmt.Sprintf("%s.%s.svc.cluster.local", daprServiceName, s.Namespace),
+			},
+		}...)
+	}
 
 	if s.Spec.Params != nil {
 		for k, v := range s.Spec.Params {
@@ -420,6 +482,42 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving, cm map[string]str
 	}
 }
 
+func (r *servingRun) createService(s *openfunction.Serving) error {
+	funcName := common.GetFunctionName(s)
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: s.Namespace, Name: funcName},
+	}
+	op, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, service, r.mutateService(s, service))
+	if err != nil {
+		r.log.Error(err, "Failed to CreateOrUpdate service")
+		return err
+	}
+	r.log.V(1).Info(fmt.Sprintf("Service %s", op))
+	return nil
+}
+
+func (r *servingRun) mutateService(s *openfunction.Serving, service *corev1.Service) controllerutil.MutateFn {
+	var port = int32(constants.DefaultFuncPort)
+	if s.Spec.Port != nil {
+		port = *s.Spec.Port
+	}
+	return func() error {
+		funcPort := corev1.ServicePort{
+			Name:       "http",
+			Protocol:   corev1.ProtocolTCP,
+			Port:       port,
+			TargetPort: intstr.IntOrString{Type: intstr.Int, IntVal: port},
+		}
+		if s.Annotations[common.DaprAppProtocol] != "http" {
+			service.Spec.ClusterIP = corev1.ClusterIPNone
+		}
+		selector := map[string]string{common.ServingLabel: s.Name}
+		service.Spec.Ports = []corev1.ServicePort{funcPort}
+		service.Spec.Selector = selector
+		return ctrl.SetControllerReference(s, service, r.scheme)
+	}
+}
+
 func (r *servingRun) createScaler(s *openfunction.Serving, workload runtime.Object) error {
 	log := r.log.WithName("CreateKedaScaler").
 		WithValues("Serving", fmt.Sprintf("%s/%s", s.Namespace, s.Name))
@@ -430,8 +528,8 @@ func (r *servingRun) createScaler(s *openfunction.Serving, workload runtime.Obje
 		return nil
 	}
 
-	scaledJobTriggers := []kedav1alpha1.ScaleTriggers{}
-	scaledObjectTriggers := []kedav1alpha1.ScaleTriggers{}
+	var scaledJobTriggers []kedav1alpha1.ScaleTriggers
+	var scaledObjectTriggers []kedav1alpha1.ScaleTriggers
 	for _, triggers := range s.Spec.Triggers {
 		t := triggers.DeepCopy()
 		if t.TargetKind != nil && *t.TargetKind == openfunction.ScaledJob {
@@ -601,11 +699,6 @@ func (r *servingRun) createComponents(s *openfunction.Serving, components map[st
 	}
 
 	return nil
-}
-
-func getFunctionName(s *openfunction.Serving) string {
-
-	return s.Labels[constants.FunctionLabel]
 }
 
 func getWorkloadName(s *openfunction.Serving) string {

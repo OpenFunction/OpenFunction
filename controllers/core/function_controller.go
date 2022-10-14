@@ -799,7 +799,7 @@ func (r *FunctionReconciler) mutateHTTPRoute(
 					return err
 				}
 				path = pathBuffer.String()
-				if !strings.HasSuffix(path, "/") {
+				if !strings.HasPrefix(path, "/") {
 					path = fmt.Sprintf("/%s", path)
 				}
 			}

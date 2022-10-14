@@ -25,6 +25,7 @@ import (
 
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -117,6 +118,12 @@ func (r *servingRun) Run(s *openfunction.Serving, cm map[string]string) error {
 	s.Status.ResourceRef[knativeService] = service.Name
 	s.Status.Service = service.Name
 
+	if common.NeedCreateDaprProxy(s) {
+		if err := common.CreateDaprProxy(r.ctx, r.log, r.Client, r.scheme, s, cm, pendingComponents, componentName); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -138,6 +145,10 @@ func (r *servingRun) Clean(s *openfunction.Serving) error {
 		}
 	}
 
+	if err := common.CleanDaprProxy(r.ctx, log, r.Client, s); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -157,71 +168,38 @@ func (r *servingRun) Result(s *openfunction.Serving) (string, error) {
 		return "", err
 	}
 
-	if service.IsReady() {
-		return openfunction.Running, nil
-	} else if service.IsFailed() {
+	if service.IsFailed() {
 		return openfunction.Failed, nil
-	} else {
+	} else if !service.IsReady() {
 		return "", nil
 	}
+
+	if common.NeedCreateDaprProxy(s) {
+		proxy := &appsv1.Deployment{}
+		if err := r.Get(r.ctx, client.ObjectKey{Name: common.GetProxyName(s), Namespace: s.Namespace}, proxy); err != nil {
+			return "", err
+		}
+
+		for _, cond := range proxy.Status.Conditions {
+			switch cond.Type {
+			case appsv1.DeploymentProgressing:
+				switch cond.Status {
+				case corev1.ConditionUnknown, corev1.ConditionFalse:
+					return "", nil
+				}
+			case appsv1.DeploymentReplicaFailure:
+				switch cond.Status {
+				case corev1.ConditionUnknown, corev1.ConditionTrue:
+					return "", nil
+				}
+			}
+		}
+	}
+
+	return openfunction.Running, nil
 }
 
 func (r *servingRun) createService(s *openfunction.Serving, cm map[string]string, components map[string]*componentsv1alpha1.ComponentSpec) *kservingv1.Service {
-
-	template := s.Spec.Template
-	if template == nil {
-		template = &corev1.PodSpec{}
-	}
-
-	if s.Spec.ImageCredentials != nil {
-		template.ImagePullSecrets = append(template.ImagePullSecrets, *s.Spec.ImageCredentials)
-	}
-
-	var container *corev1.Container
-	for index := range template.Containers {
-		if template.Containers[index].Name == core.FunctionContainer {
-			container = &template.Containers[index]
-		}
-	}
-
-	appended := false
-	if container == nil {
-		container = &corev1.Container{
-			Name:            core.FunctionContainer,
-			ImagePullPolicy: corev1.PullIfNotPresent,
-		}
-		appended = true
-	}
-
-	container.Image = s.Spec.Image
-
-	var appPort int32 = 8080
-	port := corev1.ContainerPort{}
-	if s.Spec.Port != nil {
-		appPort = *s.Spec.Port
-		port.ContainerPort = *s.Spec.Port
-		container.Ports = append(container.Ports, port)
-	}
-
-	container.Env = append(container.Env, corev1.EnvVar{
-		Name:  common.FunctionContextEnvName,
-		Value: common.GenOpenFunctionContext(r.ctx, r.log, s, cm, components, getFunctionName(s), componentName),
-	})
-
-	if s.Spec.Params != nil {
-		for k, v := range s.Spec.Params {
-			container.Env = append(container.Env, corev1.EnvVar{
-				Name:  k,
-				Value: v,
-			})
-		}
-	}
-	container.Env = append(container.Env, common.AddPodMetadataEnv(s.Namespace)...)
-
-	if appended {
-		template.Containers = append(template.Containers, *container)
-	}
-
 	version := constants.DefaultFunctionVersion
 	if s.Spec.Version != nil {
 		version = *s.Spec.Version
@@ -272,21 +250,102 @@ func (r *servingRun) createService(s *openfunction.Serving, cm map[string]string
 			s.Spec.Annotations["autoscaling.knative.dev/minScale"] = minScale
 			s.Spec.Annotations["autoscaling.knative.dev/min-scale"] = minScale
 		}
+
+		if s.Spec.ScaleOptions.Knative != nil {
+			s.Spec.Annotations = util.AppendLabels(s.Spec.Annotations, *s.Spec.ScaleOptions.Knative)
+		}
 	}
 
-	if s.Spec.Outputs != nil {
-		if s.Spec.Annotations == nil {
-			s.Spec.Annotations = map[string]string{}
-		}
-		s.Spec.Annotations[common.DaprEnabled] = "true"
-		s.Spec.Annotations[common.DaprAppID] = fmt.Sprintf("%s-%s", getFunctionName(s), s.Namespace)
-		s.Spec.Annotations[common.DaprLogAsJSON] = "true"
+	var appPort = int32(constants.DefaultFuncPort)
+	port := corev1.ContainerPort{}
+	if s.Spec.Port != nil {
+		appPort = *s.Spec.Port
+		port.ContainerPort = *s.Spec.Port
+	}
 
-		// The dapr protocol must equal to the protocol of function framework.
-		s.Spec.Annotations[common.DaprAppProtocol] = "grpc"
-		// The dapr port must equal the function port.
-		s.Spec.Annotations[common.DaprAppPort] = fmt.Sprintf("%d", appPort)
-		s.Spec.Annotations[common.DaprMetricsPort] = "19090"
+	annotations := make(map[string]string)
+	annotations[common.DaprAppID] = fmt.Sprintf("%s-%s", common.GetFunctionName(s), s.Namespace)
+	annotations[common.DaprLogAsJSON] = "true"
+	// The dapr protocol must equal to the protocol of function framework.
+	annotations[common.DaprAppProtocol] = "grpc"
+	// The dapr port must equal the function port.
+	annotations[common.DaprAppPort] = fmt.Sprintf("%d", appPort)
+	annotations[common.DaprMetricsPort] = "19090"
+	annotations = util.AppendLabels(s.Spec.Annotations, annotations)
+
+	if common.NeedCreateDaprSidecar(s) == false {
+		annotations[common.DaprEnabled] = "false"
+	} else {
+		annotations[common.DaprEnabled] = "true"
+	}
+
+	template := s.Spec.Template
+	if template == nil {
+		template = &corev1.PodSpec{}
+	}
+
+	if s.Spec.ImageCredentials != nil {
+		template.ImagePullSecrets = append(template.ImagePullSecrets, *s.Spec.ImageCredentials)
+	}
+
+	var container *corev1.Container
+	for index := range template.Containers {
+		if template.Containers[index].Name == core.FunctionContainer {
+			container = &template.Containers[index]
+		}
+	}
+
+	appended := false
+	if container == nil {
+		container = &corev1.Container{
+			Name:            core.FunctionContainer,
+			ImagePullPolicy: corev1.PullIfNotPresent,
+		}
+		appended = true
+	}
+
+	container.Image = s.Spec.Image
+
+	container.Ports = append(container.Ports, port)
+
+	container.Env = append(container.Env, []corev1.EnvVar{
+		{
+			Name:  common.FunctionContextEnvName,
+			Value: common.GenOpenFunctionContext(r.ctx, r.log, s, cm, components, common.GetFunctionName(s), componentName),
+		},
+		{
+			Name:  common.DaprProtocolEnvVar,
+			Value: annotations[common.DaprAppProtocol],
+		},
+	}...)
+
+	if s.Spec.Params != nil {
+		for k, v := range s.Spec.Params {
+			container.Env = append(container.Env, corev1.EnvVar{
+				Name:  k,
+				Value: v,
+			})
+		}
+	}
+	container.Env = append(container.Env, common.AddPodMetadataEnv(s.Namespace)...)
+
+	if common.NeedCreateDaprProxy(s) {
+		funcName := common.GetFunctionName(s)
+		daprServiceName := fmt.Sprintf("%s-%s-dapr", funcName, s.Namespace)
+		container.Env = append(container.Env, []corev1.EnvVar{
+			{
+				Name:  common.DaprHostEnvVar,
+				Value: fmt.Sprintf("%s.%s.svc.cluster.local", daprServiceName, s.Namespace),
+			},
+			{
+				Name:  common.DaprSidecarIPEnvVar,
+				Value: fmt.Sprintf("%s.%s.svc.cluster.local", daprServiceName, s.Namespace),
+			},
+		}...)
+	}
+
+	if appended {
+		template.Containers = append(template.Containers, *container)
 	}
 
 	rand.Seed(time.Now().UnixNano())
@@ -294,6 +353,15 @@ func (r *servingRun) createService(s *openfunction.Serving, cm map[string]string
 	workloadName := serviceName
 	workloadName = fmt.Sprintf("%s-%s", workloadName, strings.ReplaceAll(version, ".", ""))
 
+	// Handle hard limit, this setting is not an annotation.
+	// The hard limit is specified per Revision using the containerConcurrency field on the Revision spec.
+	var containerConcurrency *int64
+	if val, ok := s.Spec.Annotations["autoscaling.knative.dev/container-concurrency"]; ok {
+		c, err := strconv.ParseInt(val, 10, 64)
+		if err == nil {
+			containerConcurrency = &c
+		}
+	}
 	service := kservingv1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "serving.knative.dev/v1",
@@ -313,10 +381,11 @@ func (r *servingRun) createService(s *openfunction.Serving, cm map[string]string
 						Name:        workloadName,
 						Namespace:   s.Namespace,
 						Labels:      labels,
-						Annotations: s.Spec.Annotations,
+						Annotations: annotations,
 					},
 					Spec: kservingv1.RevisionSpec{
-						PodSpec: *template,
+						ContainerConcurrency: containerConcurrency,
+						PodSpec:              *template,
 					},
 				},
 			},
@@ -324,11 +393,6 @@ func (r *servingRun) createService(s *openfunction.Serving, cm map[string]string
 	}
 
 	return &service
-}
-
-func getFunctionName(s *openfunction.Serving) string {
-
-	return s.Labels[constants.FunctionLabel]
 }
 
 func getName(s *openfunction.Serving, key string) string {

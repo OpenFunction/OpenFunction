@@ -12,6 +12,7 @@ require (
 	github.com/onsi/gomega v1.15.0
 	github.com/shipwright-io/build v0.6.0
 	go.uber.org/zap v1.19.0
+	golang.org/x/text v0.3.6
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.22.1
 	k8s.io/apimachinery v0.22.1

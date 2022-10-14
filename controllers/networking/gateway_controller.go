@@ -411,10 +411,16 @@ func (r *GatewayReconciler) createOrUpdateService(gateway *networkingv1alpha1.Ga
 	log := r.Log.WithName("createOrUpdateService")
 	var externalName string
 
+	// For the k8s gateway controller implements the addresses field, such as istio.
 	if len(r.k8sGateway.Status.Addresses) > 0 {
 		address := r.k8sGateway.Status.Addresses[0]
-		externalName = strings.Split(address.Value, ":")[0]
-	} else {
+		if *address.Type == k8sgatewayapiv1alpha2.HostnameAddressType {
+			externalName = strings.Split(address.Value, ":")[0]
+		}
+	}
+
+	// For the gateway controller does not implement the addresses field, such as contour.
+	if externalName == "" {
 		targetServices := []string{
 			fmt.Sprintf("%s-%s", r.k8sGateway.Name, networkingv1alpha1.DefaultK8sGatewayServiceName),
 			fmt.Sprintf("%s-%s", networkingv1alpha1.DefaultK8sGatewayServiceName, r.k8sGateway.Name),
