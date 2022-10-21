@@ -10,6 +10,7 @@
   * [0.7.0-rc.0 / 2022-08-11](#070-rc0--2022-08-11)
   * [0.7.0 / 2022-08-16](#070--2022-08-16)
   * [0.8.0-rc.0 / 2022-10-14](#080-rc0--2022-10-14)
+  * [0.8.0 / 2022-10-21](#080--2022-10-21)
 - [OpenFunction/samples](#openfunctionsamples)
 - [OpenFunction/website](#openfunctionwebsite)
 - [OpenFunction/builder](#openfunctionbuilder)
@@ -20,6 +21,70 @@
 - [OpenFunction/events-handlers](#openfunctionevents-handlers)
 
 # OpenFunction
+
+## 0.8.0 / 2022-10-21
+
+### OpenFunction
+
+OpenFunction v0.8.0 added a new [Dapr Standalone Mode](https://openfunction.dev/docs/concepts/baas_integration/) to replace the original Dapr Sidecar mode to speed up function launching.
+[Here](https://github.com/OpenFunction/OpenFunction/blob/main/docs/proposals/20220919-dapr-proxy.md) you can find the proposal.
+
+#### Features
+
+- support dapr-proxy [OpenFunction#370](https://github.com/OpenFunction/OpenFunction/pull/370)
+
+#### Enhancement
+
+- Update dapr-proxy proposal [OpenFunction#372](https://github.com/OpenFunction/OpenFunction/pull/372)
+- Add release drafter [OpenFunction#361](https://github.com/OpenFunction/OpenFunction/pull/361)
+- Add dapr-proxy proposal [OpenFunction#359](https://github.com/OpenFunction/OpenFunction/pull/359)
+- Support config eventsource handler image & trigger handler image [OpenFunction#354](https://github.com/OpenFunction/OpenFunction/pull/354)
+
+#### BUGFIX
+- Fix [Add knative prefix back to the annotation key](https://github.com/OpenFunction/OpenFunction/issues/368) [OpenFunction#372](https://github.com/OpenFunction/OpenFunction/pull/372)
+- Fix [can not connect to another function by internal address within k8s cluster](https://github.com/OpenFunction/OpenFunction/issues/368) [OpenFunction#372](https://github.com/OpenFunction/OpenFunction/pull/372)
+- Fix [nil pointer when creating function](https://github.com/OpenFunction/OpenFunction/issues/366) [OpenFunction#372](https://github.com/OpenFunction/OpenFunction/pull/372)
+- Fix the link of slack in readme [OpenFunction#356](https://github.com/OpenFunction/OpenFunction/pull/356)
+
+### functions-framework-go
+
+#### Features
+
+- Support creating dapr service with http protocol [functions-framework-go#66](https://github.com/OpenFunction/functions-framework-go/pull/66)
+- Support dapr-proxy mode [functions-framework-go#65](https://github.com/OpenFunction/functions-framework-go/pull/65)
+
+#### Enhancements
+
+- Remove import of dapr runtime package [functions-framework-go#67](https://github.com/OpenFunction/functions-framework-go/pull/67)
+- Add release drafter [functions-framework-go#64](https://github.com/OpenFunction/functions-framework-go/pull/64)
+
+#### BUGFIX
+
+- Fix invalid link [functions-framework-go#63](https://github.com/OpenFunction/functions-framework-go/pull/63)
+
+### functions-framework-nodejs
+
+#### Features
+- Enable skywalking plugin for tracing [functions-framework-nodejs#86](https://github.com/OpenFunction/functions-framework-nodejs/pull/86)
+- Enable plugin mechanism for async func [functions-framework-nodejs#70](https://github.com/OpenFunction/functions-framework-nodejs/pull/70)
+- Enable graceful shutdown [functions-framework-nodejs#75](https://github.com/OpenFunction/functions-framework-nodejs/pull/75)
+
+#### Enhancements
+
+- Reconstruct skywalking plugin [functions-framework-nodejs#108](https://github.com/OpenFunction/functions-framework-nodejs/pull/108)
+- Plugin system revolution [functions-framework-nodejs#108](https://github.com/OpenFunction/functions-framework-nodejs/pull/108)
+- Add dapr 1.8.0 ci env and polish e2e tests [functions-framework-nodejs#67](https://github.com/OpenFunction/functions-framework-nodejs/pull/67)
+- Add YADROOKIE as a contributor for code [functions-framework-nodejs#76](https://github.com/OpenFunction/functions-framework-nodejs/pull/76)
+
+### dapr-proxy
+
+#### Features
+
+- Implement dapr proxy [dapr-proxy#1](https://github.com/OpenFunction/dapr-proxy/pull/1)
+
+#### Enhancements
+
+- Fix cve vulnerabilities & update ci [dapr-proxy#3](https://github.com/OpenFunction/dapr-proxy/pull/3)
 
 ## 0.8.0-rc.0 / 2022-10-14
 
