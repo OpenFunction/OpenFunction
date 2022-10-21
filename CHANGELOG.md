@@ -90,6 +90,9 @@ OpenFunction v0.8.0 added a new [Dapr Standalone Mode](https://openfunction.dev/
 
 ### OpenFunction
 
+OpenFunction v0.8.0 added a new [Dapr Standalone Mode](https://openfunction.dev/docs/concepts/baas_integration/) to replace the original Dapr Sidecar mode to speed up function launching.
+[Here](https://github.com/OpenFunction/OpenFunction/blob/main/docs/proposals/20220919-dapr-proxy.md) you can find the proposal.
+
 #### Features
 
 - support dapr-proxy [OpenFunction#370](https://github.com/OpenFunction/OpenFunction/pull/370)
