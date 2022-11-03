@@ -514,6 +514,7 @@ func (r *servingRun) mutateService(s *openfunction.Serving, service *corev1.Serv
 		selector := map[string]string{common.ServingLabel: s.Name}
 		service.Spec.Ports = []corev1.ServicePort{funcPort}
 		service.Spec.Selector = selector
+		service.SetOwnerReferences(nil)
 		return ctrl.SetControllerReference(s, service, r.scheme)
 	}
 }
