@@ -302,6 +302,10 @@ func (r *builderRun) createShipwrightBuild(builder *openfunction.Builder) *shipw
 		})
 	}
 
+	for k, v := range builder.Labels {
+		shipwrightBuild.Labels[k] = v
+	}
+
 	env := ""
 	for k, v := range builder.Spec.Env {
 		env = fmt.Sprintf("%s%s=%s#", env, k, v)
@@ -361,6 +365,9 @@ func (r *builderRun) createShipwrightBuildRun(builder *openfunction.Builder, nam
 				Generate: shipwrightGenerateSA,
 			},
 		},
+	}
+	for k, v := range builder.Labels {
+		shipwrightBuildRun.Labels[k] = v
 	}
 
 	shipwrightBuildRun.SetOwnerReferences(nil)
