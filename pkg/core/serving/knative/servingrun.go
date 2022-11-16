@@ -330,8 +330,7 @@ func (r *servingRun) createService(s *openfunction.Serving, cm map[string]string
 	container.Env = append(container.Env, common.AddPodMetadataEnv(s.Namespace)...)
 
 	if common.NeedCreateDaprProxy(s) {
-		funcName := common.GetFunctionName(s)
-		daprServiceName := fmt.Sprintf("%s-%s-dapr", funcName, s.Namespace)
+		daprServiceName := fmt.Sprintf("%s-dapr", annotations[common.DaprAppID])
 		container.Env = append(container.Env, []corev1.EnvVar{
 			{
 				Name:  common.DaprHostEnvVar,

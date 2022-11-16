@@ -52,6 +52,7 @@ import (
 	openfunction "github.com/openfunction/apis/core/v1beta1"
 	networkingv1alpha1 "github.com/openfunction/apis/networking/v1alpha1"
 	"github.com/openfunction/pkg/constants"
+	"github.com/openfunction/pkg/core/serving/common"
 	"github.com/openfunction/pkg/util"
 )
 
@@ -440,6 +441,12 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 	if err := r.Create(r.ctx, serving); err != nil {
 		log.Error(err, "Failed to create serving")
 		return err
+	}
+
+	if common.NeedCreateDaprProxy(serving) {
+		if err := r.CreateOrUpdateServiceForAsyncFunc(fn, serving); err != nil {
+			return err
+		}
 	}
 
 	fn.Status.Serving = &openfunction.Condition{
@@ -890,6 +897,44 @@ func (r *FunctionReconciler) mutateService(
 		service.Spec.ExternalName = externalName
 		return ctrl.SetControllerReference(fn, service, r.Scheme)
 	}
+}
+
+func (r *FunctionReconciler) CreateOrUpdateServiceForAsyncFunc(fn *openfunction.Function, s *openfunction.Serving) error {
+	log := r.Log.WithName("CreateOrUpdateServiceForAsyncFunc")
+
+	if fn.Spec.Serving.Runtime != openfunction.Async {
+		return nil
+	}
+
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: fn.Namespace, Name: fn.Name},
+	}
+	op, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, service, func() error {
+		var port = int32(constants.DefaultFuncPort)
+		if fn.Spec.Port != nil {
+			port = *fn.Spec.Port
+		}
+		funcPort := corev1.ServicePort{
+			Name:       "http",
+			Protocol:   corev1.ProtocolTCP,
+			Port:       port,
+			TargetPort: intstr.IntOrString{Type: intstr.Int, IntVal: port},
+		}
+		if fn.Spec.Serving.Annotations[common.DaprAppProtocol] != "http" {
+			service.Spec.ClusterIP = corev1.ClusterIPNone
+		}
+		selector := map[string]string{common.ServingLabel: s.Name}
+		service.Spec.Ports = []corev1.ServicePort{funcPort}
+		service.Spec.Selector = selector
+		return ctrl.SetControllerReference(fn, service, r.Scheme)
+	})
+	if err != nil {
+		log.Error(err, "Failed to CreateOrUpdate service")
+		return err
+	}
+
+	log.V(1).Info(fmt.Sprintf("Service %s", op))
+	return nil
 }
 
 func (r *FunctionReconciler) updateFuncWithHTTPRouteStatus(
