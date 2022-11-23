@@ -15927,7 +15927,7 @@ kind: Deployment
 metadata:
   labels:
     app.kubernetes.io/name: openfunction-controller-manager
-    app.kubernetes.io/version: 0.8.1-rc.0
+    app.kubernetes.io/version: v0.8.1-rc.0
     control-plane: controller-manager
   name: openfunction-controller-manager
   namespace: openfunction
@@ -15948,7 +15948,7 @@ spec:
         - --leader-elect
         command:
         - /openfunction
-        image: openfunction/openfunction:0.8.1-rc.0
+        image: openfunction/openfunction:v0.8.1-rc.0
         livenessProbe:
           httpGet:
             path: /healthz
