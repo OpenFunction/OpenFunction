@@ -31,8 +31,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/intstr"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -132,9 +130,6 @@ func (r *servingRun) Run(s *openfunction.Serving, cm map[string]string) error {
 	}
 
 	if common.NeedCreateDaprProxy(s) {
-		if err := r.createService(s); err != nil {
-			return err
-		}
 		if err := common.CreateDaprProxy(r.ctx, r.log, r.Client, r.scheme, s, cm, pendingComponents, componentName); err != nil {
 			return err
 		}
@@ -390,8 +385,7 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving, cm map[string]str
 	}...)
 
 	if common.NeedCreateDaprProxy(s) {
-		funcName := common.GetFunctionName(s)
-		daprServiceName := fmt.Sprintf("%s-%s-dapr", funcName, s.Namespace)
+		daprServiceName := fmt.Sprintf("%s-dapr", annotations[common.DaprAppID])
 		container.Env = append(container.Env, []corev1.EnvVar{
 			{
 				Name:  common.DaprHostEnvVar,
@@ -479,42 +473,6 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving, cm map[string]str
 				return deploy
 			}
 		}
-	}
-}
-
-func (r *servingRun) createService(s *openfunction.Serving) error {
-	funcName := common.GetFunctionName(s)
-	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{Namespace: s.Namespace, Name: funcName},
-	}
-	op, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, service, r.mutateService(s, service))
-	if err != nil {
-		r.log.Error(err, "Failed to CreateOrUpdate service")
-		return err
-	}
-	r.log.V(1).Info(fmt.Sprintf("Service %s", op))
-	return nil
-}
-
-func (r *servingRun) mutateService(s *openfunction.Serving, service *corev1.Service) controllerutil.MutateFn {
-	var port = int32(constants.DefaultFuncPort)
-	if s.Spec.Port != nil {
-		port = *s.Spec.Port
-	}
-	return func() error {
-		funcPort := corev1.ServicePort{
-			Name:       "http",
-			Protocol:   corev1.ProtocolTCP,
-			Port:       port,
-			TargetPort: intstr.IntOrString{Type: intstr.Int, IntVal: port},
-		}
-		if s.Annotations[common.DaprAppProtocol] != "http" {
-			service.Spec.ClusterIP = corev1.ClusterIPNone
-		}
-		selector := map[string]string{common.ServingLabel: s.Name}
-		service.Spec.Ports = []corev1.ServicePort{funcPort}
-		service.Spec.Selector = selector
-		return ctrl.SetControllerReference(s, service, r.scheme)
 	}
 }
 

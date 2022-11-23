@@ -11,6 +11,7 @@
   * [0.7.0 / 2022-08-16](#070--2022-08-16)
   * [0.8.0-rc.0 / 2022-10-14](#080-rc0--2022-10-14)
   * [0.8.0 / 2022-10-21](#080--2022-10-21)
+  * [0.8.1-rc.0 / 2022-11-23](#081-rc0--2022-11-23)
 - [OpenFunction/samples](#openfunctionsamples)
 - [OpenFunction/website](#openfunctionwebsite)
 - [OpenFunction/builder](#openfunctionbuilder)
@@ -21,6 +22,20 @@
 - [OpenFunction/events-handlers](#openfunctionevents-handlers)
 
 # OpenFunction
+
+## 0.8.1-rc.0 / 2022-11-23
+
+### OpenFunction
+
+#### Enhancement
+
+- Bump kafka version to 3.3.1 in samples [OpenFunction#385](https://github.com/OpenFunction/OpenFunction/pull/385)
+
+#### BUGFIX
+
+- Fix [Dapr-proxy service name fissioned](https://github.com/OpenFunction/OpenFunction/issues/378) [OpenFunction#387](https://github.com/OpenFunction/OpenFunction/pull/387)
+- Fix [Failed to CreateOrUpdate service when function is updated](https://github.com/OpenFunction/OpenFunction/issues/380) [OpenFunction#387](https://github.com/OpenFunction/OpenFunction/pull/387)
+
 
 ## 0.8.0 / 2022-10-21
 
@@ -89,6 +104,9 @@ OpenFunction v0.8.0 added a new [Dapr Standalone Mode](https://openfunction.dev/
 ## 0.8.0-rc.0 / 2022-10-14
 
 ### OpenFunction
+
+OpenFunction v0.8.0 added a new [Dapr Standalone Mode](https://openfunction.dev/docs/concepts/baas_integration/) to replace the original Dapr Sidecar mode to speed up function launching.
+[Here](https://github.com/OpenFunction/OpenFunction/blob/main/docs/proposals/20220919-dapr-proxy.md) you can find the proposal.
 
 #### Features
 
