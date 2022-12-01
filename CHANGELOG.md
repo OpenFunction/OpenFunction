@@ -12,6 +12,7 @@
   * [0.8.0-rc.0 / 2022-10-14](#080-rc0--2022-10-14)
   * [0.8.0 / 2022-10-21](#080--2022-10-21)
   * [0.8.1-rc.0 / 2022-11-23](#081-rc0--2022-11-23)
+  * [0.8.1 / 2022-12-01](#081--2022-12-01)
 - [OpenFunction/samples](#openfunctionsamples)
 - [OpenFunction/website](#openfunctionwebsite)
 - [OpenFunction/builder](#openfunctionbuilder)
@@ -22,6 +23,19 @@
 - [OpenFunction/events-handlers](#openfunctionevents-handlers)
 
 # OpenFunction
+
+## 0.8.1 / 2022-12-01
+
+### OpenFunction
+
+#### Enhancement
+
+- Bump kafka version to 3.3.1 in samples [OpenFunction#385](https://github.com/OpenFunction/OpenFunction/pull/385)
+
+#### BUGFIX
+
+- Fix [Dapr-proxy service name fissioned](https://github.com/OpenFunction/OpenFunction/issues/378) [OpenFunction#387](https://github.com/OpenFunction/OpenFunction/pull/387)
+- Fix [Failed to CreateOrUpdate service when function is updated](https://github.com/OpenFunction/OpenFunction/issues/380) [OpenFunction#387](https://github.com/OpenFunction/OpenFunction/pull/387)
 
 ## 0.8.1-rc.0 / 2022-11-23
 
