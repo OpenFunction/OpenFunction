@@ -19,6 +19,7 @@ This page describes the release process and the currently planned schedule for u
 | v0.8.0-rc      | 2022-10-14             | Wrongerror @wrongerror    |
 | v0.8.0         | 2022-10-21             | Wrongerror @wrongerror    |
 | v0.8.1-rc      | 2022-11-23             | Wrongerror @wrongerror    |
+| v0.8.1         | 2022-12-01             | Wrongerror @wrongerror    |
 
 # How to cut a new release
 
