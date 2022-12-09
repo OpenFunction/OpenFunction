@@ -31,7 +31,7 @@ OpenFunction features include:
 - Flexible autoscaling between 0 and N
 - Advanced async function autoscaling based on event sources' specific metrics
 - Simplified BaaS integration for both sync and async functions by introducing [Dapr](https://dapr.io/) 
-- Advanced function ingress & traffic management powered by [K8s Gateway API](https://gateway-api.sigs.k8s.io/) (In Progress)
+- Advanced function ingress & traffic management powered by [K8s Gateway API](https://gateway-api.sigs.k8s.io/)
 - Flexible and easy-to-use events management framework
 
 ## ☸ Architecture
