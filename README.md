@@ -36,7 +36,7 @@ OpenFunction features include:
 
 ## ☸ Architecture
 
-![OpenFunction Architecture](docs/images/openfunction-0.5-architecture.svg)
+<div align=center><img width="120%" height="120%" src=docs/images/openfunction-0.5-architecture.svg/></div>
 
 OpenFunction manages its components in the form of Custom Resource Definitions (CRD) throughout the lifecycle of a function, you can find more details in the [Concepts](https://openfunction.dev/docs/concepts/) section.
 
