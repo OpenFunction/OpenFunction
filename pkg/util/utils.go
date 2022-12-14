@@ -22,9 +22,10 @@ import (
 	"reflect"
 
 	"github.com/go-logr/logr"
-	"github.com/openfunction/pkg/constants"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/openfunction/pkg/constants"
 )
 
 func InterfaceIsNil(val interface{}) bool {
