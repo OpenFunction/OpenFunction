@@ -60,6 +60,7 @@ type EventSourceReconciler struct {
 	EventSourceConfig *EventSourceConfig
 	Function          *ofcore.Function
 	defaultConfig     map[string]string
+	newSinkUri        string
 }
 
 //+kubebuilder:rbac:groups=events.openfunction.io,resources=eventsources,verbs=get;list;watch;create;update;patch;delete
@@ -162,6 +163,7 @@ func (r *EventSourceReconciler) createOrUpdateEventSource(ctx context.Context, l
 
 	// Handle Sink reconcile.
 	if eventSource.Spec.Sink != nil {
+		r.newSinkUri = *eventSource.Spec.Sink.Uri
 		if err := r.handleSink(ctx, log, eventSource); err != nil {
 			return err
 		}
@@ -172,9 +174,7 @@ func (r *EventSourceReconciler) createOrUpdateEventSource(ctx context.Context, l
 		return err
 	}
 
-	newSinkUri := *eventSource.Spec.Sink.Uri
-
-	if _, err := ctrl.CreateOrUpdate(ctx, r.Client, eventSource, r.mutateEventSource(eventSource, newSinkUri)); err != nil {
+	if _, err := ctrl.CreateOrUpdate(ctx, r.Client, eventSource, r.mutateEventSource(eventSource, r.newSinkUri)); err != nil {
 		condition := ofevent.CreateCondition(
 			ofevent.Error, metav1.ConditionFalse, ofevent.ErrorCreatingEventSource,
 		).SetMessage(err.Error())
@@ -451,7 +451,9 @@ func (r *EventSourceReconciler) mutateEventSource(eventSource *ofevent.EventSour
 		if eventSource.Spec.EventBus != "" {
 			eventSource.Labels[EventBusNameLabel] = eventSource.Spec.EventBus
 		}
-		eventSource.Spec.Sink.Uri = &uri
+		if eventSource.Spec.Sink != nil {
+			eventSource.Spec.Sink.Uri = &uri
+		}
 		return nil
 	}
 }
