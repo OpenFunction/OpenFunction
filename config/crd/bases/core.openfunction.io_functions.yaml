@@ -7186,6 +7186,14 @@ spec:
                   state:
                     type: string
                 type: object
+              output:
+                properties:
+                  digest:
+                    type: string
+                  size:
+                    format: int64
+                    type: integer
+                type: object
               route:
                 properties:
                   conditions:

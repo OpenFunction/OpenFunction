@@ -252,6 +252,7 @@ func (r *FunctionReconciler) updateFuncWithBuilderStatus(fn *openfunction.Functi
 	// If builder status changed, update function build status.
 	if fn.Status.Build.State != builder.Status.State {
 		fn.Status.Build.State = builder.Status.State
+		fn.Status.Output = builder.Status.Output
 		// If build had complete, update function serving status.
 		if builder.Status.State == openfunction.Succeeded {
 			if fn.Status.Serving == nil {
@@ -554,7 +555,7 @@ func (r *FunctionReconciler) createServingSpec(fn *openfunction.Function) openfu
 
 	spec := openfunction.ServingSpec{
 		Version:          fn.Spec.Version,
-		Image:            fn.Spec.Image,
+		Image:            getServingImage(fn),
 		ImageCredentials: fn.Spec.ImageCredentials,
 		Timeout:          fn.Spec.Serving.Timeout,
 	}
@@ -579,6 +580,14 @@ func (r *FunctionReconciler) createServingSpec(fn *openfunction.Function) openfu
 	}
 
 	return spec
+}
+
+func getServingImage(fn *openfunction.Function) string {
+	if fn.Status.Output == nil || fn.Status.Output.Digest == "" {
+		return fn.Spec.Image
+	}
+
+	return fn.Spec.Image + "@" + fn.Status.Output.Digest
 }
 
 func (r *FunctionReconciler) needToCreateBuilder(fn *openfunction.Function) bool {

@@ -294,6 +294,7 @@ type FunctionStatus struct {
 	// Addresses holds the addresses that used to access the Function.
 	// +optional
 	Addresses []FunctionAddress `json:"addresses,omitempty"`
+	Output    *Output           `json:"output,omitempty"`
 }
 
 //+genclient
