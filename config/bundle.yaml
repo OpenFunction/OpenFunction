@@ -8214,6 +8214,11 @@ spec:
                   state:
                     type: string
                 type: object
+              revision:
+                properties:
+                  imageDigest:
+                    type: string
+                type: object
               route:
                 properties:
                   conditions:
