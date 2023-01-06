@@ -286,6 +286,10 @@ type RouteStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
+type Revision struct {
+	ImageDigest string `json:"imageDigest,omitempty"`
+}
+
 // FunctionStatus defines the observed state of Function
 type FunctionStatus struct {
 	Route   *RouteStatus `json:"route,omitempty"`
@@ -294,7 +298,7 @@ type FunctionStatus struct {
 	// Addresses holds the addresses that used to access the Function.
 	// +optional
 	Addresses []FunctionAddress `json:"addresses,omitempty"`
-	Output    *Output           `json:"output,omitempty"`
+	Revision  *Revision         `json:"revision,omitempty"`
 }
 
 //+genclient
