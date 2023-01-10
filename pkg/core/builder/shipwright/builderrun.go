@@ -186,6 +186,28 @@ func (r *builderRun) Result(builder *openfunction.Builder) (string, string, erro
 					}
 				}
 
+				builder.Status.Sources = []openfunction.SourceResult{}
+				for _, source := range shipwrightBuildRun.Status.Sources {
+					sr := openfunction.SourceResult{
+						Name: source.Name,
+					}
+
+					if source.Git != nil {
+						sr.Git = &openfunction.GitSourceResult{
+							CommitSha:    source.Git.CommitSha,
+							CommitAuthor: source.Git.CommitAuthor,
+						}
+					}
+
+					if source.Bundle != nil {
+						sr.Bundle = &openfunction.BundleSourceResult{
+							Digest: source.Bundle.Digest,
+						}
+					}
+
+					builder.Status.Sources = append(builder.Status.Sources, sr)
+				}
+
 				return openfunction.Succeeded, openfunction.Succeeded, nil
 			} else {
 				return "", "", nil

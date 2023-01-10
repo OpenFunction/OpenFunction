@@ -258,6 +258,7 @@ func (r *FunctionReconciler) updateFuncWithBuilderStatus(fn *openfunction.Functi
 				fn.Status.Revision = &openfunction.Revision{
 					ImageDigest: builder.Status.Output.Digest,
 				}
+				fn.Status.Sources = builder.Status.Sources
 			}
 			if fn.Status.Serving == nil {
 				fn.Status.Serving = &openfunction.Condition{}
