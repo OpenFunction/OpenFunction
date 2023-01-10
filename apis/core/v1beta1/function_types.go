@@ -290,6 +290,43 @@ type Revision struct {
 	ImageDigest string `json:"imageDigest,omitempty"`
 }
 
+// SourceResult holds the results emitted from the different sources
+type SourceResult struct {
+	// Name is the name of source
+	Name string `json:"name"`
+
+	// Git holds the results emitted from from the
+	// step definition of a git source
+	//
+	// +optional
+	Git *GitSourceResult `json:"git,omitempty"`
+
+	// Bundle holds the results emitted from from the
+	// step definition of bundle source
+	//
+	// +optional
+	Bundle *BundleSourceResult `json:"bundle,omitempty"`
+}
+
+// BundleSourceResult holds the results emitted from the bundle source
+type BundleSourceResult struct {
+	// Digest hold the image digest result
+	Digest string `json:"digest,omitempty"`
+}
+
+// GitSourceResult holds the results emitted from the git source
+type GitSourceResult struct {
+	// CommitSha holds the commit sha of git source
+	CommitSha string `json:"commitSha,omitempty"`
+
+	// CommitAuthor holds the commit author of a git source
+	CommitAuthor string `json:"commitAuthor,omitempty"`
+
+	// BranchName holds the default branch name of the git source
+	// this will be set only when revision is not specified in Build object
+	BranchName string `json:"branchName,omitempty"`
+}
+
 // FunctionStatus defines the observed state of Function
 type FunctionStatus struct {
 	Route   *RouteStatus `json:"route,omitempty"`
@@ -299,6 +336,11 @@ type FunctionStatus struct {
 	// +optional
 	Addresses []FunctionAddress `json:"addresses,omitempty"`
 	Revision  *Revision         `json:"revision,omitempty"`
+	// Sources holds the results emitted from the step definition
+	// of different sources
+	//
+	// +optional
+	Sources []SourceResult `json:"sources,omitempty"`
 }
 
 //+genclient

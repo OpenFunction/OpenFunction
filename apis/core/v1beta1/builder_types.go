@@ -96,6 +96,11 @@ type BuilderStatus struct {
 	//
 	// +optional
 	Output *Output `json:"output,omitempty"`
+	// Sources holds the results emitted from the step definition
+	// of different sources
+	//
+	// +optional
+	Sources []SourceResult `json:"sources,omitempty"`
 }
 
 //+genclient

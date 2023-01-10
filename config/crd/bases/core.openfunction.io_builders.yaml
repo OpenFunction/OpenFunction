@@ -244,6 +244,29 @@ spec:
                 additionalProperties:
                   type: string
                 type: object
+              sources:
+                items:
+                  properties:
+                    bundle:
+                      properties:
+                        digest:
+                          type: string
+                      type: object
+                    git:
+                      properties:
+                        branchName:
+                          type: string
+                        commitAuthor:
+                          type: string
+                        commitSha:
+                          type: string
+                      type: object
+                    name:
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
               state:
                 type: string
             type: object
