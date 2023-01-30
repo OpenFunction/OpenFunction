@@ -23,7 +23,7 @@ import (
 
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	"github.com/go-logr/logr"
-	log "github.com/go-logr/logr/testing"
+	"github.com/go-logr/logr/testr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/json"
@@ -119,11 +119,9 @@ func Test_createSinkComponent(t *testing.T) {
 		{
 			name: "Use uri",
 			args: args{
-				ctx: context.Background(),
-				c:   nil,
-				log: &log.TestLogger{
-					T: t,
-				},
+				ctx:      context.Background(),
+				c:        nil,
+				log:      testr.New(t),
 				resource: resource,
 				sink: &ofevent.SinkSpec{
 					Uri: &uri,
@@ -149,9 +147,7 @@ func Test_createSinkComponent(t *testing.T) {
 					},
 					Status: *newServiceStatusFunc(t, "http://test-service"),
 				}).Build(),
-				log: &log.TestLogger{
-					T: t,
-				},
+				log:      testr.New(t),
 				resource: resource,
 				sink: &ofevent.SinkSpec{
 					Ref: &ofevent.Reference{
@@ -184,9 +180,7 @@ func Test_createSinkComponent(t *testing.T) {
 						Addresses: []ofcore.FunctionAddress{{Type: &addressType, Value: "http://test-of"}},
 					},
 				}).Build(),
-				log: &log.TestLogger{
-					T: t,
-				},
+				log:      testr.New(t),
 				resource: resource,
 				sink: &ofevent.SinkSpec{
 					Ref: &ofevent.Reference{
@@ -217,9 +211,7 @@ func Test_createSinkComponent(t *testing.T) {
 					},
 					Status: *newServiceStatusFunc(t, "http://test"),
 				}).Build(),
-				log: &log.TestLogger{
-					T: t,
-				},
+				log:      testr.New(t),
 				resource: resource,
 				sink: &ofevent.SinkSpec{
 					Ref: &ofevent.Reference{
@@ -251,9 +243,7 @@ func Test_createSinkComponent(t *testing.T) {
 					},
 					Status: *newServiceStatusFunc(t, "http://test-ref"),
 				}).Build(),
-				log: &log.TestLogger{
-					T: t,
-				},
+				log:      testr.New(t),
 				resource: resource,
 				sink: &ofevent.SinkSpec{
 					Ref: &ofevent.Reference{
@@ -279,9 +269,7 @@ func Test_createSinkComponent(t *testing.T) {
 						Addresses: []ofcore.FunctionAddress{{Type: &addressType, Value: "http://test-of"}},
 					},
 				}).Build(),
-				log: &log.TestLogger{
-					T: t,
-				},
+				log:      testr.New(t),
 				resource: resource,
 				sink: &ofevent.SinkSpec{
 					Ref: &ofevent.Reference{
@@ -297,11 +285,9 @@ func Test_createSinkComponent(t *testing.T) {
 		{
 			name: "unsupported reference",
 			args: args{
-				ctx: context.Background(),
-				c:   nil,
-				log: &log.TestLogger{
-					T: t,
-				},
+				ctx:      context.Background(),
+				c:        nil,
+				log:      testr.New(t),
 				resource: resource,
 				sink: &ofevent.SinkSpec{
 					Ref: &ofevent.Reference{
@@ -317,10 +303,8 @@ func Test_createSinkComponent(t *testing.T) {
 		{
 			name: "None of them are set",
 			args: args{
-				ctx: context.Background(),
-				log: &log.TestLogger{
-					T: t,
-				},
+				ctx:  context.Background(),
+				log:  testr.New(t),
 				sink: &ofevent.SinkSpec{},
 			},
 			wantErr: true,

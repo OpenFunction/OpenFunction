@@ -146,9 +146,13 @@ func (r *builderRun) Result(builder *openfunction.Builder) (string, string, erro
 		return "", "", util.IgnoreNotFound(err)
 	}
 
-	if shipwrightBuild.Status.Registered == corev1.ConditionFalse {
-		return openfunction.Failed, string(shipwrightBuild.Status.Reason), nil
-	} else if shipwrightBuild.Status.Registered == corev1.ConditionUnknown {
+	if shipwrightBuild.Status.Registered == nil {
+		return "", "", nil
+	}
+
+	if shipwrightBuild.Status.Registered == shipwrightv1alpha1.ConditionStatusPtr(corev1.ConditionFalse) {
+		return openfunction.Failed, string(*shipwrightBuild.Status.Reason), nil
+	} else if shipwrightBuild.Status.Registered == shipwrightv1alpha1.ConditionStatusPtr(corev1.ConditionUnknown) {
 		return "", "", nil
 	}
 
@@ -271,8 +275,8 @@ func (r *builderRun) Cancel(builder *openfunction.Builder) error {
 		return util.IgnoreNotFound(err)
 	}
 
-	if shipwrightBuildRun.Spec.State != shipwrightv1alpha1.BuildRunStateCancel {
-		shipwrightBuildRun.Spec.State = shipwrightv1alpha1.BuildRunStateCancel
+	if shipwrightBuildRun.Spec.State != shipwrightv1alpha1.BuildRunRequestedStatePtr(shipwrightv1alpha1.BuildRunStateCancel) {
+		shipwrightBuildRun.Spec.State = shipwrightv1alpha1.BuildRunRequestedStatePtr(shipwrightv1alpha1.BuildRunStateCancel)
 		if err := r.Update(r.ctx, shipwrightBuildRun); util.IgnoreNotFound(err) != nil {
 			log.Error(err, "Failed to cancel BuildRun", "BuildRun", shipwrightBuildRun.Name)
 			return err
@@ -283,7 +287,7 @@ func (r *builderRun) Cancel(builder *openfunction.Builder) error {
 }
 
 func (r *builderRun) createShipwrightBuild(builder *openfunction.Builder) *shipwrightv1alpha1.Build {
-
+	url := builder.Spec.SrcRepo.Url
 	shipwrightBuild := &shipwrightv1alpha1.Build{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-build-", builder.Name),
@@ -294,7 +298,7 @@ func (r *builderRun) createShipwrightBuild(builder *openfunction.Builder) *shipw
 		},
 		Spec: shipwrightv1alpha1.BuildSpec{
 			Source: shipwrightv1alpha1.Source{
-				URL:         builder.Spec.SrcRepo.Url,
+				URL:         &url,
 				Revision:    builder.Spec.SrcRepo.Revision,
 				ContextDir:  builder.Spec.SrcRepo.SourceSubPath,
 				Credentials: builder.Spec.SrcRepo.Credentials,
@@ -318,9 +322,12 @@ func (r *builderRun) createShipwrightBuild(builder *openfunction.Builder) *shipw
 	}
 
 	for k, v := range builder.Spec.Params {
+		val := v
 		shipwrightBuild.Spec.ParamValues = append(shipwrightBuild.Spec.ParamValues, shipwrightv1alpha1.ParamValue{
-			Name:  k,
-			Value: v,
+			Name: k,
+			SingleValue: &shipwrightv1alpha1.SingleValue{
+				Value: &val,
+			},
 		})
 	}
 
@@ -338,14 +345,16 @@ func (r *builderRun) createShipwrightBuild(builder *openfunction.Builder) *shipw
 
 	if len(env) > 0 {
 		shipwrightBuild.Spec.ParamValues = append(shipwrightBuild.Spec.ParamValues, shipwrightv1alpha1.ParamValue{
-			Name:  envVars,
-			Value: env,
+			Name: envVars,
+			SingleValue: &shipwrightv1alpha1.SingleValue{
+				Value: &env,
+			},
 		})
 	}
 
 	if builder.Spec.Shipwright == nil || builder.Spec.Shipwright.Strategy == nil {
 		kind := shipwrightv1alpha1.ClusterBuildStrategyKind
-		shipwrightBuild.Spec.Strategy = &shipwrightv1alpha1.Strategy{
+		shipwrightBuild.Spec.Strategy = shipwrightv1alpha1.Strategy{
 			Name: defaultStrategy,
 			Kind: &kind,
 		}
@@ -353,7 +362,7 @@ func (r *builderRun) createShipwrightBuild(builder *openfunction.Builder) *shipw
 
 	if builder.Spec.Shipwright != nil {
 		if builder.Spec.Shipwright.Strategy != nil {
-			shipwrightBuild.Spec.Strategy = &shipwrightv1alpha1.Strategy{
+			shipwrightBuild.Spec.Strategy = shipwrightv1alpha1.Strategy{
 				Name: builder.Spec.Shipwright.Strategy.Name,
 			}
 
@@ -369,7 +378,7 @@ func (r *builderRun) createShipwrightBuild(builder *openfunction.Builder) *shipw
 }
 
 func (r *builderRun) createShipwrightBuildRun(builder *openfunction.Builder, name string) *shipwrightv1alpha1.BuildRun {
-
+	generateSA := shipwrightGenerateSA
 	shipwrightBuildRun := &shipwrightv1alpha1.BuildRun{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-buildrun-", builder.Name),
@@ -384,7 +393,7 @@ func (r *builderRun) createShipwrightBuildRun(builder *openfunction.Builder, nam
 			},
 			// Generate a temporal service account for each buildrun to avoid build failed when previous used secret was deleted
 			ServiceAccount: &shipwrightv1alpha1.ServiceAccount{
-				Generate: shipwrightGenerateSA,
+				Generate: &generateSA,
 			},
 		},
 	}
@@ -409,7 +418,7 @@ func (r *builderRun) waitForBuildReady(build *shipwrightv1alpha1.Build) error {
 				continue
 			}
 
-			if b.Status.Registered == corev1.ConditionUnknown {
+			if b.Status.Registered == shipwrightv1alpha1.ConditionStatusPtr(corev1.ConditionUnknown) {
 				continue
 			} else {
 				return nil
