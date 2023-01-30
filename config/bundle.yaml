@@ -2035,6 +2035,16 @@ spec:
                                 failureThreshold:
                                   format: int32
                                   type: integer
+                                grpc:
+                                  properties:
+                                    port:
+                                      format: int32
+                                      type: integer
+                                    service:
+                                      type: string
+                                  required:
+                                  - port
+                                  type: object
                                 httpGet:
                                   properties:
                                     host:
@@ -2129,6 +2139,16 @@ spec:
                                 failureThreshold:
                                   format: int32
                                   type: integer
+                                grpc:
+                                  properties:
+                                    port:
+                                      format: int32
+                                      type: integer
+                                    service:
+                                      type: string
+                                  required:
+                                  - port
+                                  type: object
                                 httpGet:
                                   properties:
                                     host:
@@ -2259,6 +2279,8 @@ spec:
                                       type: string
                                     gmsaCredentialSpecName:
                                       type: string
+                                    hostProcess:
+                                      type: boolean
                                     runAsUserName:
                                       type: string
                                   type: object
@@ -2275,6 +2297,16 @@ spec:
                                 failureThreshold:
                                   format: int32
                                   type: integer
+                                grpc:
+                                  properties:
+                                    port:
+                                      format: int32
+                                      type: integer
+                                    service:
+                                      type: string
+                                  required:
+                                  - port
+                                  type: object
                                 httpGet:
                                   properties:
                                     host:
@@ -2614,6 +2646,16 @@ spec:
                                 failureThreshold:
                                   format: int32
                                   type: integer
+                                grpc:
+                                  properties:
+                                    port:
+                                      format: int32
+                                      type: integer
+                                    service:
+                                      type: string
+                                  required:
+                                  - port
+                                  type: object
                                 httpGet:
                                   properties:
                                     host:
@@ -2692,6 +2734,10 @@ spec:
                                 - containerPort
                                 type: object
                               type: array
+                              x-kubernetes-list-map-keys:
+                              - containerPort
+                              - protocol
+                              x-kubernetes-list-type: map
                             readinessProbe:
                               properties:
                                 exec:
@@ -2704,6 +2750,16 @@ spec:
                                 failureThreshold:
                                   format: int32
                                   type: integer
+                                grpc:
+                                  properties:
+                                    port:
+                                      format: int32
+                                      type: integer
+                                    service:
+                                      type: string
+                                  required:
+                                  - port
+                                  type: object
                                 httpGet:
                                   properties:
                                     host:
@@ -2834,6 +2890,8 @@ spec:
                                       type: string
                                     gmsaCredentialSpecName:
                                       type: string
+                                    hostProcess:
+                                      type: boolean
                                     runAsUserName:
                                       type: string
                                   type: object
@@ -2850,6 +2908,16 @@ spec:
                                 failureThreshold:
                                   format: int32
                                   type: integer
+                                grpc:
+                                  properties:
+                                    port:
+                                      format: int32
+                                      type: integer
+                                    service:
+                                      type: string
+                                  required:
+                                  - port
+                                  type: object
                                 httpGet:
                                   properties:
                                     host:
@@ -3193,6 +3261,16 @@ spec:
                                 failureThreshold:
                                   format: int32
                                   type: integer
+                                grpc:
+                                  properties:
+                                    port:
+                                      format: int32
+                                      type: integer
+                                    service:
+                                      type: string
+                                  required:
+                                  - port
+                                  type: object
                                 httpGet:
                                   properties:
                                     host:
@@ -3287,6 +3365,16 @@ spec:
                                 failureThreshold:
                                   format: int32
                                   type: integer
+                                grpc:
+                                  properties:
+                                    port:
+                                      format: int32
+                                      type: integer
+                                    service:
+                                      type: string
+                                  required:
+                                  - port
+                                  type: object
                                 httpGet:
                                   properties:
                                     host:
@@ -3417,6 +3505,8 @@ spec:
                                       type: string
                                     gmsaCredentialSpecName:
                                       type: string
+                                    hostProcess:
+                                      type: boolean
                                     runAsUserName:
                                       type: string
                                   type: object
@@ -3433,6 +3523,16 @@ spec:
                                 failureThreshold:
                                   format: int32
                                   type: integer
+                                grpc:
+                                  properties:
+                                    port:
+                                      format: int32
+                                      type: integer
+                                    service:
+                                      type: string
+                                  required:
+                                  - port
+                                  type: object
                                 httpGet:
                                   properties:
                                     host:
@@ -3543,6 +3643,14 @@ spec:
                         additionalProperties:
                           type: string
                         type: object
+                        x-kubernetes-map-type: atomic
+                      os:
+                        properties:
+                          name:
+                            type: string
+                        required:
+                        - name
+                        type: object
                       overhead:
                         additionalProperties:
                           anyOf:
@@ -3631,6 +3739,8 @@ spec:
                                 type: string
                               gmsaCredentialSpecName:
                                 type: string
+                              hostProcess:
+                                type: boolean
                               runAsUserName:
                                 type: string
                             type: object
@@ -3903,6 +4013,18 @@ spec:
                                             type: string
                                           type: array
                                         dataSource:
+                                          properties:
+                                            apiGroup:
+                                              type: string
+                                            kind:
+                                              type: string
+                                            name:
+                                              type: string
+                                          required:
+                                          - kind
+                                          - name
+                                          type: object
+                                        dataSourceRef:
                                           properties:
                                             apiGroup:
                                               type: string
@@ -5822,6 +5944,16 @@ spec:
                                 failureThreshold:
                                   format: int32
                                   type: integer
+                                grpc:
+                                  properties:
+                                    port:
+                                      format: int32
+                                      type: integer
+                                    service:
+                                      type: string
+                                  required:
+                                  - port
+                                  type: object
                                 httpGet:
                                   properties:
                                     host:
@@ -5916,6 +6048,16 @@ spec:
                                 failureThreshold:
                                   format: int32
                                   type: integer
+                                grpc:
+                                  properties:
+                                    port:
+                                      format: int32
+                                      type: integer
+                                    service:
+                                      type: string
+                                  required:
+                                  - port
+                                  type: object
                                 httpGet:
                                   properties:
                                     host:
@@ -6046,6 +6188,8 @@ spec:
                                       type: string
                                     gmsaCredentialSpecName:
                                       type: string
+                                    hostProcess:
+                                      type: boolean
                                     runAsUserName:
                                       type: string
                                   type: object
@@ -6062,6 +6206,16 @@ spec:
                                 failureThreshold:
                                   format: int32
                                   type: integer
+                                grpc:
+                                  properties:
+                                    port:
+                                      format: int32
+                                      type: integer
+                                    service:
+                                      type: string
+                                  required:
+                                  - port
+                                  type: object
                                 httpGet:
                                   properties:
                                     host:
@@ -6401,6 +6555,16 @@ spec:
                                 failureThreshold:
                                   format: int32
                                   type: integer
+                                grpc:
+                                  properties:
+                                    port:
+                                      format: int32
+                                      type: integer
+                                    service:
+                                      type: string
+                                  required:
+                                  - port
+                                  type: object
                                 httpGet:
                                   properties:
                                     host:
@@ -6479,6 +6643,10 @@ spec:
                                 - containerPort
                                 type: object
                               type: array
+                              x-kubernetes-list-map-keys:
+                              - containerPort
+                              - protocol
+                              x-kubernetes-list-type: map
                             readinessProbe:
                               properties:
                                 exec:
@@ -6491,6 +6659,16 @@ spec:
                                 failureThreshold:
                                   format: int32
                                   type: integer
+                                grpc:
+                                  properties:
+                                    port:
+                                      format: int32
+                                      type: integer
+                                    service:
+                                      type: string
+                                  required:
+                                  - port
+                                  type: object
                                 httpGet:
                                   properties:
                                     host:
@@ -6621,6 +6799,8 @@ spec:
                                       type: string
                                     gmsaCredentialSpecName:
                                       type: string
+                                    hostProcess:
+                                      type: boolean
                                     runAsUserName:
                                       type: string
                                   type: object
@@ -6637,6 +6817,16 @@ spec:
                                 failureThreshold:
                                   format: int32
                                   type: integer
+                                grpc:
+                                  properties:
+                                    port:
+                                      format: int32
+                                      type: integer
+                                    service:
+                                      type: string
+                                  required:
+                                  - port
+                                  type: object
                                 httpGet:
                                   properties:
                                     host:
@@ -6980,6 +7170,16 @@ spec:
                                 failureThreshold:
                                   format: int32
                                   type: integer
+                                grpc:
+                                  properties:
+                                    port:
+                                      format: int32
+                                      type: integer
+                                    service:
+                                      type: string
+                                  required:
+                                  - port
+                                  type: object
                                 httpGet:
                                   properties:
                                     host:
@@ -7074,6 +7274,16 @@ spec:
                                 failureThreshold:
                                   format: int32
                                   type: integer
+                                grpc:
+                                  properties:
+                                    port:
+                                      format: int32
+                                      type: integer
+                                    service:
+                                      type: string
+                                  required:
+                                  - port
+                                  type: object
                                 httpGet:
                                   properties:
                                     host:
@@ -7204,6 +7414,8 @@ spec:
                                       type: string
                                     gmsaCredentialSpecName:
                                       type: string
+                                    hostProcess:
+                                      type: boolean
                                     runAsUserName:
                                       type: string
                                   type: object
@@ -7220,6 +7432,16 @@ spec:
                                 failureThreshold:
                                   format: int32
                                   type: integer
+                                grpc:
+                                  properties:
+                                    port:
+                                      format: int32
+                                      type: integer
+                                    service:
+                                      type: string
+                                  required:
+                                  - port
+                                  type: object
                                 httpGet:
                                   properties:
                                     host:
@@ -7330,6 +7552,14 @@ spec:
                         additionalProperties:
                           type: string
                         type: object
+                        x-kubernetes-map-type: atomic
+                      os:
+                        properties:
+                          name:
+                            type: string
+                        required:
+                        - name
+                        type: object
                       overhead:
                         additionalProperties:
                           anyOf:
@@ -7418,6 +7648,8 @@ spec:
                                 type: string
                               gmsaCredentialSpecName:
                                 type: string
+                              hostProcess:
+                                type: boolean
                               runAsUserName:
                                 type: string
                             type: object
@@ -7690,6 +7922,18 @@ spec:
                                             type: string
                                           type: array
                                         dataSource:
+                                          properties:
+                                            apiGroup:
+                                              type: string
+                                            kind:
+                                              type: string
+                                            name:
+                                              type: string
+                                          required:
+                                          - kind
+                                          - name
+                                          type: object
+                                        dataSourceRef:
                                           properties:
                                             apiGroup:
                                               type: string
@@ -9659,6 +9903,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -9753,6 +10007,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -9883,6 +10147,8 @@ spec:
                                   type: string
                                 gmsaCredentialSpecName:
                                   type: string
+                                hostProcess:
+                                  type: boolean
                                 runAsUserName:
                                   type: string
                               type: object
@@ -9899,6 +10165,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -10238,6 +10514,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -10316,6 +10602,10 @@ spec:
                             - containerPort
                             type: object
                           type: array
+                          x-kubernetes-list-map-keys:
+                          - containerPort
+                          - protocol
+                          x-kubernetes-list-type: map
                         readinessProbe:
                           properties:
                             exec:
@@ -10328,6 +10618,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -10458,6 +10758,8 @@ spec:
                                   type: string
                                 gmsaCredentialSpecName:
                                   type: string
+                                hostProcess:
+                                  type: boolean
                                 runAsUserName:
                                   type: string
                               type: object
@@ -10474,6 +10776,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -10817,6 +11129,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -10911,6 +11233,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -11041,6 +11373,8 @@ spec:
                                   type: string
                                 gmsaCredentialSpecName:
                                   type: string
+                                hostProcess:
+                                  type: boolean
                                 runAsUserName:
                                   type: string
                               type: object
@@ -11057,6 +11391,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -11167,6 +11511,14 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
+                    x-kubernetes-map-type: atomic
+                  os:
+                    properties:
+                      name:
+                        type: string
+                    required:
+                    - name
+                    type: object
                   overhead:
                     additionalProperties:
                       anyOf:
@@ -11255,6 +11607,8 @@ spec:
                             type: string
                           gmsaCredentialSpecName:
                             type: string
+                          hostProcess:
+                            type: boolean
                           runAsUserName:
                             type: string
                         type: object
@@ -11527,6 +11881,18 @@ spec:
                                         type: string
                                       type: array
                                     dataSource:
+                                      properties:
+                                        apiGroup:
+                                          type: string
+                                        kind:
+                                          type: string
+                                        name:
+                                          type: string
+                                      required:
+                                      - kind
+                                      - name
+                                      type: object
+                                    dataSourceRef:
                                       properties:
                                         apiGroup:
                                           type: string
@@ -12892,6 +13258,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -12986,6 +13362,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -13116,6 +13502,8 @@ spec:
                                   type: string
                                 gmsaCredentialSpecName:
                                   type: string
+                                hostProcess:
+                                  type: boolean
                                 runAsUserName:
                                   type: string
                               type: object
@@ -13132,6 +13520,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -13471,6 +13869,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -13549,6 +13957,10 @@ spec:
                             - containerPort
                             type: object
                           type: array
+                          x-kubernetes-list-map-keys:
+                          - containerPort
+                          - protocol
+                          x-kubernetes-list-type: map
                         readinessProbe:
                           properties:
                             exec:
@@ -13561,6 +13973,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -13691,6 +14113,8 @@ spec:
                                   type: string
                                 gmsaCredentialSpecName:
                                   type: string
+                                hostProcess:
+                                  type: boolean
                                 runAsUserName:
                                   type: string
                               type: object
@@ -13707,6 +14131,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -14050,6 +14484,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -14144,6 +14588,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -14274,6 +14728,8 @@ spec:
                                   type: string
                                 gmsaCredentialSpecName:
                                   type: string
+                                hostProcess:
+                                  type: boolean
                                 runAsUserName:
                                   type: string
                               type: object
@@ -14290,6 +14746,16 @@ spec:
                             failureThreshold:
                               format: int32
                               type: integer
+                            grpc:
+                              properties:
+                                port:
+                                  format: int32
+                                  type: integer
+                                service:
+                                  type: string
+                              required:
+                              - port
+                              type: object
                             httpGet:
                               properties:
                                 host:
@@ -14400,6 +14866,14 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
+                    x-kubernetes-map-type: atomic
+                  os:
+                    properties:
+                      name:
+                        type: string
+                    required:
+                    - name
+                    type: object
                   overhead:
                     additionalProperties:
                       anyOf:
@@ -14488,6 +14962,8 @@ spec:
                             type: string
                           gmsaCredentialSpecName:
                             type: string
+                          hostProcess:
+                            type: boolean
                           runAsUserName:
                             type: string
                         type: object
@@ -14760,6 +15236,18 @@ spec:
                                         type: string
                                       type: array
                                     dataSource:
+                                      properties:
+                                        apiGroup:
+                                          type: string
+                                        kind:
+                                          type: string
+                                        name:
+                                          type: string
+                                      required:
+                                      - kind
+                                      - name
+                                      type: object
+                                    dataSourceRef:
                                       properties:
                                         apiGroup:
                                           type: string
@@ -15467,127 +15955,6 @@ status:
   conditions: []
   storedVersions: []
 ---
-apiVersion: admissionregistration.k8s.io/v1
-kind: MutatingWebhookConfiguration
-metadata:
-  name: openfunction-mutating-webhook-configuration
-  namespace: openfunction
-webhooks:
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUROVENDQWgyZ0F3SUJBZ0lVUWNCUGt6MC90OTZ2dzJZV2F0S1JqRWZwaFJrd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0tqRW9NQ1lHQTFVRUF3d2ZZMkV0YjNCbGJtWjFibU4wYVc5dUxYZGxZbWh2YjJzdGMyVnlkbWxqWlRBZQpGdzB5TWpBME1EY3dNelV3TURaYUZ3MHpNakEwTURRd016VXdNRFphTUNveEtEQW1CZ05WQkFNTUgyTmhMVzl3ClpXNW1kVzVqZEdsdmJpMTNaV0pvYjI5ckxYTmxjblpwWTJVd2dnRWlNQTBHQ1NxR1NJYjNEUUVCQVFVQUE0SUIKRHdBd2dnRUtBb0lCQVFEVXpZK1hZSmoxdS9sNmZvR1NiWEhaUDNhZklZN1lFRi9ZUk9sQ1V0Q2VBZ25CSDE4NwpqUk1hUVlTWmxMQTBBNEUxR0ZONzVqUU5KV3k5MVJkZmsxN1Z3RFlSa2lpUmg4bjNJbHpsbHQrQ3JKdWJsUHJmCkRFUVZuUkNTRW1Udnc5WmIvWkpXSXloRTNmN0dhckY4S3R3VVZXazNzTzB2Mk0wWXVvdGQxdjdUV3JmS0FBaUgKQjhNS0E2VTN6M0gyOSs0M1NkN1I5SW8vQzhuSFVHMkUrMDk5R3lhcnhRNUVkb2hkTkVCc05jbGprS0ZkNDRkKwpTdzRSVG56MFhIS1JILy9TM0hQMmUvd1ptRTBkb2E0N2VXdlVBay8waUxtMnY3Wk1CWUF2TmFDamVOd3BNNjJmCmpBVnd2YVBid0lIRGZBZHdRaU42bHhrbThIWHlsV0xEZDVnTEFnTUJBQUdqVXpCUk1CMEdBMVVkRGdRV0JCVEYKL0VFcGdsVGJOZ1VTYnhTS2c1bk1kMzMyZ3pBZkJnTlZIU01FR0RBV2dCVEYvRUVwZ2xUYk5nVVNieFNLZzVuTQpkMzMyZ3pBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFCWTN5MWI0MC9sCm03bVJrek91YnRFSnNYWWUzYTFSYkx0eE4vNnQzOG1kNnlneWxVVzZ5WWxJTHBYdjc1ZlFIR3Z2cUhMREdJdmMKOG5VVCsrNUgrUHExaHZxeVV3azFUby9NODE2NkNDMHB2UVNERERMMkNYUzl5TWtrL25tQXBTV2l5aVhRT0cxRApyWEdSMk9BZFlYcFdaNHlzZFRqSGNCY2V1Z3Y0ZzJGOWtXSXJ1eDBCeExGdzE4YjVqSGI1dTltK1VnMDZZMTd6ClNxbWhza0dYajVLWTkwWXAwZUpnUHBWRjNPSzhIWGRYbVlTcjdjOXp4bWc1NGR4K0QxcnMveUc1SjJBN1NTU3gKM1BnL05zbXZvY2QzdFp3K1ZyUnkycC9GbXZ4aUdQOHM0MFBQMTVjdkZMcnM0REVZRFVtekxXNmtqVW9aK041bgpiZFFGM24rZ045ZnkKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
-    service:
-      name: openfunction-webhook-service
-      namespace: openfunction
-      path: /mutate-core-openfunction-io-v1beta1-function
-  failurePolicy: Fail
-  name: mfunctions.of.io
-  rules:
-  - apiGroups:
-    - core.openfunction.io
-    apiVersions:
-    - v1beta1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - functions
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUROVENDQWgyZ0F3SUJBZ0lVUWNCUGt6MC90OTZ2dzJZV2F0S1JqRWZwaFJrd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0tqRW9NQ1lHQTFVRUF3d2ZZMkV0YjNCbGJtWjFibU4wYVc5dUxYZGxZbWh2YjJzdGMyVnlkbWxqWlRBZQpGdzB5TWpBME1EY3dNelV3TURaYUZ3MHpNakEwTURRd016VXdNRFphTUNveEtEQW1CZ05WQkFNTUgyTmhMVzl3ClpXNW1kVzVqZEdsdmJpMTNaV0pvYjI5ckxYTmxjblpwWTJVd2dnRWlNQTBHQ1NxR1NJYjNEUUVCQVFVQUE0SUIKRHdBd2dnRUtBb0lCQVFEVXpZK1hZSmoxdS9sNmZvR1NiWEhaUDNhZklZN1lFRi9ZUk9sQ1V0Q2VBZ25CSDE4NwpqUk1hUVlTWmxMQTBBNEUxR0ZONzVqUU5KV3k5MVJkZmsxN1Z3RFlSa2lpUmg4bjNJbHpsbHQrQ3JKdWJsUHJmCkRFUVZuUkNTRW1Udnc5WmIvWkpXSXloRTNmN0dhckY4S3R3VVZXazNzTzB2Mk0wWXVvdGQxdjdUV3JmS0FBaUgKQjhNS0E2VTN6M0gyOSs0M1NkN1I5SW8vQzhuSFVHMkUrMDk5R3lhcnhRNUVkb2hkTkVCc05jbGprS0ZkNDRkKwpTdzRSVG56MFhIS1JILy9TM0hQMmUvd1ptRTBkb2E0N2VXdlVBay8waUxtMnY3Wk1CWUF2TmFDamVOd3BNNjJmCmpBVnd2YVBid0lIRGZBZHdRaU42bHhrbThIWHlsV0xEZDVnTEFnTUJBQUdqVXpCUk1CMEdBMVVkRGdRV0JCVEYKL0VFcGdsVGJOZ1VTYnhTS2c1bk1kMzMyZ3pBZkJnTlZIU01FR0RBV2dCVEYvRUVwZ2xUYk5nVVNieFNLZzVuTQpkMzMyZ3pBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFCWTN5MWI0MC9sCm03bVJrek91YnRFSnNYWWUzYTFSYkx0eE4vNnQzOG1kNnlneWxVVzZ5WWxJTHBYdjc1ZlFIR3Z2cUhMREdJdmMKOG5VVCsrNUgrUHExaHZxeVV3azFUby9NODE2NkNDMHB2UVNERERMMkNYUzl5TWtrL25tQXBTV2l5aVhRT0cxRApyWEdSMk9BZFlYcFdaNHlzZFRqSGNCY2V1Z3Y0ZzJGOWtXSXJ1eDBCeExGdzE4YjVqSGI1dTltK1VnMDZZMTd6ClNxbWhza0dYajVLWTkwWXAwZUpnUHBWRjNPSzhIWGRYbVlTcjdjOXp4bWc1NGR4K0QxcnMveUc1SjJBN1NTU3gKM1BnL05zbXZvY2QzdFp3K1ZyUnkycC9GbXZ4aUdQOHM0MFBQMTVjdkZMcnM0REVZRFVtekxXNmtqVW9aK041bgpiZFFGM24rZ045ZnkKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
-    service:
-      name: openfunction-webhook-service
-      namespace: openfunction
-      path: /mutate-core-openfunction-io-v1beta1-serving
-  failurePolicy: Fail
-  name: mservings.of.io
-  rules:
-  - apiGroups:
-    - core.openfunction.io
-    apiVersions:
-    - v1beta1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - servings
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  - v1beta1
-  clientConfig:
-    caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUROVENDQWgyZ0F3SUJBZ0lVUWNCUGt6MC90OTZ2dzJZV2F0S1JqRWZwaFJrd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0tqRW9NQ1lHQTFVRUF3d2ZZMkV0YjNCbGJtWjFibU4wYVc5dUxYZGxZbWh2YjJzdGMyVnlkbWxqWlRBZQpGdzB5TWpBME1EY3dNelV3TURaYUZ3MHpNakEwTURRd016VXdNRFphTUNveEtEQW1CZ05WQkFNTUgyTmhMVzl3ClpXNW1kVzVqZEdsdmJpMTNaV0pvYjI5ckxYTmxjblpwWTJVd2dnRWlNQTBHQ1NxR1NJYjNEUUVCQVFVQUE0SUIKRHdBd2dnRUtBb0lCQVFEVXpZK1hZSmoxdS9sNmZvR1NiWEhaUDNhZklZN1lFRi9ZUk9sQ1V0Q2VBZ25CSDE4NwpqUk1hUVlTWmxMQTBBNEUxR0ZONzVqUU5KV3k5MVJkZmsxN1Z3RFlSa2lpUmg4bjNJbHpsbHQrQ3JKdWJsUHJmCkRFUVZuUkNTRW1Udnc5WmIvWkpXSXloRTNmN0dhckY4S3R3VVZXazNzTzB2Mk0wWXVvdGQxdjdUV3JmS0FBaUgKQjhNS0E2VTN6M0gyOSs0M1NkN1I5SW8vQzhuSFVHMkUrMDk5R3lhcnhRNUVkb2hkTkVCc05jbGprS0ZkNDRkKwpTdzRSVG56MFhIS1JILy9TM0hQMmUvd1ptRTBkb2E0N2VXdlVBay8waUxtMnY3Wk1CWUF2TmFDamVOd3BNNjJmCmpBVnd2YVBid0lIRGZBZHdRaU42bHhrbThIWHlsV0xEZDVnTEFnTUJBQUdqVXpCUk1CMEdBMVVkRGdRV0JCVEYKL0VFcGdsVGJOZ1VTYnhTS2c1bk1kMzMyZ3pBZkJnTlZIU01FR0RBV2dCVEYvRUVwZ2xUYk5nVVNieFNLZzVuTQpkMzMyZ3pBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFCWTN5MWI0MC9sCm03bVJrek91YnRFSnNYWWUzYTFSYkx0eE4vNnQzOG1kNnlneWxVVzZ5WWxJTHBYdjc1ZlFIR3Z2cUhMREdJdmMKOG5VVCsrNUgrUHExaHZxeVV3azFUby9NODE2NkNDMHB2UVNERERMMkNYUzl5TWtrL25tQXBTV2l5aVhRT0cxRApyWEdSMk9BZFlYcFdaNHlzZFRqSGNCY2V1Z3Y0ZzJGOWtXSXJ1eDBCeExGdzE4YjVqSGI1dTltK1VnMDZZMTd6ClNxbWhza0dYajVLWTkwWXAwZUpnUHBWRjNPSzhIWGRYbVlTcjdjOXp4bWc1NGR4K0QxcnMveUc1SjJBN1NTU3gKM1BnL05zbXZvY2QzdFp3K1ZyUnkycC9GbXZ4aUdQOHM0MFBQMTVjdkZMcnM0REVZRFVtekxXNmtqVW9aK041bgpiZFFGM24rZ045ZnkKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
-    service:
-      name: openfunction-webhook-service
-      namespace: openfunction
-      path: /mutate-networking-openfunction-io-v1alpha1-gateway
-  failurePolicy: Fail
-  name: mgateway.of.io
-  rules:
-  - apiGroups:
-    - networking.openfunction.io
-    apiVersions:
-    - v1alpha1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - gateways
-  sideEffects: None
----
-apiVersion: admissionregistration.k8s.io/v1
-kind: ValidatingWebhookConfiguration
-metadata:
-  name: openfunction-validating-webhook-configuration
-  namespace: openfunction
-webhooks:
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUROVENDQWgyZ0F3SUJBZ0lVUWNCUGt6MC90OTZ2dzJZV2F0S1JqRWZwaFJrd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0tqRW9NQ1lHQTFVRUF3d2ZZMkV0YjNCbGJtWjFibU4wYVc5dUxYZGxZbWh2YjJzdGMyVnlkbWxqWlRBZQpGdzB5TWpBME1EY3dNelV3TURaYUZ3MHpNakEwTURRd016VXdNRFphTUNveEtEQW1CZ05WQkFNTUgyTmhMVzl3ClpXNW1kVzVqZEdsdmJpMTNaV0pvYjI5ckxYTmxjblpwWTJVd2dnRWlNQTBHQ1NxR1NJYjNEUUVCQVFVQUE0SUIKRHdBd2dnRUtBb0lCQVFEVXpZK1hZSmoxdS9sNmZvR1NiWEhaUDNhZklZN1lFRi9ZUk9sQ1V0Q2VBZ25CSDE4NwpqUk1hUVlTWmxMQTBBNEUxR0ZONzVqUU5KV3k5MVJkZmsxN1Z3RFlSa2lpUmg4bjNJbHpsbHQrQ3JKdWJsUHJmCkRFUVZuUkNTRW1Udnc5WmIvWkpXSXloRTNmN0dhckY4S3R3VVZXazNzTzB2Mk0wWXVvdGQxdjdUV3JmS0FBaUgKQjhNS0E2VTN6M0gyOSs0M1NkN1I5SW8vQzhuSFVHMkUrMDk5R3lhcnhRNUVkb2hkTkVCc05jbGprS0ZkNDRkKwpTdzRSVG56MFhIS1JILy9TM0hQMmUvd1ptRTBkb2E0N2VXdlVBay8waUxtMnY3Wk1CWUF2TmFDamVOd3BNNjJmCmpBVnd2YVBid0lIRGZBZHdRaU42bHhrbThIWHlsV0xEZDVnTEFnTUJBQUdqVXpCUk1CMEdBMVVkRGdRV0JCVEYKL0VFcGdsVGJOZ1VTYnhTS2c1bk1kMzMyZ3pBZkJnTlZIU01FR0RBV2dCVEYvRUVwZ2xUYk5nVVNieFNLZzVuTQpkMzMyZ3pBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFCWTN5MWI0MC9sCm03bVJrek91YnRFSnNYWWUzYTFSYkx0eE4vNnQzOG1kNnlneWxVVzZ5WWxJTHBYdjc1ZlFIR3Z2cUhMREdJdmMKOG5VVCsrNUgrUHExaHZxeVV3azFUby9NODE2NkNDMHB2UVNERERMMkNYUzl5TWtrL25tQXBTV2l5aVhRT0cxRApyWEdSMk9BZFlYcFdaNHlzZFRqSGNCY2V1Z3Y0ZzJGOWtXSXJ1eDBCeExGdzE4YjVqSGI1dTltK1VnMDZZMTd6ClNxbWhza0dYajVLWTkwWXAwZUpnUHBWRjNPSzhIWGRYbVlTcjdjOXp4bWc1NGR4K0QxcnMveUc1SjJBN1NTU3gKM1BnL05zbXZvY2QzdFp3K1ZyUnkycC9GbXZ4aUdQOHM0MFBQMTVjdkZMcnM0REVZRFVtekxXNmtqVW9aK041bgpiZFFGM24rZ045ZnkKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
-    service:
-      name: openfunction-webhook-service
-      namespace: openfunction
-      path: /validate-core-openfunction-io-v1beta1-function
-  failurePolicy: Fail
-  name: vfunctions.of.io
-  rules:
-  - apiGroups:
-    - core.openfunction.io
-    apiVersions:
-    - v1beta1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - functions
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  - v1beta1
-  clientConfig:
-    caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUROVENDQWgyZ0F3SUJBZ0lVUWNCUGt6MC90OTZ2dzJZV2F0S1JqRWZwaFJrd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0tqRW9NQ1lHQTFVRUF3d2ZZMkV0YjNCbGJtWjFibU4wYVc5dUxYZGxZbWh2YjJzdGMyVnlkbWxqWlRBZQpGdzB5TWpBME1EY3dNelV3TURaYUZ3MHpNakEwTURRd016VXdNRFphTUNveEtEQW1CZ05WQkFNTUgyTmhMVzl3ClpXNW1kVzVqZEdsdmJpMTNaV0pvYjI5ckxYTmxjblpwWTJVd2dnRWlNQTBHQ1NxR1NJYjNEUUVCQVFVQUE0SUIKRHdBd2dnRUtBb0lCQVFEVXpZK1hZSmoxdS9sNmZvR1NiWEhaUDNhZklZN1lFRi9ZUk9sQ1V0Q2VBZ25CSDE4NwpqUk1hUVlTWmxMQTBBNEUxR0ZONzVqUU5KV3k5MVJkZmsxN1Z3RFlSa2lpUmg4bjNJbHpsbHQrQ3JKdWJsUHJmCkRFUVZuUkNTRW1Udnc5WmIvWkpXSXloRTNmN0dhckY4S3R3VVZXazNzTzB2Mk0wWXVvdGQxdjdUV3JmS0FBaUgKQjhNS0E2VTN6M0gyOSs0M1NkN1I5SW8vQzhuSFVHMkUrMDk5R3lhcnhRNUVkb2hkTkVCc05jbGprS0ZkNDRkKwpTdzRSVG56MFhIS1JILy9TM0hQMmUvd1ptRTBkb2E0N2VXdlVBay8waUxtMnY3Wk1CWUF2TmFDamVOd3BNNjJmCmpBVnd2YVBid0lIRGZBZHdRaU42bHhrbThIWHlsV0xEZDVnTEFnTUJBQUdqVXpCUk1CMEdBMVVkRGdRV0JCVEYKL0VFcGdsVGJOZ1VTYnhTS2c1bk1kMzMyZ3pBZkJnTlZIU01FR0RBV2dCVEYvRUVwZ2xUYk5nVVNieFNLZzVuTQpkMzMyZ3pBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFCWTN5MWI0MC9sCm03bVJrek91YnRFSnNYWWUzYTFSYkx0eE4vNnQzOG1kNnlneWxVVzZ5WWxJTHBYdjc1ZlFIR3Z2cUhMREdJdmMKOG5VVCsrNUgrUHExaHZxeVV3azFUby9NODE2NkNDMHB2UVNERERMMkNYUzl5TWtrL25tQXBTV2l5aVhRT0cxRApyWEdSMk9BZFlYcFdaNHlzZFRqSGNCY2V1Z3Y0ZzJGOWtXSXJ1eDBCeExGdzE4YjVqSGI1dTltK1VnMDZZMTd6ClNxbWhza0dYajVLWTkwWXAwZUpnUHBWRjNPSzhIWGRYbVlTcjdjOXp4bWc1NGR4K0QxcnMveUc1SjJBN1NTU3gKM1BnL05zbXZvY2QzdFp3K1ZyUnkycC9GbXZ4aUdQOHM0MFBQMTVjdkZMcnM0REVZRFVtekxXNmtqVW9aK041bgpiZFFGM24rZ045ZnkKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
-    service:
-      name: openfunction-webhook-service
-      namespace: openfunction
-      path: /validate-networking-openfunction-io-v1alpha1-gateway
-  failurePolicy: Fail
-  name: vgateway.of.io
-  rules:
-  - apiGroups:
-    - networking.openfunction.io
-    apiVersions:
-    - v1alpha1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - gateways
-  sideEffects: None
----
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -16115,16 +16482,6 @@ spec:
     spec:
       containers:
       - args:
-        - --secure-listen-address=0.0.0.0:8443
-        - --upstream=http://127.0.0.1:8080/
-        - --logtostderr=true
-        - --v=10
-        image: openfunction/kube-rbac-proxy:v0.8.0
-        name: kube-rbac-proxy
-        ports:
-        - containerPort: 8443
-          name: https
-      - args:
         - --health-probe-bind-address=:8081
         - --metrics-bind-address=127.0.0.1:8080
         - --leader-elect
@@ -16161,6 +16518,16 @@ spec:
         - mountPath: /tmp/k8s-webhook-server/serving-certs
           name: cert
           readOnly: true
+      - args:
+        - --secure-listen-address=0.0.0.0:8443
+        - --upstream=http://127.0.0.1:8080/
+        - --logtostderr=true
+        - --v=10
+        image: openfunction/kube-rbac-proxy:v0.8.0
+        name: kube-rbac-proxy
+        ports:
+        - containerPort: 8443
+          name: https
       securityContext:
         runAsNonRoot: true
       serviceAccountName: openfunction-controller-manager
@@ -16170,6 +16537,125 @@ spec:
         secret:
           defaultMode: 420
           secretName: openfunction-webhook-server-cert
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: openfunction-mutating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUROVENDQWgyZ0F3SUJBZ0lVUWNCUGt6MC90OTZ2dzJZV2F0S1JqRWZwaFJrd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0tqRW9NQ1lHQTFVRUF3d2ZZMkV0YjNCbGJtWjFibU4wYVc5dUxYZGxZbWh2YjJzdGMyVnlkbWxqWlRBZQpGdzB5TWpBME1EY3dNelV3TURaYUZ3MHpNakEwTURRd016VXdNRFphTUNveEtEQW1CZ05WQkFNTUgyTmhMVzl3ClpXNW1kVzVqZEdsdmJpMTNaV0pvYjI5ckxYTmxjblpwWTJVd2dnRWlNQTBHQ1NxR1NJYjNEUUVCQVFVQUE0SUIKRHdBd2dnRUtBb0lCQVFEVXpZK1hZSmoxdS9sNmZvR1NiWEhaUDNhZklZN1lFRi9ZUk9sQ1V0Q2VBZ25CSDE4NwpqUk1hUVlTWmxMQTBBNEUxR0ZONzVqUU5KV3k5MVJkZmsxN1Z3RFlSa2lpUmg4bjNJbHpsbHQrQ3JKdWJsUHJmCkRFUVZuUkNTRW1Udnc5WmIvWkpXSXloRTNmN0dhckY4S3R3VVZXazNzTzB2Mk0wWXVvdGQxdjdUV3JmS0FBaUgKQjhNS0E2VTN6M0gyOSs0M1NkN1I5SW8vQzhuSFVHMkUrMDk5R3lhcnhRNUVkb2hkTkVCc05jbGprS0ZkNDRkKwpTdzRSVG56MFhIS1JILy9TM0hQMmUvd1ptRTBkb2E0N2VXdlVBay8waUxtMnY3Wk1CWUF2TmFDamVOd3BNNjJmCmpBVnd2YVBid0lIRGZBZHdRaU42bHhrbThIWHlsV0xEZDVnTEFnTUJBQUdqVXpCUk1CMEdBMVVkRGdRV0JCVEYKL0VFcGdsVGJOZ1VTYnhTS2c1bk1kMzMyZ3pBZkJnTlZIU01FR0RBV2dCVEYvRUVwZ2xUYk5nVVNieFNLZzVuTQpkMzMyZ3pBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFCWTN5MWI0MC9sCm03bVJrek91YnRFSnNYWWUzYTFSYkx0eE4vNnQzOG1kNnlneWxVVzZ5WWxJTHBYdjc1ZlFIR3Z2cUhMREdJdmMKOG5VVCsrNUgrUHExaHZxeVV3azFUby9NODE2NkNDMHB2UVNERERMMkNYUzl5TWtrL25tQXBTV2l5aVhRT0cxRApyWEdSMk9BZFlYcFdaNHlzZFRqSGNCY2V1Z3Y0ZzJGOWtXSXJ1eDBCeExGdzE4YjVqSGI1dTltK1VnMDZZMTd6ClNxbWhza0dYajVLWTkwWXAwZUpnUHBWRjNPSzhIWGRYbVlTcjdjOXp4bWc1NGR4K0QxcnMveUc1SjJBN1NTU3gKM1BnL05zbXZvY2QzdFp3K1ZyUnkycC9GbXZ4aUdQOHM0MFBQMTVjdkZMcnM0REVZRFVtekxXNmtqVW9aK041bgpiZFFGM24rZ045ZnkKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+    service:
+      name: openfunction-webhook-service
+      namespace: openfunction
+      path: /mutate-core-openfunction-io-v1beta1-function
+  failurePolicy: Fail
+  name: mfunctions.of.io
+  rules:
+  - apiGroups:
+    - core.openfunction.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - functions
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUROVENDQWgyZ0F3SUJBZ0lVUWNCUGt6MC90OTZ2dzJZV2F0S1JqRWZwaFJrd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0tqRW9NQ1lHQTFVRUF3d2ZZMkV0YjNCbGJtWjFibU4wYVc5dUxYZGxZbWh2YjJzdGMyVnlkbWxqWlRBZQpGdzB5TWpBME1EY3dNelV3TURaYUZ3MHpNakEwTURRd016VXdNRFphTUNveEtEQW1CZ05WQkFNTUgyTmhMVzl3ClpXNW1kVzVqZEdsdmJpMTNaV0pvYjI5ckxYTmxjblpwWTJVd2dnRWlNQTBHQ1NxR1NJYjNEUUVCQVFVQUE0SUIKRHdBd2dnRUtBb0lCQVFEVXpZK1hZSmoxdS9sNmZvR1NiWEhaUDNhZklZN1lFRi9ZUk9sQ1V0Q2VBZ25CSDE4NwpqUk1hUVlTWmxMQTBBNEUxR0ZONzVqUU5KV3k5MVJkZmsxN1Z3RFlSa2lpUmg4bjNJbHpsbHQrQ3JKdWJsUHJmCkRFUVZuUkNTRW1Udnc5WmIvWkpXSXloRTNmN0dhckY4S3R3VVZXazNzTzB2Mk0wWXVvdGQxdjdUV3JmS0FBaUgKQjhNS0E2VTN6M0gyOSs0M1NkN1I5SW8vQzhuSFVHMkUrMDk5R3lhcnhRNUVkb2hkTkVCc05jbGprS0ZkNDRkKwpTdzRSVG56MFhIS1JILy9TM0hQMmUvd1ptRTBkb2E0N2VXdlVBay8waUxtMnY3Wk1CWUF2TmFDamVOd3BNNjJmCmpBVnd2YVBid0lIRGZBZHdRaU42bHhrbThIWHlsV0xEZDVnTEFnTUJBQUdqVXpCUk1CMEdBMVVkRGdRV0JCVEYKL0VFcGdsVGJOZ1VTYnhTS2c1bk1kMzMyZ3pBZkJnTlZIU01FR0RBV2dCVEYvRUVwZ2xUYk5nVVNieFNLZzVuTQpkMzMyZ3pBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFCWTN5MWI0MC9sCm03bVJrek91YnRFSnNYWWUzYTFSYkx0eE4vNnQzOG1kNnlneWxVVzZ5WWxJTHBYdjc1ZlFIR3Z2cUhMREdJdmMKOG5VVCsrNUgrUHExaHZxeVV3azFUby9NODE2NkNDMHB2UVNERERMMkNYUzl5TWtrL25tQXBTV2l5aVhRT0cxRApyWEdSMk9BZFlYcFdaNHlzZFRqSGNCY2V1Z3Y0ZzJGOWtXSXJ1eDBCeExGdzE4YjVqSGI1dTltK1VnMDZZMTd6ClNxbWhza0dYajVLWTkwWXAwZUpnUHBWRjNPSzhIWGRYbVlTcjdjOXp4bWc1NGR4K0QxcnMveUc1SjJBN1NTU3gKM1BnL05zbXZvY2QzdFp3K1ZyUnkycC9GbXZ4aUdQOHM0MFBQMTVjdkZMcnM0REVZRFVtekxXNmtqVW9aK041bgpiZFFGM24rZ045ZnkKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+    service:
+      name: openfunction-webhook-service
+      namespace: openfunction
+      path: /mutate-core-openfunction-io-v1beta1-serving
+  failurePolicy: Fail
+  name: mservings.of.io
+  rules:
+  - apiGroups:
+    - core.openfunction.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - servings
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUROVENDQWgyZ0F3SUJBZ0lVUWNCUGt6MC90OTZ2dzJZV2F0S1JqRWZwaFJrd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0tqRW9NQ1lHQTFVRUF3d2ZZMkV0YjNCbGJtWjFibU4wYVc5dUxYZGxZbWh2YjJzdGMyVnlkbWxqWlRBZQpGdzB5TWpBME1EY3dNelV3TURaYUZ3MHpNakEwTURRd016VXdNRFphTUNveEtEQW1CZ05WQkFNTUgyTmhMVzl3ClpXNW1kVzVqZEdsdmJpMTNaV0pvYjI5ckxYTmxjblpwWTJVd2dnRWlNQTBHQ1NxR1NJYjNEUUVCQVFVQUE0SUIKRHdBd2dnRUtBb0lCQVFEVXpZK1hZSmoxdS9sNmZvR1NiWEhaUDNhZklZN1lFRi9ZUk9sQ1V0Q2VBZ25CSDE4NwpqUk1hUVlTWmxMQTBBNEUxR0ZONzVqUU5KV3k5MVJkZmsxN1Z3RFlSa2lpUmg4bjNJbHpsbHQrQ3JKdWJsUHJmCkRFUVZuUkNTRW1Udnc5WmIvWkpXSXloRTNmN0dhckY4S3R3VVZXazNzTzB2Mk0wWXVvdGQxdjdUV3JmS0FBaUgKQjhNS0E2VTN6M0gyOSs0M1NkN1I5SW8vQzhuSFVHMkUrMDk5R3lhcnhRNUVkb2hkTkVCc05jbGprS0ZkNDRkKwpTdzRSVG56MFhIS1JILy9TM0hQMmUvd1ptRTBkb2E0N2VXdlVBay8waUxtMnY3Wk1CWUF2TmFDamVOd3BNNjJmCmpBVnd2YVBid0lIRGZBZHdRaU42bHhrbThIWHlsV0xEZDVnTEFnTUJBQUdqVXpCUk1CMEdBMVVkRGdRV0JCVEYKL0VFcGdsVGJOZ1VTYnhTS2c1bk1kMzMyZ3pBZkJnTlZIU01FR0RBV2dCVEYvRUVwZ2xUYk5nVVNieFNLZzVuTQpkMzMyZ3pBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFCWTN5MWI0MC9sCm03bVJrek91YnRFSnNYWWUzYTFSYkx0eE4vNnQzOG1kNnlneWxVVzZ5WWxJTHBYdjc1ZlFIR3Z2cUhMREdJdmMKOG5VVCsrNUgrUHExaHZxeVV3azFUby9NODE2NkNDMHB2UVNERERMMkNYUzl5TWtrL25tQXBTV2l5aVhRT0cxRApyWEdSMk9BZFlYcFdaNHlzZFRqSGNCY2V1Z3Y0ZzJGOWtXSXJ1eDBCeExGdzE4YjVqSGI1dTltK1VnMDZZMTd6ClNxbWhza0dYajVLWTkwWXAwZUpnUHBWRjNPSzhIWGRYbVlTcjdjOXp4bWc1NGR4K0QxcnMveUc1SjJBN1NTU3gKM1BnL05zbXZvY2QzdFp3K1ZyUnkycC9GbXZ4aUdQOHM0MFBQMTVjdkZMcnM0REVZRFVtekxXNmtqVW9aK041bgpiZFFGM24rZ045ZnkKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+    service:
+      name: openfunction-webhook-service
+      namespace: openfunction
+      path: /mutate-networking-openfunction-io-v1alpha1-gateway
+  failurePolicy: Fail
+  name: mgateway.of.io
+  rules:
+  - apiGroups:
+    - networking.openfunction.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - gateways
+  sideEffects: None
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: openfunction-validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUROVENDQWgyZ0F3SUJBZ0lVUWNCUGt6MC90OTZ2dzJZV2F0S1JqRWZwaFJrd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0tqRW9NQ1lHQTFVRUF3d2ZZMkV0YjNCbGJtWjFibU4wYVc5dUxYZGxZbWh2YjJzdGMyVnlkbWxqWlRBZQpGdzB5TWpBME1EY3dNelV3TURaYUZ3MHpNakEwTURRd016VXdNRFphTUNveEtEQW1CZ05WQkFNTUgyTmhMVzl3ClpXNW1kVzVqZEdsdmJpMTNaV0pvYjI5ckxYTmxjblpwWTJVd2dnRWlNQTBHQ1NxR1NJYjNEUUVCQVFVQUE0SUIKRHdBd2dnRUtBb0lCQVFEVXpZK1hZSmoxdS9sNmZvR1NiWEhaUDNhZklZN1lFRi9ZUk9sQ1V0Q2VBZ25CSDE4NwpqUk1hUVlTWmxMQTBBNEUxR0ZONzVqUU5KV3k5MVJkZmsxN1Z3RFlSa2lpUmg4bjNJbHpsbHQrQ3JKdWJsUHJmCkRFUVZuUkNTRW1Udnc5WmIvWkpXSXloRTNmN0dhckY4S3R3VVZXazNzTzB2Mk0wWXVvdGQxdjdUV3JmS0FBaUgKQjhNS0E2VTN6M0gyOSs0M1NkN1I5SW8vQzhuSFVHMkUrMDk5R3lhcnhRNUVkb2hkTkVCc05jbGprS0ZkNDRkKwpTdzRSVG56MFhIS1JILy9TM0hQMmUvd1ptRTBkb2E0N2VXdlVBay8waUxtMnY3Wk1CWUF2TmFDamVOd3BNNjJmCmpBVnd2YVBid0lIRGZBZHdRaU42bHhrbThIWHlsV0xEZDVnTEFnTUJBQUdqVXpCUk1CMEdBMVVkRGdRV0JCVEYKL0VFcGdsVGJOZ1VTYnhTS2c1bk1kMzMyZ3pBZkJnTlZIU01FR0RBV2dCVEYvRUVwZ2xUYk5nVVNieFNLZzVuTQpkMzMyZ3pBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFCWTN5MWI0MC9sCm03bVJrek91YnRFSnNYWWUzYTFSYkx0eE4vNnQzOG1kNnlneWxVVzZ5WWxJTHBYdjc1ZlFIR3Z2cUhMREdJdmMKOG5VVCsrNUgrUHExaHZxeVV3azFUby9NODE2NkNDMHB2UVNERERMMkNYUzl5TWtrL25tQXBTV2l5aVhRT0cxRApyWEdSMk9BZFlYcFdaNHlzZFRqSGNCY2V1Z3Y0ZzJGOWtXSXJ1eDBCeExGdzE4YjVqSGI1dTltK1VnMDZZMTd6ClNxbWhza0dYajVLWTkwWXAwZUpnUHBWRjNPSzhIWGRYbVlTcjdjOXp4bWc1NGR4K0QxcnMveUc1SjJBN1NTU3gKM1BnL05zbXZvY2QzdFp3K1ZyUnkycC9GbXZ4aUdQOHM0MFBQMTVjdkZMcnM0REVZRFVtekxXNmtqVW9aK041bgpiZFFGM24rZ045ZnkKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+    service:
+      name: openfunction-webhook-service
+      namespace: openfunction
+      path: /validate-core-openfunction-io-v1beta1-function
+  failurePolicy: Fail
+  name: vfunctions.of.io
+  rules:
+  - apiGroups:
+    - core.openfunction.io
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - functions
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUROVENDQWgyZ0F3SUJBZ0lVUWNCUGt6MC90OTZ2dzJZV2F0S1JqRWZwaFJrd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0tqRW9NQ1lHQTFVRUF3d2ZZMkV0YjNCbGJtWjFibU4wYVc5dUxYZGxZbWh2YjJzdGMyVnlkbWxqWlRBZQpGdzB5TWpBME1EY3dNelV3TURaYUZ3MHpNakEwTURRd016VXdNRFphTUNveEtEQW1CZ05WQkFNTUgyTmhMVzl3ClpXNW1kVzVqZEdsdmJpMTNaV0pvYjI5ckxYTmxjblpwWTJVd2dnRWlNQTBHQ1NxR1NJYjNEUUVCQVFVQUE0SUIKRHdBd2dnRUtBb0lCQVFEVXpZK1hZSmoxdS9sNmZvR1NiWEhaUDNhZklZN1lFRi9ZUk9sQ1V0Q2VBZ25CSDE4NwpqUk1hUVlTWmxMQTBBNEUxR0ZONzVqUU5KV3k5MVJkZmsxN1Z3RFlSa2lpUmg4bjNJbHpsbHQrQ3JKdWJsUHJmCkRFUVZuUkNTRW1Udnc5WmIvWkpXSXloRTNmN0dhckY4S3R3VVZXazNzTzB2Mk0wWXVvdGQxdjdUV3JmS0FBaUgKQjhNS0E2VTN6M0gyOSs0M1NkN1I5SW8vQzhuSFVHMkUrMDk5R3lhcnhRNUVkb2hkTkVCc05jbGprS0ZkNDRkKwpTdzRSVG56MFhIS1JILy9TM0hQMmUvd1ptRTBkb2E0N2VXdlVBay8waUxtMnY3Wk1CWUF2TmFDamVOd3BNNjJmCmpBVnd2YVBid0lIRGZBZHdRaU42bHhrbThIWHlsV0xEZDVnTEFnTUJBQUdqVXpCUk1CMEdBMVVkRGdRV0JCVEYKL0VFcGdsVGJOZ1VTYnhTS2c1bk1kMzMyZ3pBZkJnTlZIU01FR0RBV2dCVEYvRUVwZ2xUYk5nVVNieFNLZzVuTQpkMzMyZ3pBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFCWTN5MWI0MC9sCm03bVJrek91YnRFSnNYWWUzYTFSYkx0eE4vNnQzOG1kNnlneWxVVzZ5WWxJTHBYdjc1ZlFIR3Z2cUhMREdJdmMKOG5VVCsrNUgrUHExaHZxeVV3azFUby9NODE2NkNDMHB2UVNERERMMkNYUzl5TWtrL25tQXBTV2l5aVhRT0cxRApyWEdSMk9BZFlYcFdaNHlzZFRqSGNCY2V1Z3Y0ZzJGOWtXSXJ1eDBCeExGdzE4YjVqSGI1dTltK1VnMDZZMTd6ClNxbWhza0dYajVLWTkwWXAwZUpnUHBWRjNPSzhIWGRYbVlTcjdjOXp4bWc1NGR4K0QxcnMveUc1SjJBN1NTU3gKM1BnL05zbXZvY2QzdFp3K1ZyUnkycC9GbXZ4aUdQOHM0MFBQMTVjdkZMcnM0REVZRFVtekxXNmtqVW9aK041bgpiZFFGM24rZ045ZnkKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+    service:
+      name: openfunction-webhook-service
+      namespace: openfunction
+      path: /validate-networking-openfunction-io-v1alpha1-gateway
+  failurePolicy: Fail
+  name: vgateway.of.io
+  rules:
+  - apiGroups:
+    - networking.openfunction.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - gateways
+  sideEffects: None
 ---
 apiVersion: v1
 kind: ConfigMap
