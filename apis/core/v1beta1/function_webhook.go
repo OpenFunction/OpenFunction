@@ -167,9 +167,14 @@ func (r *Function) ValidateBuild() error {
 			"must be specified when `spec.build.dockerfile` is not enabled")
 	}
 
-	if r.Spec.Build.SrcRepo != nil && r.Spec.Build.SrcRepo.Url == "" {
-		return field.Required(field.NewPath("spec", "build", "srcRepo", "url"),
-			"must be specified when `spec.build.srcRepo` enabled")
+	if r.Spec.Build.SrcRepo == nil {
+		return field.Required(field.NewPath("spec", "build", "srcRepo"),
+			"must be specified when `spec.build` enabled")
+	}
+
+	if r.Spec.Build.SrcRepo.Url == "" && r.Spec.Build.SrcRepo.BundleContainer == nil {
+		return field.Required(field.NewPath("spec", "build", "srcRepo"),
+			"must specify one of: `url` or `bundleContainer`")
 	}
 
 	if r.Spec.Build.Timeout != nil && r.Spec.Build.Timeout.Duration < 0 {

@@ -208,6 +208,13 @@ spec:
                 type: object
               srcRepo:
                 properties:
+                  bundleContainer:
+                    properties:
+                      image:
+                        type: string
+                    required:
+                    - image
+                    type: object
                   credentials:
                     properties:
                       name:
@@ -219,8 +226,6 @@ spec:
                     type: string
                   url:
                     type: string
-                required:
-                - url
                 type: object
               state:
                 type: string
@@ -730,6 +735,13 @@ spec:
                     type: object
                   srcRepo:
                     properties:
+                      bundleContainer:
+                        properties:
+                          image:
+                            type: string
+                        required:
+                        - image
+                        type: object
                       credentials:
                         properties:
                           name:
@@ -741,8 +753,6 @@ spec:
                         type: string
                       url:
                         type: string
-                    required:
-                    - url
                     type: object
                   successfulBuildsHistoryLimit:
                     format: int32
@@ -4618,6 +4628,13 @@ spec:
                     type: object
                   srcRepo:
                     properties:
+                      bundleContainer:
+                        properties:
+                          image:
+                            type: string
+                        required:
+                        - image
+                        type: object
                       credentials:
                         properties:
                           name:
@@ -4629,8 +4646,6 @@ spec:
                         type: string
                       url:
                         type: string
-                    required:
-                    - url
                     type: object
                   successfulBuildsHistoryLimit:
                     format: int32

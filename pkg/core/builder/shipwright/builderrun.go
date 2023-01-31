@@ -287,7 +287,6 @@ func (r *builderRun) Cancel(builder *openfunction.Builder) error {
 }
 
 func (r *builderRun) createShipwrightBuild(builder *openfunction.Builder) *shipwrightv1alpha1.Build {
-	url := builder.Spec.SrcRepo.Url
 	shipwrightBuild := &shipwrightv1alpha1.Build{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-build-", builder.Name),
@@ -298,7 +297,6 @@ func (r *builderRun) createShipwrightBuild(builder *openfunction.Builder) *shipw
 		},
 		Spec: shipwrightv1alpha1.BuildSpec{
 			Source: shipwrightv1alpha1.Source{
-				URL:         &url,
 				Revision:    builder.Spec.SrcRepo.Revision,
 				ContextDir:  builder.Spec.SrcRepo.SourceSubPath,
 				Credentials: builder.Spec.SrcRepo.Credentials,
@@ -313,6 +311,16 @@ func (r *builderRun) createShipwrightBuild(builder *openfunction.Builder) *shipw
 				Credentials: builder.Spec.BuilderCredentials,
 			},
 		},
+	}
+
+	switch {
+	case builder.Spec.SrcRepo.BundleContainer != nil:
+		shipwrightBuild.Spec.Source.BundleContainer = &shipwrightv1alpha1.BundleContainer{
+			Image: builder.Spec.SrcRepo.BundleContainer.Image,
+		}
+	case builder.Spec.SrcRepo.Url != "":
+		url := builder.Spec.SrcRepo.Url
+		shipwrightBuild.Spec.Source.URL = &url
 	}
 
 	if builder.Spec.Timeout != nil {
