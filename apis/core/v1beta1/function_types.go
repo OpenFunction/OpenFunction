@@ -26,9 +26,19 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+// BundleContainer describes the source code bundle container to pull
+type BundleContainer struct {
+	// Image reference, i.e. quay.io/org/image:tag
+	Image string `json:"image"`
+}
+
 type GitRepo struct {
 	// Git url to clone
-	Url string `json:"url"`
+	Url string `json:"url,omitempty"`
+	// BundleContainer
+	//
+	// +optional
+	BundleContainer *BundleContainer `json:"bundleContainer,omitempty"`
 	// Git revision to check out (branch, tag, sha, ref…) (default:"")
 	Revision *string `json:"revision,omitempty"`
 	// A subpath within the `source` input where the source to build is located.
