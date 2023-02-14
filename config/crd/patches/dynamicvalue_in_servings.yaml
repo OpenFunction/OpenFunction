@@ -1,9 +1,0 @@
-- op: replace
-  path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/openFuncAsync/properties/dapr/properties/components/additionalProperties/properties/metadata/items/properties/value/type
-  value: ""
-- op: replace
-  path: /spec/versions/1/schema/openAPIV3Schema/properties/spec/properties/pubsub/additionalProperties/properties/metadata/items/properties/value/type
-  value: ""
-- op: replace
-  path: /spec/versions/1/schema/openAPIV3Schema/properties/spec/properties/bindings/additionalProperties/properties/metadata/items/properties/value/type
-  value: ""

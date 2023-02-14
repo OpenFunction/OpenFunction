@@ -35,7 +35,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	k8sgatewayapiv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	corev1alpha2 "github.com/openfunction/apis/core/v1alpha2"
 	corev1beta1 "github.com/openfunction/apis/core/v1beta1"
 	openfunctionevent "github.com/openfunction/apis/events/v1alpha1"
 	networkingv1alpha1 "github.com/openfunction/apis/networking/v1alpha1"
@@ -55,7 +54,6 @@ var (
 func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = knserving.AddToScheme(scheme)
-	_ = corev1alpha2.AddToScheme(scheme)
 	_ = componentsv1alpha1.AddToScheme(scheme)
 	_ = kedav1alpha1.AddToScheme(scheme)
 	_ = openfunctionevent.AddToScheme(scheme)

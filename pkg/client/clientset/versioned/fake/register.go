@@ -18,23 +18,20 @@ limitations under the License.
 package fake
 
 import (
+	corev1beta1 "github.com/openfunction/apis/core/v1beta1"
+	eventsv1alpha1 "github.com/openfunction/apis/events/v1alpha1"
+	networkingv1alpha1 "github.com/openfunction/apis/networking/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-
-	corev1alpha2 "github.com/openfunction/apis/core/v1alpha2"
-	corev1beta1 "github.com/openfunction/apis/core/v1beta1"
-	eventsv1alpha1 "github.com/openfunction/apis/events/v1alpha1"
-	networkingv1alpha1 "github.com/openfunction/apis/networking/v1alpha1"
 )
 
 var scheme = runtime.NewScheme()
 var codecs = serializer.NewCodecFactory(scheme)
 
 var localSchemeBuilder = runtime.SchemeBuilder{
-	corev1alpha2.AddToScheme,
 	corev1beta1.AddToScheme,
 	eventsv1alpha1.AddToScheme,
 	networkingv1alpha1.AddToScheme,

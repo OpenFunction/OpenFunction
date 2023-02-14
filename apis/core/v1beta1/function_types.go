@@ -214,19 +214,6 @@ type ServingImpl struct {
 	Timeout *metav1.Duration `json:"timeout,omitempty"`
 }
 
-type ServiceImpl struct {
-	// Annotations for Ingress. Take effect when `UseStandaloneIngress` is true.
-	//
-	// +optional
-	Annotations map[string]string `json:"annotations,omitempty"`
-	// UseStandaloneIngress determines whether to create a standalone ingress for the function.
-	// If it is true, an ingress will be created for this function,
-	// else it will use the default ingress under the current namespace.
-	//
-	// +optional
-	UseStandaloneIngress bool `json:"UseStandaloneIngress,omitempty"`
-}
-
 // FunctionSpec defines the desired state of Function
 type FunctionSpec struct {
 	// Function version in format like v1.0.0
@@ -249,10 +236,6 @@ type FunctionSpec struct {
 	Build *BuildImpl `json:"build,omitempty"`
 	// Information needed to run a function. The serving step will be skipped if `Serving` is nil.
 	Serving *ServingImpl `json:"serving,omitempty"`
-	// Information needed to create an access entry for function.
-	//
-	// +optional
-	Service *ServiceImpl `json:"service,omitempty"`
 }
 
 type Condition struct {
