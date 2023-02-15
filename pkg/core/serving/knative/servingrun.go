@@ -347,6 +347,11 @@ func (r *servingRun) createService(s *openfunction.Serving, cm map[string]string
 		template.Containers = append(template.Containers, *container)
 	}
 
+	if _, ok := s.Annotations[constants.WasmVariantAnnotation]; ok && template.RuntimeClassName == nil {
+		runtimeClassName := constants.WasmEdgeRuntimeClassName
+		template.RuntimeClassName = &runtimeClassName
+	}
+
 	rand.Seed(time.Now().UnixNano())
 	serviceName := fmt.Sprintf("%s-ksvc-%s", s.Name, rand.String(5))
 	workloadName := serviceName

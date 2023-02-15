@@ -306,11 +306,14 @@ func (r *builderRun) createShipwrightBuild(builder *openfunction.Builder) *shipw
 				Image:       builder.Spec.Image,
 				Credentials: builder.Spec.ImageCredentials,
 			},
-			Builder: &shipwrightv1alpha1.Image{
-				Image:       *builder.Spec.Builder,
-				Credentials: builder.Spec.BuilderCredentials,
-			},
 		},
+	}
+
+	if builder.Spec.Builder != nil {
+		shipwrightBuild.Spec.Builder = &shipwrightv1alpha1.Image{
+			Image:       *builder.Spec.Builder,
+			Credentials: builder.Spec.BuilderCredentials,
+		}
 	}
 
 	switch {
