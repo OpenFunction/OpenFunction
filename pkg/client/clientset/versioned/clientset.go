@@ -20,12 +20,13 @@ package versioned
 import (
 	"fmt"
 
-	corev1beta1 "github.com/openfunction/pkg/client/clientset/versioned/typed/core/v1beta1"
-	eventsv1alpha1 "github.com/openfunction/pkg/client/clientset/versioned/typed/events/v1alpha1"
-	networkingv1alpha1 "github.com/openfunction/pkg/client/clientset/versioned/typed/networking/v1alpha1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
+
+	corev1beta1 "github.com/openfunction/pkg/client/clientset/versioned/typed/core/v1beta1"
+	eventsv1alpha1 "github.com/openfunction/pkg/client/clientset/versioned/typed/events/v1alpha1"
+	networkingv1alpha1 "github.com/openfunction/pkg/client/clientset/versioned/typed/networking/v1alpha1"
 )
 
 type Interface interface {

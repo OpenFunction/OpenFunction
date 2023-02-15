@@ -18,6 +18,12 @@ limitations under the License.
 package fake
 
 import (
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/discovery"
+	fakediscovery "k8s.io/client-go/discovery/fake"
+	"k8s.io/client-go/testing"
+
 	clientset "github.com/openfunction/pkg/client/clientset/versioned"
 	corev1beta1 "github.com/openfunction/pkg/client/clientset/versioned/typed/core/v1beta1"
 	fakecorev1beta1 "github.com/openfunction/pkg/client/clientset/versioned/typed/core/v1beta1/fake"
@@ -25,11 +31,6 @@ import (
 	fakeeventsv1alpha1 "github.com/openfunction/pkg/client/clientset/versioned/typed/events/v1alpha1/fake"
 	networkingv1alpha1 "github.com/openfunction/pkg/client/clientset/versioned/typed/networking/v1alpha1"
 	fakenetworkingv1alpha1 "github.com/openfunction/pkg/client/clientset/versioned/typed/networking/v1alpha1/fake"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/discovery"
-	fakediscovery "k8s.io/client-go/discovery/fake"
-	"k8s.io/client-go/testing"
 )
 
 // NewSimpleClientset returns a clientset that will respond with the provided objects.

@@ -1540,7 +1540,7 @@ spec:
                                 - name
                                 type: object
                               value:
-                                type: object
+                                type: ""
                                 x-kubernetes-preserve-unknown-fields: true
                             required:
                             - name
@@ -1627,7 +1627,7 @@ spec:
                                 - name
                                 type: object
                               value:
-                                type: object
+                                type: ""
                                 x-kubernetes-preserve-unknown-fields: true
                             required:
                             - name
@@ -5459,7 +5459,7 @@ spec:
                             - name
                             type: object
                           value:
-                            type: object
+                            type: ""
                             x-kubernetes-preserve-unknown-fields: true
                         required:
                         - name
@@ -5556,7 +5556,7 @@ spec:
                             - name
                             type: object
                           value:
-                            type: object
+                            type: ""
                             x-kubernetes-preserve-unknown-fields: true
                         required:
                         - name
