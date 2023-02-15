@@ -412,6 +412,11 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving, cm map[string]str
 		spec.Containers = append(spec.Containers, *container)
 	}
 
+	if _, ok := s.Annotations[constants.WasmVariantAnnotation]; ok && spec.RuntimeClassName == nil {
+		runtimeClassName := constants.WasmEdgeRuntimeClassName
+		spec.RuntimeClassName = &runtimeClassName
+	}
+
 	template := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: annotations,

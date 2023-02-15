@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"strings"
 
 	"github.com/openfunction/pkg/constants"
 
@@ -107,6 +108,47 @@ func (r *Function) Default() {
 			r.Spec.Route = &route
 		} else if r.Spec.Route.GatewayRef == nil {
 			r.Spec.Route.GatewayRef = &GatewayRef{Name: constants.DefaultGatewayName, Namespace: &namespace}
+		}
+	}
+
+	r.HandleWorkloadRuntime()
+}
+
+func (r Function) HandleWorkloadRuntime() {
+	if r.Annotations == nil {
+		r.Annotations = make(map[string]string)
+	}
+
+	if _, ok := r.Annotations[constants.WasmVariantAnnotation]; !ok {
+		if strings.EqualFold(r.Spec.WorkloadRuntime, constants.WasmEdgeWorkloadRuntimeName) {
+			r.Annotations[constants.WasmVariantAnnotation] = constants.WasmCompatSmart
+		} else {
+			return
+		}
+	}
+
+	if r.Spec.Build != nil {
+		kind := string(shipwrightv1alpha1.ClusterBuildStrategyKind)
+		strategy := &Strategy{Name: constants.WasmEdgeBuildStrategyName, Kind: &kind}
+		if r.Spec.Build.Shipwright == nil {
+			r.Spec.Build.Shipwright = &ShipwrightEngine{Strategy: strategy}
+		} else if r.Spec.Build.Shipwright.Strategy == nil {
+			r.Spec.Build.Shipwright.Strategy = strategy
+		}
+	}
+
+	if r.Spec.Serving != nil {
+		if r.Spec.Serving.Annotations == nil {
+			r.Spec.Serving.Annotations = map[string]string{}
+		}
+
+		if _, ok := r.Spec.Serving.Annotations[constants.WasmVariantAnnotation]; !ok {
+			r.Spec.Serving.Annotations[constants.WasmVariantAnnotation] = constants.WasmCompatSmart
+		}
+
+		if r.Spec.Serving.Template != nil && r.Spec.Serving.Template.RuntimeClassName == nil {
+			runtimeClassName := constants.WasmEdgeRuntimeClassName
+			r.Spec.Serving.Template.RuntimeClassName = &runtimeClassName
 		}
 	}
 }

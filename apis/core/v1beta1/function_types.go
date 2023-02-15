@@ -134,7 +134,7 @@ type BuildImpl struct {
 	// Builder refers to the image containing the build tools to build the source code.
 	//
 	// +optional
-	Builder *string `json:"builder"`
+	Builder *string `json:"builder,omitempty"`
 	// BuilderCredentials references a Secret that contains credentials to access
 	// the builder image repository.
 	//
@@ -216,6 +216,14 @@ type ServingImpl struct {
 
 // FunctionSpec defines the desired state of Function
 type FunctionSpec struct {
+	// WorkloadRuntime for Function. Know values:
+	// ```
+	// OCIContainer: Nodes will run standard OCI container workloads.
+	// WasmEdge: Nodes will run workloads using the crun (with WasmEdge support).
+	// ```
+	// +optional
+	// +kubebuilder:default="OCIContainer"
+	WorkloadRuntime string `json:"workloadRuntime,omitempty"`
 	// Function version in format like v1.0.0
 	Version *string `json:"version,omitempty"`
 	// Function image name

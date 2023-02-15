@@ -3917,6 +3917,9 @@ spec:
                 type: object
               version:
                 type: string
+              workloadRuntime:
+                default: OCIContainer
+                type: string
             required:
             - image
             type: object

@@ -39,4 +39,10 @@ const (
 	DefaultGatewayListenerProtocol v1alpha2.ProtocolType = "HTTP"
 	DefaultFunctionServicePort     v1alpha2.PortNumber   = 80
 	DefaultFuncPort                v1alpha2.PortNumber   = 8080
+
+	WasmEdgeWorkloadRuntimeName = "wasmedge"
+	WasmEdgeRuntimeClassName    = "openfunction-crun"
+	WasmEdgeBuildStrategyName   = "wasmedge"
+	WasmVariantAnnotation       = "module.wasm.image/variant"
+	WasmCompatSmart             = "compat-smart"
 )
