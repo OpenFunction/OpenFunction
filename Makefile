@@ -63,6 +63,9 @@ manifests: generate fmt vet controller-gen ## Generate WebhookConfiguration, Clu
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
+client:
+	./hack/update-codegen.sh
+
 fmt: goimports ## Run go fmt && goimports against code.
 	go fmt ./...
 	$(GOIMPORTS) -w -local github.com/openfunction main.go controllers/ pkg/ docs/ hack/ apis/
