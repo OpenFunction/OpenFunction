@@ -350,9 +350,6 @@ func (r *builderRun) createShipwrightBuild(builder *openfunction.Builder) *shipw
 	for k, v := range builder.Spec.Env {
 		env = fmt.Sprintf("%s%s=%s#", env, k, v)
 	}
-	if builder.Spec.Port != nil {
-		env = fmt.Sprintf("%sPORT=%d", env, *builder.Spec.Port)
-	}
 
 	if len(env) > 0 {
 		shipwrightBuild.Spec.ParamValues = append(shipwrightBuild.Spec.ParamValues, shipwrightv1alpha1.ParamValue{
