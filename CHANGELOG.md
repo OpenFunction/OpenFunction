@@ -10,6 +10,10 @@
   * [0.7.0-rc.0 / 2022-08-11](#070-rc0--2022-08-11)
   * [0.7.0 / 2022-08-16](#070--2022-08-16)
   * [0.8.0-rc.0 / 2022-10-14](#080-rc0--2022-10-14)
+  * [0.8.0 / 2022-10-21](#080--2022-10-21)
+  * [0.8.1-rc.0 / 2022-11-23](#081-rc0--2022-11-23)
+  * [0.8.1 / 2022-12-01](#081--2022-12-01)
+  * [1.0.0-rc.0 / 2023-02-23](#100-rc0--2023-02-23)
 - [OpenFunction/samples](#openfunctionsamples)
 - [OpenFunction/website](#openfunctionwebsite)
 - [OpenFunction/builder](#openfunctionbuilder)
@@ -20,6 +24,143 @@
 - [OpenFunction/events-handlers](#openfunctionevents-handlers)
 
 # OpenFunction
+
+## 1.0.0-rc.0 / 2023-02-23
+
+### OpenFunction
+
+The core v1alpha2 API was deprecated and removed.
+
+#### Features
+
+- Support build from local source code [OpenFunction#411](https://github.com/OpenFunction/OpenFunction/pull/411)
+- Integrate wasmedge [OpenFunction#415](https://github.com/OpenFunction/OpenFunction/pull/415)
+
+#### Enhancement
+
+- Add sha256 to serving image [OpenFunction#407](https://github.com/OpenFunction/OpenFunction/pull/407)
+- Add information of build source to function status [OpenFunction#408](https://github.com/OpenFunction/OpenFunction/pull/408)
+- Bump shipwright to v0.11.0, knative to v0.32.0, dapr to v1.8.3, and go to 1.18 [OpenFunction#410](https://github.com/OpenFunction/OpenFunction/pull/410)
+
+#### BUGFIX
+
+- Add non nil judgment for sink [OpenFunction#404](https://github.com/OpenFunction/OpenFunction/pull/404)
+- Fix parameter undefined bug [OpenFunction#416](https://github.com/OpenFunction/OpenFunction/pull/416)
+
+### functions-framework-java
+
+functions-framework-java released [version 1.0.0](https://github.com/OpenFunction/functions-framework-java/releases/tag/1.0.0).
+
+#### Features
+
+- Support multiple functions in one pod [functions-framework-java#3](https://github.com/OpenFunction/functions-framework-java/pull/3)
+- Support for automatic publishing [functions-framework-java#4](https://github.com/OpenFunction/functions-framework-java/pull/4)
+
+### Builder
+
+#### Features
+
+- Support multiple functions in one pod [builder#65](https://github.com/OpenFunction/builder/pull/65)
+- Update the default java framework version to 1.0.0 [builder#70](https://github.com/OpenFunction/builder/pull/70)
+
+### revision-controller
+
+revision-controller released [version 1.0.0](https://github.com/OpenFunction/revision-controller/releases/tag/v1.0.0).
+
+#### Features
+
+- Support to watch the source image [revision-controller#4](https://github.com/OpenFunction/revision-controller/pull/4)
+
+## 0.8.1 / 2022-12-01
+
+### OpenFunction
+
+#### Enhancement
+
+- Bump kafka version to 3.3.1 in samples [OpenFunction#385](https://github.com/OpenFunction/OpenFunction/pull/385)
+
+#### BUGFIX
+
+- Fix [Dapr-proxy service name fissioned](https://github.com/OpenFunction/OpenFunction/issues/378) [OpenFunction#387](https://github.com/OpenFunction/OpenFunction/pull/387)
+- Fix [Failed to CreateOrUpdate service when function is updated](https://github.com/OpenFunction/OpenFunction/issues/380) [OpenFunction#387](https://github.com/OpenFunction/OpenFunction/pull/387)
+
+## 0.8.1-rc.0 / 2022-11-23
+
+### OpenFunction
+
+#### Enhancement
+
+- Bump kafka version to 3.3.1 in samples [OpenFunction#385](https://github.com/OpenFunction/OpenFunction/pull/385)
+
+#### BUGFIX
+
+- Fix [Dapr-proxy service name fissioned](https://github.com/OpenFunction/OpenFunction/issues/378) [OpenFunction#387](https://github.com/OpenFunction/OpenFunction/pull/387)
+- Fix [Failed to CreateOrUpdate service when function is updated](https://github.com/OpenFunction/OpenFunction/issues/380) [OpenFunction#387](https://github.com/OpenFunction/OpenFunction/pull/387)
+
+
+## 0.8.0 / 2022-10-21
+
+### OpenFunction
+
+OpenFunction v0.8.0 added a new [Dapr Standalone Mode](https://openfunction.dev/docs/concepts/baas_integration/) to replace the original Dapr Sidecar mode to speed up function launching.
+[Here](https://github.com/OpenFunction/OpenFunction/blob/main/docs/proposals/20220919-dapr-proxy.md) you can find the proposal.
+
+#### Features
+
+- support dapr-proxy [OpenFunction#370](https://github.com/OpenFunction/OpenFunction/pull/370)
+
+#### Enhancement
+
+- Update dapr-proxy proposal [OpenFunction#372](https://github.com/OpenFunction/OpenFunction/pull/372)
+- Add release drafter [OpenFunction#361](https://github.com/OpenFunction/OpenFunction/pull/361)
+- Add dapr-proxy proposal [OpenFunction#359](https://github.com/OpenFunction/OpenFunction/pull/359)
+- Support config eventsource handler image & trigger handler image [OpenFunction#354](https://github.com/OpenFunction/OpenFunction/pull/354)
+
+#### BUGFIX
+- Fix [Add knative prefix back to the annotation key](https://github.com/OpenFunction/OpenFunction/issues/368) [OpenFunction#372](https://github.com/OpenFunction/OpenFunction/pull/372)
+- Fix [can not connect to another function by internal address within k8s cluster](https://github.com/OpenFunction/OpenFunction/issues/368) [OpenFunction#372](https://github.com/OpenFunction/OpenFunction/pull/372)
+- Fix [nil pointer when creating function](https://github.com/OpenFunction/OpenFunction/issues/366) [OpenFunction#372](https://github.com/OpenFunction/OpenFunction/pull/372)
+- Fix the link of slack in readme [OpenFunction#356](https://github.com/OpenFunction/OpenFunction/pull/356)
+
+### functions-framework-go
+
+#### Features
+
+- Support creating dapr service with http protocol [functions-framework-go#66](https://github.com/OpenFunction/functions-framework-go/pull/66)
+- Support dapr-proxy mode [functions-framework-go#65](https://github.com/OpenFunction/functions-framework-go/pull/65)
+
+#### Enhancements
+
+- Remove import of dapr runtime package [functions-framework-go#67](https://github.com/OpenFunction/functions-framework-go/pull/67)
+- Add release drafter [functions-framework-go#64](https://github.com/OpenFunction/functions-framework-go/pull/64)
+
+#### BUGFIX
+
+- Fix invalid link [functions-framework-go#63](https://github.com/OpenFunction/functions-framework-go/pull/63)
+
+### functions-framework-nodejs
+
+#### Features
+- Enable skywalking plugin for tracing [functions-framework-nodejs#86](https://github.com/OpenFunction/functions-framework-nodejs/pull/86)
+- Enable plugin mechanism for async func [functions-framework-nodejs#70](https://github.com/OpenFunction/functions-framework-nodejs/pull/70)
+- Enable graceful shutdown [functions-framework-nodejs#75](https://github.com/OpenFunction/functions-framework-nodejs/pull/75)
+
+#### Enhancements
+
+- Reconstruct skywalking plugin [functions-framework-nodejs#108](https://github.com/OpenFunction/functions-framework-nodejs/pull/108)
+- Plugin system revolution [functions-framework-nodejs#108](https://github.com/OpenFunction/functions-framework-nodejs/pull/108)
+- Add dapr 1.8.0 ci env and polish e2e tests [functions-framework-nodejs#67](https://github.com/OpenFunction/functions-framework-nodejs/pull/67)
+- Add YADROOKIE as a contributor for code [functions-framework-nodejs#76](https://github.com/OpenFunction/functions-framework-nodejs/pull/76)
+
+### dapr-proxy
+
+#### Features
+
+- Implement dapr proxy [dapr-proxy#1](https://github.com/OpenFunction/dapr-proxy/pull/1)
+
+#### Enhancements
+
+- Fix cve vulnerabilities & update ci [dapr-proxy#3](https://github.com/OpenFunction/dapr-proxy/pull/3)
 
 ## 0.8.0-rc.0 / 2022-10-14
 
