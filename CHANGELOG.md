@@ -69,7 +69,8 @@ revision-controller released [version 1.0.0](https://github.com/OpenFunction/rev
 
 #### Features
 
-- Support to watch the source image [revision-controller#4](https://github.com/OpenFunction/revision-controller/pull/4)
+- Support to detect source code or image changes and then rebuilt and/or redeploy the new built image [revision-controller#1](https://github.com/OpenFunction/revision-controller/pull/1)
+- Support to detect the source image changes and then rebuilt [revision-controller#4](https://github.com/OpenFunction/revision-controller/pull/4)
 
 ## 0.8.1 / 2022-12-01
 
