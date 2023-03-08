@@ -14,6 +14,7 @@
   * [0.8.1-rc.0 / 2022-11-23](#081-rc0--2022-11-23)
   * [0.8.1 / 2022-12-01](#081--2022-12-01)
   * [1.0.0-rc.0 / 2023-02-23](#100-rc0--2023-02-23)
+  * [1.0.0 / 2023-03-07](#100--2023-03-07)
 - [OpenFunction/samples](#openfunctionsamples)
 - [OpenFunction/website](#openfunctionwebsite)
 - [OpenFunction/builder](#openfunctionbuilder)
@@ -24,6 +25,53 @@
 - [OpenFunction/events-handlers](#openfunctionevents-handlers)
 
 # OpenFunction
+
+## 1.0.0 / 2023-03-07
+
+### OpenFunction
+
+The core v1alpha2 API was deprecated and removed.
+
+#### Features
+
+- Support build from local source code [OpenFunction#411](https://github.com/OpenFunction/OpenFunction/pull/411)
+- Integrate wasmedge [OpenFunction#415](https://github.com/OpenFunction/OpenFunction/pull/415)
+
+#### Enhancement
+
+- Add sha256 to serving image [OpenFunction#407](https://github.com/OpenFunction/OpenFunction/pull/407)
+- Add information of build source to function status [OpenFunction#408](https://github.com/OpenFunction/OpenFunction/pull/408)
+- Bump shipwright to v0.11.0, knative to v0.32.0, dapr to v1.8.3, and go to 1.18 [OpenFunction#410](https://github.com/OpenFunction/OpenFunction/pull/410)
+
+#### BUGFIX
+
+- Add non nil judgment for sink [OpenFunction#404](https://github.com/OpenFunction/OpenFunction/pull/404)
+- Fix parameter undefined bug [OpenFunction#416](https://github.com/OpenFunction/OpenFunction/pull/416)
+
+### functions-framework-java
+
+functions-framework-java released [version 1.0.0](https://github.com/OpenFunction/functions-framework-java/releases/tag/1.0.0).
+
+#### Features
+
+- Support multiple functions in one pod [functions-framework-java#3](https://github.com/OpenFunction/functions-framework-java/pull/3)
+- Support for automatic publishing [functions-framework-java#4](https://github.com/OpenFunction/functions-framework-java/pull/4)
+
+### Builder
+
+#### Features
+
+- Support multiple functions in one pod [builder#65](https://github.com/OpenFunction/builder/pull/65)
+- Update the default java framework version to 1.0.0 [builder#70](https://github.com/OpenFunction/builder/pull/70)
+
+### revision-controller
+
+revision-controller released [version 1.0.0](https://github.com/OpenFunction/revision-controller/releases/tag/v1.0.0).
+
+#### Features
+
+- Support to detect source code or image changes and then rebuilt and/or redeploy the new built image [revision-controller#1](https://github.com/OpenFunction/revision-controller/pull/1)
+- Support to detect the source image changes and then rebuilt [revision-controller#4](https://github.com/OpenFunction/revision-controller/pull/4)
 
 ## 1.0.0-rc.0 / 2023-02-23
 
@@ -69,7 +117,8 @@ revision-controller released [version 1.0.0](https://github.com/OpenFunction/rev
 
 #### Features
 
-- Support to watch the source image [revision-controller#4](https://github.com/OpenFunction/revision-controller/pull/4)
+- Support to detect source code or image changes and then rebuilt and/or redeploy the new built image [revision-controller#1](https://github.com/OpenFunction/revision-controller/pull/1)
+- Support to detect the source image changes and then rebuilt [revision-controller#4](https://github.com/OpenFunction/revision-controller/pull/4)
 
 ## 0.8.1 / 2022-12-01
 
