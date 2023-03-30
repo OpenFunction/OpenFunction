@@ -922,6 +922,21 @@ func (in *ServingImpl) DeepCopyInto(out *ServingImpl) {
 			(*out)[key] = outVal
 		}
 	}
+	if in.States != nil {
+		in, out := &in.States, &out.States
+		*out = make(map[string]*v1alpha1.ComponentSpec, len(*in))
+		for key, val := range *in {
+			var outVal *v1alpha1.ComponentSpec
+			if val == nil {
+				(*out)[key] = nil
+			} else {
+				in, out := &val, &outVal
+				*out = new(v1alpha1.ComponentSpec)
+				(*in).DeepCopyInto(*out)
+			}
+			(*out)[key] = outVal
+		}
+	}
 	if in.Triggers != nil {
 		in, out := &in.Triggers, &out.Triggers
 		*out = make([]Triggers, len(*in))
@@ -1066,6 +1081,21 @@ func (in *ServingSpec) DeepCopyInto(out *ServingSpec) {
 	}
 	if in.Pubsub != nil {
 		in, out := &in.Pubsub, &out.Pubsub
+		*out = make(map[string]*v1alpha1.ComponentSpec, len(*in))
+		for key, val := range *in {
+			var outVal *v1alpha1.ComponentSpec
+			if val == nil {
+				(*out)[key] = nil
+			} else {
+				in, out := &val, &outVal
+				*out = new(v1alpha1.ComponentSpec)
+				(*in).DeepCopyInto(*out)
+			}
+			(*out)[key] = outVal
+		}
+	}
+	if in.States != nil {
+		in, out := &in.States, &out.States
 		*out = make(map[string]*v1alpha1.ComponentSpec, len(*in))
 		for key, val := range *in {
 			var outVal *v1alpha1.ComponentSpec
