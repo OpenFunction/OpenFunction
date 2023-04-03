@@ -308,6 +308,45 @@ spec:
                     format: int32
                     type: integer
                 type: object
+              states:
+                additionalProperties:
+                  properties:
+                    ignoreErrors:
+                      type: boolean
+                    initTimeout:
+                      type: string
+                    metadata:
+                      items:
+                        properties:
+                          name:
+                            type: string
+                          secretKeyRef:
+                            properties:
+                              key:
+                                type: string
+                              name:
+                                type: string
+                            required:
+                            - key
+                            - name
+                            type: object
+                          value:
+                            type: object
+                            x-kubernetes-preserve-unknown-fields: true
+                        required:
+                        - name
+                        type: object
+                      type: array
+                    type:
+                      type: string
+                    version:
+                      type: string
+                  required:
+                  - metadata
+                  - type
+                  - version
+                  type: object
+                type: object
               template:
                 properties:
                   activeDeadlineSeconds:

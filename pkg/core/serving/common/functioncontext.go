@@ -26,6 +26,7 @@ type functionContext struct {
 	Version        string                     `json:"version"`
 	Inputs         map[string]*functionInput  `json:"inputs,omitempty"`
 	Outputs        map[string]*functionOutput `json:"outputs,omitempty"`
+	States         map[string]*functionState  `json:"states,omitempty"`
 	Runtime        string                     `json:"runtime"`
 	Port           string                     `json:"port,omitempty"`
 	State          interface{}                `json:"state,omitempty"`
@@ -48,6 +49,11 @@ type functionOutput struct {
 	ComponentType string            `json:"componentType"`
 	Metadata      map[string]string `json:"metadata,omitempty"`
 	Operation     string            `json:"operation,omitempty"`
+}
+
+type functionState struct {
+	ComponentName string `json:"componentName"`
+	ComponentType string `json:"componentType"`
 }
 
 type functionPluginsTracing struct {

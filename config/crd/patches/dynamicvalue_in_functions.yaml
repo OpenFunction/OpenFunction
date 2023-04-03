@@ -4,3 +4,6 @@
 - op: replace
   path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/serving/properties/pubsub/additionalProperties/properties/metadata/items/properties/value/type
   value: ""
+- op: replace
+  path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/serving/properties/states/additionalProperties/properties/metadata/items/properties/value/type
+  value: ""

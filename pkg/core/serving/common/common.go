@@ -171,6 +171,18 @@ func GenOpenFunctionContext(
 		}
 	}
 
+	if s.Spec.States != nil && len(s.Spec.States) > 0 {
+		fc.States = make(map[string]*functionState)
+		for name, _ := range s.Spec.States {
+			c, _ := components[name]
+			fnState := functionState{
+				ComponentName: getComponentName(s, name, componentName),
+				ComponentType: c.Type,
+			}
+			fc.States[name] = &fnState
+		}
+	}
+
 	// Handle plugins information
 	if err := parsePluginsCfg(s, cm, &fc); err != nil {
 		// Just log the error
@@ -210,6 +222,16 @@ func GetPendingCreateComponents(s *openfunction.Serving) (map[string]*components
 
 	if s.Spec.Pubsub != nil {
 		for name, component := range s.Spec.Pubsub {
+			c := component.DeepCopy()
+			if _, exist := components[name]; exist {
+				return nil, fmt.Errorf("dapr component with this name already exists: %s", name)
+			}
+			components[name] = c
+		}
+	}
+
+	if s.Spec.States != nil {
+		for name, component := range s.Spec.States {
 			c := component.DeepCopy()
 			if _, exist := components[name]; exist {
 				return nil, fmt.Errorf("dapr component with this name already exists: %s", name)
@@ -554,7 +576,7 @@ func GetDaprServiceMode(s *openfunction.Serving) DaprServiceMode {
 
 func GetDaprServiceEnabled(s *openfunction.Serving) bool {
 	if enabled, ok := s.Spec.Annotations[OpenfunctionDaprServiceEnabled]; !ok {
-		if s.Spec.Inputs != nil || s.Spec.Outputs != nil {
+		if s.Spec.Inputs != nil || s.Spec.Outputs != nil || s.Spec.States != nil {
 			return true
 		} else {
 			return false

@@ -575,6 +575,7 @@ func (r *FunctionReconciler) createServingSpec(fn *openfunction.Function) openfu
 		spec.ScaleOptions = fn.Spec.Serving.ScaleOptions
 		spec.Bindings = fn.Spec.Serving.Bindings
 		spec.Pubsub = fn.Spec.Serving.Pubsub
+		spec.States = fn.Spec.Serving.States
 		spec.Inputs = fn.Spec.Serving.Inputs
 		spec.Outputs = fn.Spec.Serving.Outputs
 		spec.Params = fn.Spec.Serving.Params
