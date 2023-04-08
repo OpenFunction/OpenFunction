@@ -64,8 +64,18 @@ type functionPluginsTracing struct {
 }
 
 type tracingProvider struct {
-	Name      string `json:"name" yaml:"name"`
-	OapServer string `json:"oapServer" yaml:"oapServer"`
+	Name      string    `json:"name" yaml:"name"`
+	OapServer string    `json:"oapServer,omitempty" yaml:"oapServer,omitempty"`
+	Exporter  *exporter `json:"exporter,omitempty" yaml:"exporter,omitempty"`
+}
+
+type exporter struct {
+	Name        string `json:"name" yaml:"name"`
+	Endpoint    string `json:"endpoint" yaml:"endpoint"`
+	Headers     string `json:"headers,omitempty" yaml:"headers,omitempty"`
+	Compression string `json:"compression,omitempty" yaml:"compression,omitempty"`
+	Timeout     string `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	Protocol    string `json:"protocol,omitempty" yaml:"protocol,omitempty"`
 }
 
 type plugins struct {
