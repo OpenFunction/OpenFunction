@@ -271,6 +271,7 @@ func CreateComponents(
 					ServingLabel:        s.Name,
 				},
 			},
+			Scopes: []string{fmt.Sprintf("%s-%s", GetFunctionName(s), s.Namespace)},
 		}
 
 		if dc != nil {
