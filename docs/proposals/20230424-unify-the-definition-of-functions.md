@@ -30,6 +30,7 @@ Use `triggers` to unify the definition of sync and async functions.
 Add a `Trigger` type in `OpenFunction/apis/core/v1beta1/serving_types.go`:
 ```go
 type Trigger struct {
+  // Trigger type can be one of http,http.knative,http.keda or supported Dapr binding/pubsub like pubsub.rabbitmq, binding.kafka for now. Other triggers types may be supported in the future.
   Type string `json:"type"`
   Metadata *DaprIO `json:"metadata,omitempty"`
   Route *RouteImpl `json:"route,omitempty"`
@@ -72,9 +73,6 @@ spec:
   serving:
     triggers:
       # type: http 
-      # type: http.knative 
-      # type: http.keda
-      # type: pubsub.rabbitmq
       - type: binding.kafka 
         metadata:
           name: kafka
