@@ -29,18 +29,12 @@ Use `triggers` to unify the definition of sync and async functions.
 
 Add a `Trigger` type in `OpenFunction/apis/core/v1beta1/serving_types.go`:
 ```go
-type TriggerParams struct {
-  DaprIO
-  // Information needed to make HTTPRoute.
-  // Will attempt to make HTTPRoute using the default Gateway resource if Route is nil.
-  //
-  // +optional
-  Route *RouteImpl `json:"route,omitempty"`
-}
-
 type Trigger struct {
   Type string `json:"type"`
-  Params *TriggerParams `json:"params,omitempty"`
+  Metadata *DaprIO `json:"metadata,omitempty"`
+  Route *RouteImpl `json:"route,omitempty"`
+  // import https://github.com/shipwright-io/build/blob/main/pkg/apis/build/v1alpha1/parameter.go
+  Params []*ParamValue `json:"params,omitempty"`
 }
 ```
 
@@ -82,16 +76,16 @@ spec:
       # type: http.keda
       # type: pubsub.rabbitmq
       - type: binding.kafka 
-        params:
+        metadata:
           name: kafka
           component: kafka-receiver
         ## route is only required for functions with http trigger
-        # route:
-        #   rules:
-        #     - matches:
-        #         - path:
-        #             type: PathPrefix
-        #             value: /echo
+        #route:
+        #  rules:
+        #    - matches:
+        #        - path:
+        #            type: PathPrefix
+        #            value: /echo
     outputs:
       - name: notify
         component: notification-manager
