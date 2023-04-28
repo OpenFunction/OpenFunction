@@ -14,7 +14,7 @@ Use `triggers` to unify the definition of sync and async functions.
 
 ### OpenFunction
 
-- Use `spec.serving.trigger` to replace the original `spec.serving.inputs` field.
+- Use `spec.serving.triggers` to replace the original `spec.serving.inputs` field.
 - There have two triggers, httpTrigger and daprTrigger.
 - The original `spec.serving.runtime` field will be deprecated.
 - The `spec.serving.route` field will be moved to `spec.serving.trigger.http` (only required for functions with http trigger)
@@ -25,7 +25,7 @@ Add a `Triggers` type in `OpenFunction/apis/core/v1beta1/serving_types.go`:
 ```go
 type Triggers struct {
   Http *HttpTrigger `json:"http,omitempty"`
-  Dapr *DaprTrigger `json:"dapr,omitempty"`
+  Dapr []*DaprTrigger `json:"dapr,omitempty"`
 }
 ```
 
@@ -56,10 +56,6 @@ type HttpTrigger struct {
 The `DaprTrigger` are triggers that triggered by dapr binding events or topic events, defined as follows:
 ```go
 type DaprTrigger struct {
-  Triggers []*DaprComponentTrigger `json:"triggers"`
-}
-
-type DaprComponentTrigger struct {
   *DaprComponent `json:"_inline"`
   Inputs []*Input `json:"inputs,omitempty"`
 }
@@ -122,7 +118,7 @@ spec:
       sourceSubPath: "functions/async/logs-handler-function/"
       revision: "main"
   serving:
-    trigger:
+    triggers:
       # http:
       #   port: "8080"
       #   route:
@@ -140,12 +136,11 @@ spec:
       #     - type: state.redis
       #       name: redis-input 
       dapr:
-        triggers:
-          - type: binding.kafka 
-            name: kafka-receiver
-          - type: pubsub.rocketmq
-            name: rocketmq-server
-            topic: sample
+        - type: binding.kafka 
+          name: kafka-receiver
+        - type: pubsub.rocketmq
+          name: rocketmq-server
+          topic: sample
     outputs:
       - name: notify
         component: notification-manager
