@@ -15,42 +15,89 @@ Use `triggers` to unify the definition of sync and async functions.
 ### OpenFunction
 
 - Use `spec.serving.triggers` to replace the original `spec.serving.inputs` field.
-- The original `spec.serving.runtime` field will be replaced by `spec.serving.trigger.type`.
-- The `spec.serving.route` field will be moved to `spec.serving.trigger.params.route` (only required for functions with http trigger)
-- The `spec.serving.triggers` definition is identical or similar to the origial `spec.serving.inputs`
-- The `spec.serving.triggers.type` of sync functions is `http`, `http.knative` or `http.keda`. `http` is default to `http.knative` for now.
-- The `spec.serving.triggers.params.name` and `spec.serving.triggers.params.components` is not used for sync functions
-- User can only specify one trigger if the `spec.serving.trigger.type` is `http`/`http.knative`/`http.keda`
-- Supported `spec.serving.trigger.type` for async functions is the same as Dapr pubsub and binding such as `pubsub.rabbitmq` and `binding.kafka`
-- Currently the triggers types include `http` and Dapr `binding` and `pubsub`, we may add other trigger types in the future such as `S3 events trigger` or `github event trigger`
+- There have two triggers, httpTrigger and daprTrigger.
+- The original `spec.serving.runtime` field will be deprecated.
+- The `spec.serving.route` field will be moved to `spec.serving.trigger.http` (only required for functions with http trigger)
 - Multiple triggers can be specified together if they're non-http triggers
 - The API version can be upgrade from v1beta1 to v1beta2
-- We may add `spec.serving.inputs` back in the future for input bindings that're not triggers, or replace the `spec.serving.inputs` and `spec.serving.outputs` with a unified `ioBinding` field.
 
-Add a `Trigger` type in `OpenFunction/apis/core/v1beta1/serving_types.go`:
+Add a `Triggers` type in `OpenFunction/apis/core/v1beta1/serving_types.go`:
 ```go
-type Trigger struct {
-  // Trigger type can be one of http,http.knative,http.keda or supported Dapr binding/pubsub like pubsub.rabbitmq, binding.kafka for now. Other triggers types may be supported in the future.
-  Type string `json:"type"`
-  Metadata *DaprIO `json:"metadata,omitempty"`
-  Route *RouteImpl `json:"route,omitempty"`
-  // import https://github.com/shipwright-io/build/blob/main/pkg/apis/build/v1alpha1/parameter.go
-  Params []*ParamValue `json:"params,omitempty"`
+type Triggers struct {
+  Http *HttpTrigger `json:"http,omitempty"`
+  Dapr []*DaprTrigger `json:"dapr,omitempty"`
 }
 ```
 
-Remove the `Inputs` and add the `Triggers` instead in `OpenFunction/apis/core/v1beta1/function_types.go`:
+> A `TimerTrigger` will support later.
+> ```go
+> type TimerTrigger struct {
+>   Scheduler string `json:"scheduler"`
+>   Inputs []*Input `json:"inputs,omitempty"`
+> }
+> ```
+
+The `HttpTrigger` is defined as follows:
 ```go
-type ServingImpl struct {
-  Triggers []*Trigger `json:"inputs"`
-  // Function outputs from Dapr components including binding, pubsub
+type HttpTrigger struct {
+  // The port on which the function will be invoked
+  Port *int32 `json:"port,omitempty"`
+  // Information needed to make HTTPRoute.
+  // Will attempt to make HTTPRoute using the default Gateway resource if Route is nil.
+  //
   // +optional
-  Outputs []*DaprIO `json:"outputs,omitempty"`
+  Route *RouteImpl `json:"route,omitempty"`
+  Inputs []*Input `json:"inputs,omitempty"`
 }
 ```
 
+> The `port` is moved from `.spec`.
+
+The `DaprTrigger` are triggers that triggered by dapr binding events or topic events, defined as follows:
+```go
+type DaprTrigger struct {
+  *DaprComponent `json:"_inline"`
+  Inputs []*Input `json:"inputs,omitempty"`
+}
+
+type DaprComponent struct {
+  Type string `json:"type,omitempty"`
+  Name string `json:"name"`
+  Topic string `json:"topic,omitempty"`
+}
+```
+
+All triggers can define some inputs, when the function is triggered, function can get data from these inputs.
+Currently, it only supports dapr state store.
+The `Input` define as follows:
+```go
+type Input struct {
+  Dapr DaprComponent `json:"dapr,omitempty"`
+}
+```
+
+Rename `plugin` to `hook`, and move the hook config to `spec.serving`.
+There are global hooks and private hooks, the global hooks define in the config of `OpenFunction Controller`, the private hooks
+define in the `Function` cr. 
+
+By default, all hooks will be executed, user can controll this logic by the `policy` field. There have two policy to determine the relation of global hooks and private hooks.
+- `Append` All hooks will be executed, the private pre hooks will execute after the global pre hooks , and the private post hooks will execute before the global post hooks. this is the default policy.
+- `Override` Only execute the private hooks. 
+
+The `hook` config define as follows:
+```go
+type HookConfig struct {
+  Pre   []string `yaml:"pre,omitempty"`
+  Post  []string `yaml:"post,omitempty"`
+  Policy string `yaml:"policy,omitempty"`
+}
+```
+
+The `plugins.tracing` will move from `annotation` to `spec.serving`.
+
+The `Function` yaml will like this:
 ```yaml=
-apiVersion: core.openfunction.io/v1beta1
+apiVersion: core.openfunction.io/v1beta2
 kind: Function
 metadata:
   name: logs-async-handler
@@ -72,18 +119,28 @@ spec:
       revision: "main"
   serving:
     triggers:
-      # type: http 
-      - type: binding.kafka 
-        metadata:
-          name: kafka
-          component: kafka-receiver
-        ## route is only required for functions with http trigger
-        #route:
-        #  rules:
-        #    - matches:
-        #        - path:
-        #            type: PathPrefix
-        #            value: /echo
+      # http:
+      #   port: "8080"
+      #   route:
+      #     rules:
+      #       - matches:
+      #           - path:
+      #               type: PathPrefix
+      #               value: /echo
+      #   inputs:
+      #     - type: binding.kafka 
+      #       name: kafka-input
+      #     - type: pubsub.rocketmq
+      #       name: rocketmq-input
+      #       topic: sample
+      #     - type: state.redis
+      #       name: redis-input 
+      dapr:
+        - type: binding.kafka 
+          name: kafka-receiver
+        - type: pubsub.rocketmq
+          name: rocketmq-server
+          topic: sample
     outputs:
       - name: notify
         component: notification-manager
@@ -139,16 +196,36 @@ spec:
       containers:
         - name: function # DO NOT change this
           imagePullPolicy: IfNotPresent
+    hooks:
+      pre:
+        - pre-hook1
+        - pre-hook2
+      post:
+        - post-hook2
+        - post-hook1
+    tracing:
+      enabled: true
+      provider:
+        name: opentelemetry
+        exporter:
+          name: jaeger
+          endpoint: "http://localhost:14268/api/traces"
+      tags:
+        func: sample-binding
+        layer: faas
+      baggage:
+        key: opentelemetry
+        value: v1.23.0
 ```
-
 
 ### functions-framework
 
-We can stil use the original `Inputs` in function context which means no changes is needed for functions-frameworks.
+The controller need to create two function context, one is for v1beta1, and other is for v1beta2, the framework need to get the context by the API version.
 
 ## Action items
 - [ ] Adjust OpenFunction CRD and Controller
 - [ ] Add conversion between v1beta1 and v1
+- [ ] Split builder to separate repository
 - [ ] Adjust samples
 - [ ] Adjust docs
 - [ ] Release OpenFunction v1.1
