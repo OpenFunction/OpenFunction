@@ -16,6 +16,10 @@ limitations under the License.
 
 package common
 
+import (
+	daprsdk "github.com/dapr/go-sdk/service/common"
+)
+
 const (
 	bindings = "bindings"
 	topic    = "pubsub"
@@ -37,10 +41,11 @@ type functionContext struct {
 }
 
 type functionInput struct {
-	Uri           string            `json:"uri,omitempty"`
-	ComponentName string            `json:"componentName"`
-	ComponentType string            `json:"componentType"`
-	Metadata      map[string]string `json:"metadata,omitempty"`
+	Uri               string                `json:"uri,omitempty"`
+	ComponentName     string                `json:"componentName"`
+	ComponentType     string                `json:"componentType"`
+	Metadata          map[string]string     `json:"metadata,omitempty"`
+	PubSubRoutingRule *daprsdk.Subscription `json:"pubSubRoutingRule,omitempty"`
 }
 
 type functionOutput struct {

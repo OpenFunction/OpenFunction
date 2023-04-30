@@ -101,6 +101,21 @@ spec:
                       additionalProperties:
                         type: string
                       type: object
+                    pubSubRoutingRule:
+                      properties:
+                        metadata:
+                          type: object
+                        match:
+                          type: string
+                        priority:
+                          type: integer
+                        disableTopicValidation:
+                          boolean
+                      required:
+                      - metadata
+                      - match
+                      - priority
+                      type: object
                     topic:
                       type: string
                   required:
@@ -124,6 +139,19 @@ spec:
                     params:
                       additionalProperties:
                         type: string
+                      type: object
+                    pubSubRoutingRule:
+                      properties:
+                        match:
+                          type: string
+                        priority:
+                          type: integer
+                        route:
+                          type: string
+                      required:
+                      - match
+                      - priority
+                      - route
                       type: object
                     topic:
                       type: string

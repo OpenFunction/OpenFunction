@@ -23,8 +23,9 @@ package v1beta1
 
 import (
 	"github.com/dapr/dapr/pkg/apis/components/v1alpha1"
+	"github.com/dapr/go-sdk/service/common"
 	apiv1alpha1 "github.com/kedacore/keda/v2/api/v1alpha1"
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -340,6 +341,11 @@ func (in *DaprIO) DeepCopyInto(out *DaprIO) {
 		for key, val := range *in {
 			(*out)[key] = val
 		}
+	}
+	if in.PubSubRoutingRule != nil {
+		in, out := &in.PubSubRoutingRule, &out.PubSubRoutingRule
+		*out = new(common.Subscription)
+		(*in).DeepCopyInto(*out)
 	}
 }
 

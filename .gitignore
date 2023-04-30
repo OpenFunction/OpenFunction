@@ -8,6 +8,7 @@
 bin
 __debug_bin
 testbin/*
+/vendor
 
 # Test binary, build with `go test -c`
 *.test

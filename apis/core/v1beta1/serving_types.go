@@ -18,6 +18,7 @@ package v1beta1
 
 import (
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
+	daprsdk "github.com/dapr/go-sdk/service/common"
 	kedav1alpha1 "github.com/kedacore/keda/v2/api/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -98,6 +99,9 @@ type DaprIO struct {
 	// Operation field tells the Dapr component which operation it should perform.
 	// +optional
 	Operation string `json:"operation,omitempty"`
+	// PubSubRoutingRule routing rule. used when type is pubsub
+	// +optional
+	PubSubRoutingRule *daprsdk.Subscription `json:"pubSubRoutingRule,omitempty"`
 }
 
 type ScaleOptions struct {
