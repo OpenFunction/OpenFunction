@@ -35,7 +35,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	openfunction "github.com/openfunction/apis/core/v1beta1"
+	openfunctionv1beta1 "github.com/openfunction/apis/core/v1beta1"
+	openfunction "github.com/openfunction/apis/core/v1beta2"
 	"github.com/openfunction/pkg/constants"
 	"github.com/openfunction/pkg/core"
 	"github.com/openfunction/pkg/util"
@@ -45,7 +46,8 @@ import (
 type DaprServiceMode string
 
 const (
-	FunctionContextEnvName = "FUNC_CONTEXT"
+	FunctionContextV1beta1EnvName = "FUNC_CONTEXT"
+	FunctionContextV1beta2EnvName = "FUNC_CONTEXT_V1BETA2"
 
 	ServingLabel                   = "openfunction.io/serving"
 	ProxyLabel                     = "openfunction.io/proxy"
@@ -70,193 +72,41 @@ const (
 	DaprServiceModeStandalone DaprServiceMode = "standalone"
 	DaprServiceModeSidecar    DaprServiceMode = "sidecar"
 
+	daprComponentKey = "dapr.io/component"
+
 	PluginsTracingAnnotation = "plugins.tracing"
 	PluginsAnnotation        = "plugins"
+
+	hooksKey   = "hooks"
+	tracingKey = "tracing"
+
+	bindingsPrefix = "bindings"
+	pubsubPrefix   = "pubsub"
+	statesPrefix   = "states"
 )
-
-func GenOpenFunctionContext(
-	ctx context.Context,
-	logger logr.Logger,
-	s *openfunction.Serving,
-	cm map[string]string,
-	components map[string]*componentsv1alpha1.ComponentSpec,
-	functionName string,
-	componentName string,
-) string {
-	log := logger.WithName("GenOpenFunctionContext").
-		WithValues("Serving", fmt.Sprintf("%s/%s", s.Namespace, s.Name))
-
-	var port = int32(constants.DefaultFuncPort)
-	if s.Spec.Port != nil {
-		port = *s.Spec.Port
-	}
-
-	version := ""
-	if s.Spec.Version != nil {
-		version = *s.Spec.Version
-	}
-
-	fc := functionContext{
-		Name:    functionName,
-		Version: version,
-		Runtime: cases.Title(language.Und, cases.NoLower).String(string(s.Spec.Runtime)),
-		Port:    fmt.Sprintf("%d", port),
-	}
-
-	switch s.Spec.Runtime {
-	case openfunction.Async:
-		if s.Spec.Inputs != nil && len(s.Spec.Inputs) > 0 {
-			fc.Inputs = make(map[string]*functionInput)
-
-			for _, input := range s.Spec.Inputs {
-				i := input.DeepCopy()
-				c, _ := components[i.Component]
-				buildingBlockType := strings.Split(c.Type, ".")[0]
-				uri := i.Topic
-				if buildingBlockType == bindings {
-					uri = i.Component
-				}
-				fnInput := functionInput{
-					Uri:           uri,
-					ComponentName: getComponentName(s, i.Component, componentName),
-					ComponentType: c.Type,
-					Metadata:      i.Params,
-				}
-				fc.Inputs[i.Name] = &fnInput
-			}
-		}
-
-		if s.Spec.Outputs != nil && len(s.Spec.Outputs) > 0 {
-			fc.Outputs = make(map[string]*functionOutput)
-
-			for _, output := range s.Spec.Outputs {
-				o := output.DeepCopy()
-				c, _ := components[o.Component]
-				buildingBlockType := strings.Split(c.Type, ".")[0]
-				uri := o.Topic
-				if buildingBlockType == bindings {
-					uri = o.Component
-				}
-				fnOutput := functionOutput{
-					Uri:           uri,
-					ComponentName: getComponentName(s, o.Component, componentName),
-					ComponentType: c.Type,
-					Metadata:      o.Params,
-					Operation:     o.Operation,
-				}
-				fc.Outputs[o.Name] = &fnOutput
-			}
-		}
-	default:
-		if s.Spec.Outputs != nil && len(s.Spec.Outputs) > 0 {
-			fc.Outputs = make(map[string]*functionOutput)
-
-			for _, output := range s.Spec.Outputs {
-				o := output.DeepCopy()
-				c, _ := components[o.Component]
-				buildingBlockType := strings.Split(c.Type, ".")[0]
-				uri := o.Topic
-				if buildingBlockType == bindings {
-					uri = o.Component
-				}
-				fnOutput := functionOutput{
-					Uri:           uri,
-					ComponentName: getComponentName(s, o.Component, componentName),
-					ComponentType: c.Type,
-					Metadata:      o.Params,
-					Operation:     o.Operation,
-				}
-				fc.Outputs[o.Name] = &fnOutput
-			}
-		}
-	}
-
-	if s.Spec.States != nil && len(s.Spec.States) > 0 {
-		fc.States = make(map[string]*functionState)
-		for name, _ := range s.Spec.States {
-			c, _ := components[name]
-			fnState := functionState{
-				ComponentName: getComponentName(s, name, componentName),
-				ComponentType: c.Type,
-			}
-			fc.States[name] = &fnState
-		}
-	}
-
-	// Handle plugins information
-	if err := parsePluginsCfg(s, cm, &fc); err != nil {
-		// Just log the error
-		log.Error(err, "failed to parse plugins configuration.")
-	}
-
-	bs, _ := jsoniter.Marshal(fc)
-	return string(bs)
-}
-
-func getComponentName(s *openfunction.Serving, name string, componentName string) string {
-
-	names := strings.Split(s.Status.ResourceRef[componentName], ",")
-	for _, n := range names {
-		tmp := strings.TrimPrefix(n, fmt.Sprintf("%s-component-", s.Name))
-		if index := strings.LastIndex(tmp, "-"); index != -1 {
-			if tmp[:index] == name {
-				return n
-			}
-		}
-	}
-
-	return name
-}
-
-func GetPendingCreateComponents(s *openfunction.Serving) (map[string]*componentsv1alpha1.ComponentSpec, error) {
-	components := map[string]*componentsv1alpha1.ComponentSpec{}
-	if s.Spec.Bindings != nil {
-		for name, component := range s.Spec.Bindings {
-			c := component.DeepCopy()
-			if _, exist := components[name]; exist {
-				return nil, fmt.Errorf("dapr component with this name already exists: %s", name)
-			}
-			components[name] = c
-		}
-	}
-
-	if s.Spec.Pubsub != nil {
-		for name, component := range s.Spec.Pubsub {
-			c := component.DeepCopy()
-			if _, exist := components[name]; exist {
-				return nil, fmt.Errorf("dapr component with this name already exists: %s", name)
-			}
-			components[name] = c
-		}
-	}
-
-	if s.Spec.States != nil {
-		for name, component := range s.Spec.States {
-			c := component.DeepCopy()
-			if _, exist := components[name]; exist {
-				return nil, fmt.Errorf("dapr component with this name already exists: %s", name)
-			}
-			components[name] = c
-		}
-	}
-
-	return components, nil
-}
 
 func CreateComponents(
 	ctx context.Context,
 	logger logr.Logger,
 	c client.Client,
 	scheme *runtime.Scheme,
-	s *openfunction.Serving,
-	components map[string]*componentsv1alpha1.ComponentSpec,
-	componentName string,
-) error {
+	s *openfunction.Serving) error {
 	log := logger.WithName("CreateDaprComponents").
 		WithValues("Serving", fmt.Sprintf("%s/%s", s.Namespace, s.Name))
 
-	if components == nil {
-		return nil
+	components := map[string]*componentsv1alpha1.ComponentSpec{}
+	for name, component := range s.Spec.Bindings {
+		components[bindingsPrefix+"-"+name] = component.DeepCopy()
+	}
+
+	for name, component := range s.Spec.Pubsub {
+		components[pubsubPrefix+"-"+name] = component.DeepCopy()
+	}
+
+	for name, component := range s.Spec.States {
+		if component.Spec != nil {
+			components[statesPrefix+"-"+name] = component.Spec.DeepCopy()
+		}
 	}
 
 	value := ""
@@ -264,7 +114,7 @@ func CreateComponents(
 		dc := daprComponent.DeepCopy()
 		component := &componentsv1alpha1.Component{
 			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: fmt.Sprintf("%s-component-%s-", s.Name, name),
+				GenerateName: fmt.Sprintf("%s-%s-", s.Name, name),
 				Namespace:    s.Namespace,
 				Labels: map[string]string{
 					OpenfunctionManaged: "true",
@@ -293,116 +143,9 @@ func CreateComponents(
 	}
 
 	if value != "" {
-		s.Status.ResourceRef[componentName] = strings.TrimSuffix(value, ",")
+		s.Status.ResourceRef[daprComponentKey] = strings.TrimSuffix(value, ",")
 	}
 
-	return nil
-}
-
-func CheckComponentSpecExist(s *openfunction.Serving, components map[string]*componentsv1alpha1.ComponentSpec) error {
-	var cs []string
-
-	switch s.Spec.Runtime {
-	case openfunction.Async:
-		if s.Spec.Inputs != nil && len(s.Spec.Inputs) > 0 {
-			for _, input := range s.Spec.Inputs {
-				i := input.DeepCopy()
-				if _, ok := components[i.Component]; !ok {
-					cs = append(cs, i.Component)
-				}
-			}
-		}
-
-		if s.Spec.Outputs != nil && len(s.Spec.Outputs) > 0 {
-			for _, output := range s.Spec.Outputs {
-				o := output.DeepCopy()
-				if _, ok := components[o.Component]; !ok {
-					cs = append(cs, o.Component)
-				}
-			}
-		}
-	default:
-		if s.Spec.Outputs != nil && len(s.Spec.Outputs) > 0 {
-			for _, output := range s.Spec.Outputs {
-				o := output.DeepCopy()
-				if _, ok := components[o.Component]; !ok {
-					cs = append(cs, o.Component)
-				}
-			}
-		}
-	}
-
-	if cs != nil && len(cs) > 0 {
-		return fmt.Errorf("component %s does not exist", strings.Join(cs, ","))
-	}
-	return nil
-}
-
-// parsePluginsCfg parses the plugin configuration information from both ConfigMap and function annotations.
-// The plugin configuration information obtained from the function annotations has a higher priority.
-// The Tracing plugin is registered at the end of prePlugins and the beginning of postPlugins by default.
-func parsePluginsCfg(s *openfunction.Serving, cm map[string]string, fc *functionContext) error {
-	var plgCfg = &plugins{}
-	var tcCfg = &functionPluginsTracing{}
-	var prePlugins []string
-	var postPlugins []string
-
-	pluginsRaw := ""
-	pluginsTracingRaw := ""
-
-	if raw, ok := cm[PluginsAnnotation]; ok {
-		pluginsRaw = raw
-	}
-	if raw, ok := s.Annotations[PluginsAnnotation]; ok {
-		pluginsRaw = raw
-	}
-	if pluginsRaw != "" {
-		cfg := bytes.NewBufferString(pluginsRaw)
-		if err := yaml.Unmarshal(cfg.Bytes(), plgCfg); err != nil {
-			return err
-		}
-	}
-
-	if raw, ok := cm[PluginsTracingAnnotation]; ok {
-		pluginsTracingRaw = raw
-	}
-	if raw, ok := s.Annotations[PluginsTracingAnnotation]; ok {
-		pluginsTracingRaw = raw
-	}
-	if pluginsTracingRaw != "" {
-		cfg := bytes.NewBufferString(pluginsTracingRaw)
-		if err := yaml.Unmarshal(cfg.Bytes(), tcCfg); err != nil {
-			return err
-		}
-	}
-
-	if plgCfg != nil {
-		if plgCfg.Order != nil {
-			var prePlgs []string
-			for _, plg := range plgCfg.Order {
-				prePlgs = append(prePlgs, plg)
-			}
-			prePlugins = prePlgs
-			postPlugins = reverse(prePlgs)
-		}
-
-		if plgCfg.Pre != nil {
-			prePlugins = plgCfg.Pre
-		}
-
-		if plgCfg.Post != nil {
-			postPlugins = plgCfg.Post
-		}
-	}
-
-	if tcCfg != nil && tcCfg.Enabled {
-		prePlugins = append(prePlugins, tcCfg.Provider.Name)
-		postPlugins = append([]string{tcCfg.Provider.Name}, postPlugins...)
-	}
-
-	fc.PrePlugins = prePlugins
-	fc.PostPlugins = postPlugins
-	fc.PluginsTracing = tcCfg
 	return nil
 }
 
@@ -412,9 +155,7 @@ func CreateDaprProxy(
 	c client.Client,
 	scheme *runtime.Scheme,
 	s *openfunction.Serving,
-	cm map[string]string,
-	components map[string]*componentsv1alpha1.ComponentSpec,
-	componentName string) error {
+	cm map[string]string) error {
 
 	labels := map[string]string{
 		OpenfunctionManaged: "true",
@@ -427,8 +168,8 @@ func CreateDaprProxy(
 	}
 
 	var port = int32(constants.DefaultFuncPort)
-	if s.Spec.Port != nil {
-		port = *s.Spec.Port
+	if s.Spec.Triggers.Http != nil && s.Spec.Triggers.Http.Port != nil {
+		port = *s.Spec.Triggers.Http.Port
 	}
 
 	annotations := map[string]string{
@@ -459,10 +200,6 @@ func CreateDaprProxy(
 				}},
 				Env: []corev1.EnvVar{
 					{
-						Name:  FunctionContextEnvName,
-						Value: GenOpenFunctionContext(ctx, logger, s, cm, components, GetFunctionName(s), componentName),
-					},
-					{
 						Name:  DaprProtocolEnvVar,
 						Value: annotations[DaprAppProtocol],
 					},
@@ -470,6 +207,13 @@ func CreateDaprProxy(
 			},
 		},
 	}
+
+	if env, err := CreateFunctionContextENV(ctx, logger, c, s, cm); err != nil {
+		return err
+	} else {
+		spec.Containers[0].Env = append(spec.Containers[0].Env, env...)
+	}
+
 	spec.Containers[0].Env = append(spec.Containers[0].Env, AddPodMetadataEnv(s.Namespace)...)
 
 	template := corev1.PodTemplateSpec{
@@ -515,6 +259,29 @@ func CreateDaprProxy(
 	return nil
 }
 
+func CreateFunctionContextENV(ctx context.Context, logger logr.Logger, c client.Client, s *openfunction.Serving, cm map[string]string) ([]corev1.EnvVar, error) {
+	var env []corev1.EnvVar
+	if v, err := GenOpenFunctionContextV1beta1(ctx, logger, c, s, cm); err != nil {
+		return nil, err
+	} else {
+		env = append(env, corev1.EnvVar{
+			Name:  FunctionContextV1beta1EnvName,
+			Value: v,
+		})
+	}
+
+	if v, err := GenOpenFunctionContextV1beta2(ctx, logger, c, s, cm); err != nil {
+		return nil, err
+	} else {
+		env = append(env, corev1.EnvVar{
+			Name:  FunctionContextV1beta2EnvName,
+			Value: v,
+		})
+	}
+
+	return env, nil
+}
+
 func CleanDaprProxy(
 	ctx context.Context,
 	logger logr.Logger,
@@ -535,14 +302,6 @@ func CleanDaprProxy(
 	}
 
 	return nil
-}
-
-func reverse(originSlice []string) []string {
-	var reverseSlice []string
-	for i := len(originSlice) - 1; i >= 0; i-- {
-		reverseSlice = append(reverseSlice, originSlice[i])
-	}
-	return reverseSlice
 }
 
 func AddPodMetadataEnv(namespace string) []corev1.EnvVar {
@@ -577,7 +336,10 @@ func GetDaprServiceMode(s *openfunction.Serving) DaprServiceMode {
 
 func GetDaprServiceEnabled(s *openfunction.Serving) bool {
 	if enabled, ok := s.Spec.Annotations[OpenfunctionDaprServiceEnabled]; !ok {
-		if s.Spec.Inputs != nil || s.Spec.Outputs != nil || s.Spec.States != nil {
+		if len(s.Spec.Triggers.Dapr) != 0 ||
+			len(s.Spec.Triggers.Inputs) != 0 ||
+			s.Spec.Outputs != nil ||
+			s.Spec.States != nil {
 			return true
 		} else {
 			return false
@@ -618,4 +380,508 @@ func GetProxyName(s *openfunction.Serving) string {
 		return ""
 	}
 	return s.Status.ResourceRef[DaprProxyName]
+}
+
+func GenOpenFunctionContextV1beta1(ctx context.Context, logger logr.Logger, c client.Client, s *openfunction.Serving, cm map[string]string) (string, error) {
+	var port = int32(constants.DefaultFuncPort)
+	if s.Spec.Triggers.Http != nil && s.Spec.Triggers.Http.Port != nil {
+		port = *s.Spec.Triggers.Http.Port
+	}
+
+	version := ""
+	if s.Spec.Version != nil {
+		version = *s.Spec.Version
+	}
+
+	ofnRuntime := openfunctionv1beta1.Knative
+	if s.Spec.Triggers.Dapr != nil {
+		ofnRuntime = openfunctionv1beta1.Async
+	}
+
+	fc := functionContextV1beta1{
+		Name:    GetFunctionName(s),
+		Version: version,
+		Runtime: cases.Title(language.Und, cases.NoLower).String(string(ofnRuntime)),
+		Port:    fmt.Sprintf("%d", port),
+	}
+
+	if s.Spec.Triggers.Dapr != nil {
+		fc.Inputs = make(map[string]*functionInput)
+		for _, item := range s.Spec.Triggers.Dapr {
+			input := item.DeepCopy()
+			componentType, err := getComponentType(ctx, c, s, input.Name, input.Type)
+			if err != nil {
+				return "", err
+			}
+			uri := input.Topic
+			if strings.HasPrefix(componentType, bindingsPrefix) {
+				uri = input.Name
+			}
+			fnInput := functionInput{
+				Uri:           uri,
+				ComponentName: getRealComponentName(s, input.Name, componentType),
+				ComponentType: componentType,
+			}
+			if input.InputName != "" {
+				fc.Inputs[input.InputName] = &fnInput
+			} else {
+				fc.Inputs[input.Name] = &fnInput
+			}
+		}
+	}
+
+	if s.Spec.Outputs != nil && len(s.Spec.Outputs) > 0 {
+		fc.Outputs = make(map[string]*functionOutput)
+		for _, item := range s.Spec.Outputs {
+			if item.Dapr == nil {
+				continue
+			}
+			output := item.DeepCopy()
+			componentType, err := getComponentType(ctx, c, s, output.Dapr.Name, output.Dapr.Type)
+			if err != nil {
+				return "", err
+			}
+			uri := output.Dapr.Topic
+			if strings.HasPrefix(componentType, bindingsPrefix) {
+				uri = output.Dapr.Name
+			}
+			fnOutput := functionOutput{
+				Uri:           uri,
+				ComponentName: getRealComponentName(s, output.Dapr.Name, componentType),
+				ComponentType: componentType,
+				Metadata:      output.Dapr.Metadata,
+				Operation:     output.Dapr.Operation,
+			}
+			if output.Dapr.OutputName != "" {
+				fc.Outputs[output.Dapr.OutputName] = &fnOutput
+			} else {
+				fc.Outputs[output.Dapr.Name] = &fnOutput
+			}
+		}
+	}
+
+	if s.Spec.States != nil && len(s.Spec.States) > 0 {
+		fc.States = make(map[string]*functionState)
+		for name, state := range s.Spec.States {
+			stateType, err := getStateType(ctx, c, s, name, state)
+			if err != nil {
+				return "", err
+			}
+
+			fnState := functionState{
+				ComponentName: getRealComponentName(s, name, stateType),
+				ComponentType: stateType,
+			}
+			fc.States[name] = &fnState
+		}
+	}
+
+	// Handle plugins information
+	parsePluginsCfg(logger, s, cm, &fc)
+
+	bs, _ := jsoniter.Marshal(fc)
+	return string(bs), nil
+}
+
+func getRealComponentName(s *openfunction.Serving, componentName, componentType string) string {
+	resourceRefs := strings.Split(s.Status.ResourceRef[daprComponentKey], ",")
+	realName := componentName
+	for _, resourceRef := range resourceRefs {
+		prefix := fmt.Sprintf("%s-%s-%s-", s.Name, getComponentTypePrefix(componentType), componentName)
+		if strings.HasPrefix(resourceRef, prefix) {
+			if !strings.Contains(strings.TrimPrefix(resourceRef, prefix), "-") {
+				realName = resourceRef
+			}
+		}
+	}
+
+	return realName
+}
+
+func getComponentTypePrefix(componentType string) string {
+	arrays := strings.Split(componentType, ".")
+	if len(arrays) < 2 {
+		return ""
+	}
+
+	return arrays[0]
+}
+
+// parsePluginsCfg parses the plugin configuration information from both ConfigMap and function annotations.
+// The plugin configuration information obtained from the function annotations has a higher priority.
+// The Tracing plugin is registered at the end of prePlugins and the beginning of postPlugins by default.
+func parsePluginsCfg(logger logr.Logger, s *openfunction.Serving, cm map[string]string, fc *functionContextV1beta1) {
+	var plgCfg = &plugins{}
+	var tcCfg = &functionPluginsTracing{}
+	var prePlugins []string
+	var postPlugins []string
+
+	pluginsRaw := ""
+	pluginsTracingRaw := ""
+
+	if raw, ok := cm[PluginsAnnotation]; ok {
+		pluginsRaw = raw
+	}
+	if raw, ok := s.Annotations[PluginsAnnotation]; ok {
+		pluginsRaw = raw
+	}
+	if pluginsRaw != "" {
+		cfg := bytes.NewBufferString(pluginsRaw)
+		if err := yaml.Unmarshal(cfg.Bytes(), plgCfg); err != nil {
+			logger.Error(err, "failed to unmarshal plugin config")
+		} else {
+			if plgCfg.Order != nil {
+				var prePlgs []string
+				for _, plg := range plgCfg.Order {
+					prePlgs = append(prePlgs, plg)
+				}
+				prePlugins = prePlgs
+				postPlugins = reverse(prePlgs)
+			}
+
+			if plgCfg.Pre != nil {
+				prePlugins = plgCfg.Pre
+			}
+
+			if plgCfg.Post != nil {
+				postPlugins = plgCfg.Post
+			}
+		}
+	}
+
+	if raw, ok := cm[PluginsTracingAnnotation]; ok {
+		pluginsTracingRaw = raw
+	}
+	if raw, ok := s.Annotations[PluginsTracingAnnotation]; ok {
+		pluginsTracingRaw = raw
+	}
+	if pluginsTracingRaw != "" {
+		cfg := bytes.NewBufferString(pluginsTracingRaw)
+		if err := yaml.Unmarshal(cfg.Bytes(), tcCfg); err != nil {
+			logger.Error(err, "failed to unmarshal tracing config")
+		} else {
+			if tcCfg.Enabled {
+				prePlugins = append(prePlugins, tcCfg.Provider.Name)
+				postPlugins = append([]string{tcCfg.Provider.Name}, postPlugins...)
+			}
+
+			fc.PluginsTracing = tcCfg
+		}
+	}
+
+	fc.PrePlugins = prePlugins
+	fc.PostPlugins = postPlugins
+}
+
+func reverse(originSlice []string) []string {
+	var reverseSlice []string
+	for i := len(originSlice) - 1; i >= 0; i-- {
+		reverseSlice = append(reverseSlice, originSlice[i])
+	}
+	return reverseSlice
+}
+
+func getComponentTypeFromServing(s *openfunction.Serving, name string) string {
+	if s.Spec.Bindings != nil {
+		if item := s.Spec.Bindings[name]; item != nil {
+			return item.Type
+		}
+	}
+
+	if s.Spec.Pubsub != nil {
+		if item := s.Spec.Pubsub[name]; item != nil {
+			return item.Type
+		}
+	}
+
+	if s.Spec.States != nil {
+		if item := s.Spec.States[name]; item != nil {
+			if item.Spec != nil {
+				return item.Spec.Type
+			}
+		}
+	}
+
+	return ""
+}
+
+func getExistingComponentType(ctx context.Context, c client.Client, s *openfunction.Serving, name string) (string, error) {
+	// Component had created by others.
+	dc := &componentsv1alpha1.Component{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: s.Namespace,
+			Name:      name,
+		},
+	}
+	if err := c.Get(ctx, client.ObjectKeyFromObject(dc), dc); err != nil {
+		return "", err
+	}
+
+	return dc.Spec.Type, nil
+}
+
+func getComponentType(ctx context.Context, c client.Client, s *openfunction.Serving, componentName, componentType string) (string, error) {
+	if componentType != "" {
+		return componentType, nil
+	}
+
+	if t := getComponentTypeFromServing(s, componentName); t != "" {
+		return t, nil
+	}
+
+	return getExistingComponentType(ctx, c, s, componentName)
+}
+
+func getStateType(ctx context.Context, c client.Client, s *openfunction.Serving, name string, state *openfunction.State) (string, error) {
+	if state.Spec != nil {
+		return state.Spec.Type, nil
+	}
+
+	// Component had created by others.
+	component := &componentsv1alpha1.Component{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: s.Namespace,
+			Name:      name,
+		},
+	}
+	if err := c.Get(ctx, client.ObjectKeyFromObject(component), component); err != nil {
+		return "", err
+	}
+
+	return component.Spec.Type, nil
+}
+
+func GenOpenFunctionContextV1beta2(ctx context.Context, logger logr.Logger, c client.Client, s *openfunction.Serving, cm map[string]string) (string, error) {
+	version := ""
+	if s.Spec.Version != nil {
+		version = *s.Spec.Version
+	}
+
+	var pre, post []string
+	globalPreHooks, globalPostHooks := getGlobalHooks(logger, cm)
+	pre = globalPreHooks
+	post = globalPostHooks
+
+	if s.Spec.Hooks != nil {
+		if s.Spec.Hooks.Policy == openfunction.HookPolicyOverride {
+			pre = s.Spec.Hooks.Pre
+			post = s.Spec.Hooks.Post
+		} else {
+			pre = append(globalPreHooks, s.Spec.Hooks.Pre...)
+			post = s.Spec.Hooks.Post
+			post = append(s.Spec.Hooks.Post, globalPostHooks...)
+		}
+	}
+
+	fc := &functionContextV1beta2{
+		Name:      GetFunctionName(s),
+		Version:   version,
+		Triggers:  s.Spec.Triggers.DeepCopy(),
+		PreHooks:  pre,
+		PostHooks: post,
+		Tracing:   mergerTracingConfig(logger, s, cm),
+	}
+
+	if len(fc.Triggers.Dapr) > 0 {
+		for index := 0; index < len(fc.Triggers.Dapr); index++ {
+			trigger := fc.Triggers.Dapr[index]
+			componentType, err := getComponentType(ctx, c, s, trigger.Name, trigger.Type)
+			if err != nil {
+				return "", err
+			}
+
+			fc.Triggers.Dapr[index].Name = getRealComponentName(s, trigger.Name, componentType)
+		}
+	}
+
+	if len(s.Spec.Triggers.Inputs) > 0 {
+		fc.Inputs = make(map[string]*functionComponent)
+		for _, item := range s.Spec.Triggers.Inputs {
+			if item.Dapr == nil {
+				continue
+			}
+
+			input := item.DeepCopy()
+			componentType, err := getComponentType(ctx, c, s, input.Dapr.Name, input.Dapr.Type)
+			if err != nil {
+				return "", err
+			}
+
+			fnInput := functionComponent{
+				ComponentName: getRealComponentName(s, input.Dapr.Name, componentType),
+				ComponentType: componentType,
+				Topic:         input.Dapr.Topic,
+			}
+			fc.Inputs[input.Dapr.Name] = &fnInput
+		}
+	}
+
+	if s.Spec.Outputs != nil && len(s.Spec.Outputs) > 0 {
+		fc.Outputs = make(map[string]*functionComponent)
+		for _, item := range s.Spec.Outputs {
+			if item.Dapr == nil {
+				continue
+			}
+			output := item.DeepCopy()
+			componentType, err := getComponentType(ctx, c, s, output.Dapr.Name, output.Dapr.Type)
+			if err != nil {
+				return "", err
+			}
+			fnOutput := functionComponent{
+				ComponentName: getRealComponentName(s, output.Dapr.Name, componentType),
+				ComponentType: componentType,
+				Metadata:      output.Dapr.Metadata,
+				Operation:     output.Dapr.Operation,
+			}
+			fc.Outputs[output.Dapr.Name] = &fnOutput
+		}
+	}
+
+	if s.Spec.States != nil && len(s.Spec.States) > 0 {
+		fc.States = make(map[string]*functionComponent)
+		for name, state := range s.Spec.States {
+			stateType, err := getStateType(ctx, c, s, name, state)
+			if err != nil {
+				return "", err
+			}
+			fc.States[name] = &functionComponent{
+				ComponentName: getRealComponentName(s, name, stateType),
+				ComponentType: stateType,
+			}
+		}
+	}
+
+	bs, _ := jsoniter.Marshal(fc)
+	return string(bs), nil
+}
+
+func getGlobalHooks(logger logr.Logger, cm map[string]string) ([]string, []string) {
+	hooksRaw := ""
+	// To compatible with v1beta1
+	if raw, ok := cm[PluginsAnnotation]; ok {
+		hooksRaw = raw
+	}
+
+	if raw, ok := cm[hooksKey]; ok {
+		hooksRaw = raw
+	}
+
+	if hooksRaw == "" {
+		return nil, nil
+	}
+
+	hooks := &openfunction.Hooks{}
+	if err := yaml.Unmarshal([]byte(hooksRaw), hooks); err != nil {
+		logger.Error(err, "failed to unmarshal global hook config")
+		return nil, nil
+	}
+
+	return hooks.Pre, hooks.Post
+}
+
+func getGlobalTracingConfig(logger logr.Logger, cm map[string]string) *openfunction.TracingConfig {
+	tracingRaw := ""
+	// To compatible with v1beta1
+	if raw, ok := cm[PluginsTracingAnnotation]; ok {
+		tracingRaw = raw
+	}
+
+	if raw, ok := cm[tracingKey]; ok {
+		tracingRaw = raw
+	}
+
+	if tracingRaw == "" {
+		return nil
+	}
+
+	globalTracingConfig := &openfunction.TracingConfig{}
+	if err := yaml.Unmarshal([]byte(tracingRaw), globalTracingConfig); err != nil {
+		logger.Error(err, "failed to unmarshal global tracing config")
+		return nil
+	}
+
+	return globalTracingConfig
+}
+
+func mergerTracingConfig(logger logr.Logger, s *openfunction.Serving, cm map[string]string) *openfunction.TracingConfig {
+	tracingConfig := s.Spec.Tracing
+	if tracingConfig != nil && !tracingConfig.Enabled {
+		return nil
+	}
+
+	globalTracingConfig := getGlobalTracingConfig(logger, cm)
+	if globalTracingConfig == nil {
+		return tracingConfig
+	}
+
+	if tracingConfig == nil {
+		return globalTracingConfig
+	}
+
+	if tracingConfig.Provider == nil {
+		tracingConfig.Provider = globalTracingConfig.Provider
+	} else {
+		if globalTracingConfig.Provider != nil {
+			if tracingConfig.Provider.Name == "" {
+				tracingConfig.Provider.Name = globalTracingConfig.Provider.Name
+			}
+
+			if tracingConfig.Provider.OapServer == "" {
+				tracingConfig.Provider.OapServer = globalTracingConfig.Provider.OapServer
+			}
+
+			if tracingConfig.Provider.Exporter == nil {
+				tracingConfig.Provider.Exporter = globalTracingConfig.Provider.Exporter
+			} else {
+				if globalTracingConfig.Provider.Exporter != nil {
+					if tracingConfig.Provider.Exporter.Name == "" {
+						tracingConfig.Provider.Exporter.Name = globalTracingConfig.Provider.Exporter.Name
+					}
+
+					if tracingConfig.Provider.Exporter.Protocol == "" {
+						tracingConfig.Provider.Exporter.Protocol = globalTracingConfig.Provider.Exporter.Protocol
+					}
+
+					if tracingConfig.Provider.Exporter.Endpoint == "" {
+						tracingConfig.Provider.Exporter.Endpoint = globalTracingConfig.Provider.Exporter.Endpoint
+					}
+
+					if tracingConfig.Provider.Exporter.Headers == "" {
+						tracingConfig.Provider.Exporter.Headers = globalTracingConfig.Provider.Exporter.Headers
+					}
+
+					if tracingConfig.Provider.Exporter.Compression == "" {
+						tracingConfig.Provider.Exporter.Compression = globalTracingConfig.Provider.Exporter.Compression
+					}
+
+					if tracingConfig.Provider.Exporter.Timeout == "" {
+						tracingConfig.Provider.Exporter.Timeout = globalTracingConfig.Provider.Exporter.Timeout
+					}
+				}
+			}
+		}
+	}
+
+	tracingConfig.Baggage = mergerMap(tracingConfig.Baggage, globalTracingConfig.Baggage)
+	tracingConfig.Tags = mergerMap(tracingConfig.Tags, globalTracingConfig.Tags)
+
+	return tracingConfig
+}
+
+func mergerMap(m1, m2 map[string]string) map[string]string {
+	res := make(map[string]string)
+
+	if m2 != nil {
+		for k, v := range m2 {
+			res[k] = v
+		}
+	}
+
+	if m1 != nil {
+		for k, v := range m1 {
+			res[k] = v
+		}
+	}
+
+	return res
 }

@@ -21,6 +21,8 @@ import (
 	"os"
 	"time"
 
+	corev1beta1 "github.com/openfunction/apis/core/v1beta1"
+
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	kedav1alpha1 "github.com/kedacore/keda/v2/api/v1alpha1"
 	shipwrightv1alpha1 "github.com/shipwright-io/build/pkg/apis/build/v1alpha1"
@@ -35,7 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	k8sgatewayapiv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	corev1beta1 "github.com/openfunction/apis/core/v1beta1"
+	corev1beta2 "github.com/openfunction/apis/core/v1beta2"
 	openfunctionevent "github.com/openfunction/apis/events/v1alpha1"
 	networkingv1alpha1 "github.com/openfunction/apis/networking/v1alpha1"
 	"github.com/openfunction/controllers/core"
@@ -61,6 +63,7 @@ func init() {
 	_ = networkingv1alpha1.AddToScheme(scheme)
 	_ = shipwrightv1alpha1.AddToScheme(scheme)
 	utilruntime.Must(corev1beta1.AddToScheme(scheme))
+	utilruntime.Must(corev1beta2.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -81,6 +84,7 @@ func main() {
 	opts := zap.Options{
 		Development:     true,
 		StacktraceLevel: zapcore.PanicLevel,
+		TimeEncoder:     zapcore.RFC3339TimeEncoder,
 	}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
@@ -139,12 +143,16 @@ func main() {
 	}
 
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&corev1beta1.Serving{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "Serving")
+		if err = (&corev1beta2.Builder{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Builder")
 			os.Exit(1)
 		}
-		if err = (&corev1beta1.Function{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&corev1beta2.Function{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Function")
+			os.Exit(1)
+		}
+		if err = (&corev1beta2.Serving{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Serving")
 			os.Exit(1)
 		}
 		if err = (&networkingv1alpha1.Gateway{}).SetupWebhookWithManager(mgr); err != nil {

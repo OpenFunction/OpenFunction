@@ -91,6 +91,7 @@ openssl x509 -sha256 -req -in ${SSL_CSR} -CA ${CA_CERT} \
 sed -ri "s/(tls.crt: )[^\n]*/\1$(cat ${SSL_CERT} | base64 -w 0)/" ../config/cert/webhook-server-cert.yaml
 sed -ri "s/(tls.key: )[^\n]*/\1$(cat ${SSL_KEY} | base64 -w 0)/" ../config/cert/webhook-server-cert.yaml
 sed -ri "s/(caBundle: )[^\n]*/\1$(cat ${CA_CERT} | base64 -w 0)/" ../config/webhook/manifests.yaml
+sed -ri "s/(caBundle: )[^\n]*/\1$(cat ${CA_CERT} | base64 -w 0)/" ../config/crd/patches/webhook_in_builders.yaml
 sed -ri "s/(caBundle: )[^\n]*/\1$(cat ${CA_CERT} | base64 -w 0)/" ../config/crd/patches/webhook_in_functions.yaml
 sed -ri "s/(caBundle: )[^\n]*/\1$(cat ${CA_CERT} | base64 -w 0)/" ../config/crd/patches/webhook_in_servings.yaml
 

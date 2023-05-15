@@ -23,7 +23,6 @@ import (
 	"strings"
 	"time"
 
-	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -36,7 +35,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	openfunction "github.com/openfunction/apis/core/v1beta1"
+	openfunction "github.com/openfunction/apis/core/v1beta2"
 	"github.com/openfunction/pkg/constants"
 	"github.com/openfunction/pkg/core"
 	"github.com/openfunction/pkg/core/serving/common"
@@ -44,8 +43,7 @@ import (
 )
 
 const (
-	knativeService = "serving.knative.dev/service"
-	componentName  = "Knative/component"
+	knativeServiceKey = "serving.knative.dev/service"
 )
 
 type servingRun struct {
@@ -80,24 +78,17 @@ func (r *servingRun) Run(s *openfunction.Serving, cm map[string]string) error {
 		return err
 	}
 
-	pendingComponents, err := common.GetPendingCreateComponents(s)
-	if err != nil {
-		log.Error(err, "Failed to get pending create components")
-		return err
-	}
-
-	if err := common.CheckComponentSpecExist(s, pendingComponents); err != nil {
-		log.Error(err, "Some Components does not exist")
-		return err
-	}
-
 	s.Status.ResourceRef = make(map[string]string)
-	if err := common.CreateComponents(r.ctx, r.log, r.Client, r.scheme, s, pendingComponents, componentName); err != nil {
-		log.Error(err, "Failed to create Dapr Components")
+	if err := common.CreateComponents(r.ctx, r.log, r.Client, r.scheme, s); err != nil {
 		return err
 	}
 
-	service := r.createService(s, cm, pendingComponents)
+	service, err := r.createService(s, cm)
+	if err != nil {
+		log.Error(err, "Failed to create knative Service")
+		return err
+	}
+
 	service.SetOwnerReferences(nil)
 	if err := ctrl.SetControllerReference(s, service, r.scheme); err != nil {
 		log.Error(err, "Failed to SetControllerReference for Service", "Service", service.Name)
@@ -115,11 +106,12 @@ func (r *servingRun) Run(s *openfunction.Serving, cm map[string]string) error {
 		s.Status.ResourceRef = make(map[string]string)
 	}
 
-	s.Status.ResourceRef[knativeService] = service.Name
+	s.Status.ResourceRef[knativeServiceKey] = service.Name
 	s.Status.Service = service.Name
 
 	if common.NeedCreateDaprProxy(s) {
-		if err := common.CreateDaprProxy(r.ctx, r.log, r.Client, r.scheme, s, cm, pendingComponents, componentName); err != nil {
+		if err := common.CreateDaprProxy(r.ctx, r.log, r.Client, r.scheme, s, cm); err != nil {
+			log.Error(err, "Failed to Create dapr proxy", "Service", service.Name)
 			return err
 		}
 	}
@@ -152,32 +144,37 @@ func (r *servingRun) Clean(s *openfunction.Serving) error {
 	return nil
 }
 
-func (r *servingRun) Result(s *openfunction.Serving) (string, error) {
+func (r *servingRun) Result(s *openfunction.Serving) (string, string, string, error) {
 	log := r.log.WithName("Result").
 		WithValues("Serving", fmt.Sprintf("%s/%s", s.Namespace, s.Name))
 
 	service := &kservingv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      getName(s, knativeService),
+			Name:      getName(s, knativeServiceKey),
 			Namespace: s.Namespace,
 		},
 	}
 
 	if err := r.Get(r.ctx, client.ObjectKeyFromObject(service), service); err != nil {
 		log.Error(err, "Failed to get Service", "Service", service.Name)
-		return "", err
+		return "", "", "", err
 	}
 
 	if service.IsFailed() {
-		return openfunction.Failed, nil
+		condition := service.Status.GetCondition(kservingv1.ServiceConditionReady)
+		if condition == nil {
+			return openfunction.Failed, "", "", nil
+		} else {
+			return openfunction.Failed, condition.Reason, condition.Message, nil
+		}
 	} else if !service.IsReady() {
-		return "", nil
+		return "", "", "", nil
 	}
 
 	if common.NeedCreateDaprProxy(s) {
 		proxy := &appsv1.Deployment{}
 		if err := r.Get(r.ctx, client.ObjectKey{Name: common.GetProxyName(s), Namespace: s.Namespace}, proxy); err != nil {
-			return "", err
+			return "", "", "", err
 		}
 
 		for _, cond := range proxy.Status.Conditions {
@@ -185,21 +182,21 @@ func (r *servingRun) Result(s *openfunction.Serving) (string, error) {
 			case appsv1.DeploymentProgressing:
 				switch cond.Status {
 				case corev1.ConditionUnknown, corev1.ConditionFalse:
-					return "", nil
+					return "", "", "", nil
 				}
 			case appsv1.DeploymentReplicaFailure:
 				switch cond.Status {
 				case corev1.ConditionUnknown, corev1.ConditionTrue:
-					return "", nil
+					return "", "", "", nil
 				}
 			}
 		}
 	}
 
-	return openfunction.Running, nil
+	return openfunction.Running, openfunction.Running, openfunction.Running, nil
 }
 
-func (r *servingRun) createService(s *openfunction.Serving, cm map[string]string, components map[string]*componentsv1alpha1.ComponentSpec) *kservingv1.Service {
+func (r *servingRun) createService(s *openfunction.Serving, cm map[string]string) (*kservingv1.Service, error) {
 	version := constants.DefaultFunctionVersion
 	if s.Spec.Version != nil {
 		version = *s.Spec.Version
@@ -230,15 +227,9 @@ func (r *servingRun) createService(s *openfunction.Serving, cm map[string]string
 		if s.Spec.ScaleOptions.MinReplicas != nil {
 			minScale = strconv.Itoa(int(*s.Spec.ScaleOptions.MinReplicas))
 		}
+
 		if s.Spec.ScaleOptions.Knative != nil {
-			for k, v := range *s.Spec.ScaleOptions.Knative {
-				switch k {
-				case "autoscaling.knative.dev/max-scale", "autoscaling.knative.dev/maxScale":
-					maxScale = v
-				case "autoscaling.knative.dev/min-scale", "autoscaling.knative.dev/minScale":
-					minScale = v
-				}
-			}
+			s.Spec.Annotations = util.AppendLabels(s.Spec.Annotations, *s.Spec.ScaleOptions.Knative)
 		}
 
 		if maxScale != "" {
@@ -250,17 +241,13 @@ func (r *servingRun) createService(s *openfunction.Serving, cm map[string]string
 			s.Spec.Annotations["autoscaling.knative.dev/minScale"] = minScale
 			s.Spec.Annotations["autoscaling.knative.dev/min-scale"] = minScale
 		}
-
-		if s.Spec.ScaleOptions.Knative != nil {
-			s.Spec.Annotations = util.AppendLabels(s.Spec.Annotations, *s.Spec.ScaleOptions.Knative)
-		}
 	}
 
 	var appPort = int32(constants.DefaultFuncPort)
 	port := corev1.ContainerPort{}
-	if s.Spec.Port != nil {
-		appPort = *s.Spec.Port
-		port.ContainerPort = *s.Spec.Port
+	if s.Spec.Triggers.Http.Port != nil {
+		appPort = *s.Spec.Triggers.Http.Port
+		port.ContainerPort = *s.Spec.Triggers.Http.Port
 	}
 
 	annotations := make(map[string]string)
@@ -308,16 +295,16 @@ func (r *servingRun) createService(s *openfunction.Serving, cm map[string]string
 
 	container.Ports = append(container.Ports, port)
 
-	container.Env = append(container.Env, []corev1.EnvVar{
-		{
-			Name:  common.FunctionContextEnvName,
-			Value: common.GenOpenFunctionContext(r.ctx, r.log, s, cm, components, common.GetFunctionName(s), componentName),
-		},
-		{
-			Name:  common.DaprProtocolEnvVar,
-			Value: annotations[common.DaprAppProtocol],
-		},
-	}...)
+	container.Env = append(container.Env, corev1.EnvVar{
+		Name:  common.DaprProtocolEnvVar,
+		Value: annotations[common.DaprAppProtocol],
+	})
+
+	if env, err := common.CreateFunctionContextENV(r.ctx, r.log, r.Client, s, cm); err != nil {
+		return nil, err
+	} else {
+		container.Env = append(container.Env, env...)
+	}
 
 	if s.Spec.Params != nil {
 		for k, v := range s.Spec.Params {
@@ -396,7 +383,7 @@ func (r *servingRun) createService(s *openfunction.Serving, cm map[string]string
 		},
 	}
 
-	return &service
+	return &service, nil
 }
 
 func getName(s *openfunction.Serving, key string) string {

@@ -34,7 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	openfunction "github.com/openfunction/apis/core/v1beta1"
+	openfunction "github.com/openfunction/apis/core/v1beta2"
 	"github.com/openfunction/pkg/constants"
 	"github.com/openfunction/pkg/core"
 	"github.com/openfunction/pkg/core/serving/common"
@@ -42,11 +42,8 @@ import (
 )
 
 const (
-	runtimeLabel = "runtime"
-
-	workloadName  = "Async/workload"
-	scalerName    = "Async/scaler"
-	componentName = "Async/component"
+	workloadName = "Async/workload"
+	scalerName   = "Async/scaler"
 )
 
 type servingRun struct {
@@ -92,24 +89,18 @@ func (r *servingRun) Run(s *openfunction.Serving, cm map[string]string) error {
 		return err
 	}
 
-	pendingComponents, err := common.GetPendingCreateComponents(s)
-	if err != nil {
-		log.Error(err, "Failed to get pending create components")
-		return err
-	}
-
-	if err := common.CheckComponentSpecExist(s, pendingComponents); err != nil {
-		log.Error(err, "Some Components does not exist")
-		return err
-	}
-
 	s.Status.ResourceRef = make(map[string]string)
-	if err := common.CreateComponents(r.ctx, r.log, r.Client, r.scheme, s, pendingComponents, componentName); err != nil {
+	if err := common.CreateComponents(r.ctx, r.log, r.Client, r.scheme, s); err != nil {
 		log.Error(err, "Failed to create Dapr Components")
 		return err
 	}
 
-	workload := r.generateWorkload(s, cm, pendingComponents)
+	workload, err := r.generateWorkload(s, cm)
+	if err != nil {
+		log.Error(err, "Failed to create workload")
+		return err
+	}
+
 	if err := controllerutil.SetControllerReference(s, workload, r.scheme); err != nil {
 		log.Error(err, "Failed to SetControllerReference for workload")
 		return err
@@ -125,12 +116,12 @@ func (r *servingRun) Run(s *openfunction.Serving, cm map[string]string) error {
 	s.Status.ResourceRef[workloadName] = workload.GetName()
 
 	if err := r.createScaler(s, workload); err != nil {
-		log.Error(err, "Failed to create Keda triggers")
+		log.Error(err, "Failed to create Keda scaler")
 		return err
 	}
 
 	if common.NeedCreateDaprProxy(s) {
-		if err := common.CreateDaprProxy(r.ctx, r.log, r.Client, r.scheme, s, cm, pendingComponents, componentName); err != nil {
+		if err := common.CreateDaprProxy(r.ctx, r.log, r.Client, r.scheme, s, cm); err != nil {
 			return err
 		}
 	}
@@ -224,40 +215,31 @@ func (r *servingRun) Clean(s *openfunction.Serving) error {
 	return nil
 }
 
-func (r *servingRun) Result(s *openfunction.Serving) (string, error) {
+func (r *servingRun) Result(s *openfunction.Serving) (string, string, string, error) {
 
 	// Currently, it only supports updating the status of serving through the status of deployment.
-	if s.Spec.ScaleOptions != nil {
-		if s.Spec.ScaleOptions.Keda == nil || s.Spec.ScaleOptions.Keda.ScaledObject == nil ||
-			s.Spec.ScaleOptions.Keda.ScaledObject.WorkloadType == "StatefulSet" {
-			return openfunction.Running, nil
-		}
+	if s.Spec.WorkloadType == "StatefulSet" {
+		return openfunction.Running, openfunction.Running, openfunction.Running, nil
 	}
 
 	deploy := &appsv1.Deployment{}
 	if err := r.Get(r.ctx, client.ObjectKey{Name: getWorkloadName(s), Namespace: s.Namespace}, deploy); err != nil {
-		return "", err
+		return "", "", "", err
 	}
 
-	for _, cond := range deploy.Status.Conditions {
-		switch cond.Type {
-		case appsv1.DeploymentProgressing:
-			switch cond.Status {
-			case corev1.ConditionUnknown, corev1.ConditionFalse:
-				return "", nil
-			}
-		case appsv1.DeploymentReplicaFailure:
-			switch cond.Status {
-			case corev1.ConditionUnknown, corev1.ConditionTrue:
-				return "", nil
-			}
+	for _, condition := range deploy.Status.Conditions {
+		switch condition.Status {
+		case corev1.ConditionUnknown:
+			return "", "", "", nil
+		case corev1.ConditionFalse:
+			return "", condition.Reason, condition.Message, nil
 		}
 	}
 
 	if common.NeedCreateDaprProxy(s) {
 		proxy := &appsv1.Deployment{}
 		if err := r.Get(r.ctx, client.ObjectKey{Name: common.GetProxyName(s), Namespace: s.Namespace}, proxy); err != nil {
-			return "", err
+			return "", "", "", err
 		}
 
 		for _, cond := range proxy.Status.Conditions {
@@ -265,21 +247,21 @@ func (r *servingRun) Result(s *openfunction.Serving) (string, error) {
 			case appsv1.DeploymentProgressing:
 				switch cond.Status {
 				case corev1.ConditionUnknown, corev1.ConditionFalse:
-					return "", nil
+					return "", "", "", nil
 				}
 			case appsv1.DeploymentReplicaFailure:
 				switch cond.Status {
 				case corev1.ConditionUnknown, corev1.ConditionTrue:
-					return "", nil
+					return "", "", "", nil
 				}
 			}
 		}
 	}
 
-	return openfunction.Running, nil
+	return openfunction.Running, openfunction.Running, openfunction.Running, nil
 }
 
-func (r *servingRun) generateWorkload(s *openfunction.Serving, cm map[string]string, components map[string]*componentsv1alpha1.ComponentSpec) client.Object {
+func (r *servingRun) generateWorkload(s *openfunction.Serving, cm map[string]string) (client.Object, error) {
 
 	version := constants.DefaultFunctionVersion
 	if s.Spec.Version != nil {
@@ -289,7 +271,6 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving, cm map[string]str
 	labels := map[string]string{
 		common.OpenfunctionManaged:   "true",
 		common.ServingLabel:          s.Name,
-		runtimeLabel:                 string(openfunction.Async),
 		constants.CommonLabelVersion: version,
 	}
 
@@ -299,31 +280,21 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving, cm map[string]str
 		MatchLabels: labels,
 	}
 
-	var keda *openfunction.KedaScaleOptions
 	var replicas int32 = 1
 	restartPolicy := corev1.RestartPolicyOnFailure
 	if s.Spec.ScaleOptions != nil && s.Spec.ScaleOptions.Keda != nil {
-		keda = s.Spec.ScaleOptions.Keda
-		if keda.ScaledObject != nil {
-			if s.Spec.ScaleOptions.MaxReplicas != nil && keda.ScaledObject.MaxReplicaCount == nil {
-				keda.ScaledObject.MaxReplicaCount = s.Spec.ScaleOptions.MaxReplicas
-			}
-			if s.Spec.ScaleOptions.MinReplicas != nil && keda.ScaledObject.MinReplicaCount == nil {
-				keda.ScaledObject.MinReplicaCount = s.Spec.ScaleOptions.MinReplicas
-			}
-			if keda.ScaledObject.MinReplicaCount != nil {
-				replicas = *keda.ScaledObject.MinReplicaCount
+		if s.Spec.ScaleOptions.MinReplicas != nil {
+			num := *s.Spec.ScaleOptions.MinReplicas
+			if num > 0 {
+				replicas = num
 			}
 		}
-		if keda.ScaledJob != nil && keda.ScaledJob.RestartPolicy != nil {
-			restartPolicy = *keda.ScaledJob.RestartPolicy
+		if s.Spec.ScaleOptions.Keda.ScaledJob != nil && s.Spec.ScaleOptions.Keda.ScaledJob.RestartPolicy != nil {
+			restartPolicy = *s.Spec.ScaleOptions.Keda.ScaledJob.RestartPolicy
 		}
 	}
 
 	var port = int32(constants.DefaultFuncPort)
-	if s.Spec.Port != nil {
-		port = *s.Spec.Port
-	}
 
 	annotations := make(map[string]string)
 	annotations[common.DaprAppID] = fmt.Sprintf("%s-%s", common.GetFunctionName(s), s.Namespace)
@@ -373,16 +344,16 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving, cm map[string]str
 		Protocol:      corev1.ProtocolTCP,
 	})
 
-	container.Env = append(container.Env, []corev1.EnvVar{
-		{
-			Name:  common.FunctionContextEnvName,
-			Value: common.GenOpenFunctionContext(r.ctx, r.log, s, cm, components, common.GetFunctionName(s), componentName),
-		},
-		{
-			Name:  common.DaprProtocolEnvVar,
-			Value: annotations[common.DaprAppProtocol],
-		},
-	}...)
+	container.Env = append(container.Env, corev1.EnvVar{
+		Name:  common.DaprProtocolEnvVar,
+		Value: annotations[common.DaprAppProtocol],
+	})
+
+	if env, err := common.CreateFunctionContextENV(r.ctx, r.log, r.Client, s, cm); err != nil {
+		return nil, err
+	} else {
+		container.Env = append(container.Env, env...)
+	}
 
 	if common.NeedCreateDaprProxy(s) {
 		daprServiceName := fmt.Sprintf("%s-dapr", annotations[common.DaprAppID])
@@ -465,19 +436,12 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving, cm map[string]str
 
 	job.Spec.Template.Spec.RestartPolicy = restartPolicy
 
-	// By default, use deployment to running the function.
-	if keda == nil || (keda.ScaledJob == nil && keda.ScaledObject == nil) {
-		return deploy
+	if s.Spec.WorkloadType == openfunction.WorkloadTypeStatefulSet {
+		return statefulset, nil
+	} else if s.Spec.WorkloadType == openfunction.WorkloadTypeJob {
+		return job, nil
 	} else {
-		if keda.ScaledJob != nil {
-			return job
-		} else {
-			if keda.ScaledObject.WorkloadType == "StatefulSet" {
-				return statefulset
-			} else {
-				return deploy
-			}
-		}
+		return deploy, nil
 	}
 }
 
@@ -486,88 +450,74 @@ func (r *servingRun) createScaler(s *openfunction.Serving, workload runtime.Obje
 		WithValues("Serving", fmt.Sprintf("%s/%s", s.Namespace, s.Name))
 
 	// When no Triggers are configured, it means that no scaler needs to be created for the function.
-	if s.Spec.Triggers == nil {
-		log.Info("No triggers found, no need to create scaler.")
-		return nil
-	}
-
-	var scaledJobTriggers []kedav1alpha1.ScaleTriggers
-	var scaledObjectTriggers []kedav1alpha1.ScaleTriggers
-	for _, triggers := range s.Spec.Triggers {
-		t := triggers.DeepCopy()
-		if t.TargetKind != nil && *t.TargetKind == openfunction.ScaledJob {
-			scaledJobTriggers = append(scaledJobTriggers, t.ScaleTriggers)
-		} else {
-			scaledObjectTriggers = append(scaledObjectTriggers, t.ScaleTriggers)
-		}
-	}
-
-	var keda *openfunction.KedaScaleOptions
-
-	if s.Spec.ScaleOptions != nil && s.Spec.ScaleOptions.Keda != nil {
-		keda = s.Spec.ScaleOptions.Keda
-	}
-
-	if keda == nil || (keda.ScaledJob == nil && keda.ScaledObject == nil) {
+	if s.Spec.ScaleOptions == nil || s.Spec.ScaleOptions.Keda == nil || len(s.Spec.ScaleOptions.Keda.Triggers) == 0 {
+		log.Info("No keda triggers found, no need to create scaler.")
 		return nil
 	}
 
 	var obj client.Object
-	if keda.ScaledJob != nil && scaledJobTriggers != nil {
+	keda := s.Spec.ScaleOptions.Keda
+	if s.Spec.WorkloadType == openfunction.WorkloadTypeJob {
 		ref, err := r.getJobTargetRef(workload)
 		if err != nil {
 			return err
 		}
 
-		scaledJob := keda.ScaledJob
-		obj = &kedav1alpha1.ScaledJob{
+		scaledJob := &kedav1alpha1.ScaledJob{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: fmt.Sprintf("%s-scaler-", s.Name),
 				Namespace:    s.Namespace,
 				Labels: map[string]string{
 					common.OpenfunctionManaged: "true",
 					common.ServingLabel:        s.Name,
-					runtimeLabel:               string(openfunction.Async),
 				},
 			},
 			Spec: kedav1alpha1.ScaledJobSpec{
-				JobTargetRef:               ref,
-				PollingInterval:            scaledJob.PollingInterval,
-				SuccessfulJobsHistoryLimit: scaledJob.SuccessfulJobsHistoryLimit,
-				FailedJobsHistoryLimit:     scaledJob.FailedJobsHistoryLimit,
-				EnvSourceContainerName:     core.FunctionContainer,
-				MaxReplicaCount:            scaledJob.MaxReplicaCount,
-				ScalingStrategy:            scaledJob.ScalingStrategy,
-				Triggers:                   scaledJobTriggers,
+				JobTargetRef:           ref,
+				EnvSourceContainerName: core.FunctionContainer,
+				MaxReplicaCount:        s.Spec.ScaleOptions.MaxReplicas,
+				Triggers:               keda.Triggers,
 			},
 		}
-	} else if keda.ScaledObject != nil && scaledObjectTriggers != nil {
+
+		if keda.ScaledJob != nil {
+			scaledJob.Spec.PollingInterval = keda.ScaledJob.PollingInterval
+			scaledJob.Spec.SuccessfulJobsHistoryLimit = keda.ScaledJob.SuccessfulJobsHistoryLimit
+			scaledJob.Spec.FailedJobsHistoryLimit = keda.ScaledJob.FailedJobsHistoryLimit
+			scaledJob.Spec.ScalingStrategy = keda.ScaledJob.ScalingStrategy
+		}
+
+		obj = scaledJob
+	} else {
 		ref, err := r.getObjectTargetRef(workload)
 		if err != nil {
 			return err
 		}
 
-		scaledObject := keda.ScaledObject
-		obj = &kedav1alpha1.ScaledObject{
+		scaledObject := &kedav1alpha1.ScaledObject{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: fmt.Sprintf("%s-scaler-", s.Name),
 				Namespace:    s.Namespace,
 				Labels: map[string]string{
 					common.OpenfunctionManaged: "true",
 					common.ServingLabel:        s.Name,
-					runtimeLabel:               string(openfunction.Async),
 				},
 			},
 			Spec: kedav1alpha1.ScaledObjectSpec{
 				ScaleTargetRef:  ref,
-				PollingInterval: scaledObject.PollingInterval,
-				CooldownPeriod:  scaledObject.CooldownPeriod,
-				MinReplicaCount: scaledObject.MinReplicaCount,
-				MaxReplicaCount: scaledObject.MaxReplicaCount,
-				Advanced:        scaledObject.Advanced,
-				Triggers:        scaledObjectTriggers,
+				MinReplicaCount: s.Spec.ScaleOptions.MinReplicas,
+				MaxReplicaCount: s.Spec.ScaleOptions.MaxReplicas,
+				Triggers:        keda.Triggers,
 			},
 		}
+
+		if keda.ScaledObject != nil {
+			scaledObject.Spec.PollingInterval = keda.ScaledObject.PollingInterval
+			scaledObject.Spec.CooldownPeriod = keda.ScaledObject.CooldownPeriod
+			scaledObject.Spec.Advanced = keda.ScaledObject.Advanced
+		}
+
+		obj = scaledObject
 	}
 
 	if err := controllerutil.SetControllerReference(s, obj, r.scheme); err != nil {
@@ -607,61 +557,14 @@ func (r *servingRun) getObjectTargetRef(workload runtime.Object) (*kedav1alpha1.
 
 	switch workload.(type) {
 	case *appsv1.Deployment:
-		ref.Kind = "Deployment"
+		ref.Kind = openfunction.WorkloadTypeDeployment
 	case *appsv1.StatefulSet:
-		ref.Kind = "StatefulSet"
+		ref.Kind = openfunction.WorkloadTypeStatefulSet
 	default:
 		return nil, fmt.Errorf("%s", "Workload is neithor deployment nor statefulSet")
 	}
 
 	return ref, nil
-}
-
-func (r *servingRun) createComponents(s *openfunction.Serving, components map[string]*componentsv1alpha1.ComponentSpec) error {
-	log := r.log.WithName("CreateDaprComponents").
-		WithValues("Serving", fmt.Sprintf("%s/%s", s.Namespace, s.Name))
-
-	if components == nil {
-		return nil
-	}
-
-	value := ""
-	for name, daprComponent := range components {
-		dc := daprComponent.DeepCopy()
-		component := &componentsv1alpha1.Component{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: fmt.Sprintf("%s-component-%s-", s.Name, name),
-				Namespace:    s.Namespace,
-				Labels: map[string]string{
-					common.OpenfunctionManaged: "true",
-					common.ServingLabel:        s.Name,
-				},
-			},
-		}
-
-		if dc != nil {
-			component.Spec = *dc
-		}
-
-		if err := controllerutil.SetControllerReference(s, component, r.scheme); err != nil {
-			log.Error(err, "Failed to SetControllerReference", "Component", name)
-			return err
-		}
-
-		if err := r.Create(r.ctx, component); err != nil {
-			log.Error(err, "Failed to Create Dapr Component", "Component", name)
-			return err
-		}
-
-		value = fmt.Sprintf("%s%s,", value, component.Name)
-		log.V(1).Info("Component Created", "Component", component.Name)
-	}
-
-	if value != "" {
-		s.Status.ResourceRef[componentName] = strings.TrimSuffix(value, ",")
-	}
-
-	return nil
 }
 
 func getWorkloadName(s *openfunction.Serving) string {

@@ -12,15 +12,15 @@ webhooks:
       service:
         name: webhook-service
         namespace: openfunction
-        path: /mutate-core-openfunction-io-v1beta1-function
-#      url: "https://<node-ip>:9443/mutate-core-openfunction-io-v1beta1-function"
+        path: /mutate-core-openfunction-io-v1beta2-function
+    #      url: "https://<node-ip>:9443/mutate-core-openfunction-io-v1beta2-function"
     failurePolicy: Fail
     name: mfunctions.of.io
     rules:
       - apiGroups:
           - core.openfunction.io
         apiVersions:
-          - v1beta1
+          - v1beta2
         operations:
           - CREATE
           - UPDATE
@@ -34,15 +34,15 @@ webhooks:
       service:
         name: webhook-service
         namespace: openfunction
-        path: /mutate-core-openfunction-io-v1beta1-serving
-#      url: "https://<node-ip>:9443/mutate-core-openfunction-io-v1beta1-serving"
+        path: /mutate-core-openfunction-io-v1beta2-serving
+    #      url: "https://<node-ip>:9443/mutate-core-openfunction-io-v1beta2-serving"
     failurePolicy: Fail
     name: mservings.of.io
     rules:
       - apiGroups:
           - core.openfunction.io
         apiVersions:
-          - v1beta1
+          - v1beta2
         operations:
           - CREATE
           - UPDATE
@@ -58,7 +58,7 @@ webhooks:
         name: webhook-service
         namespace: system
         path: /mutate-networking-openfunction-io-v1alpha1-gateway
-#      url: "https://<node-ip>:9443/mutate-networking-openfunction-io-v1alpha1-gateway"
+    #      url: "https://<node-ip>:9443/mutate-networking-openfunction-io-v1alpha1-gateway"
     failurePolicy: Fail
     name: mgateway.of.io
     rules:
@@ -87,7 +87,7 @@ webhooks:
       service:
         name: webhook-service
         namespace: openfunction
-        path: /validate-core-openfunction-io-v1beta1-function
+        path: /validate-core-openfunction-io-v1beta2-function
 #      url: "https://<node-ip>:9443/validate-core-openfunction-io-v1beta1-function"
     failurePolicy: Fail
     name: vfunctions.of.io
@@ -95,7 +95,7 @@ webhooks:
       - apiGroups:
           - core.openfunction.io
         apiVersions:
-          - v1beta1
+          - v1beta2
         operations:
           - CREATE
           - UPDATE

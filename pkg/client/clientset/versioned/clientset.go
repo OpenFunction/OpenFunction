@@ -25,6 +25,7 @@ import (
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
 
 	corev1beta1 "github.com/openfunction/pkg/client/clientset/versioned/typed/core/v1beta1"
+	corev1beta2 "github.com/openfunction/pkg/client/clientset/versioned/typed/core/v1beta2"
 	eventsv1alpha1 "github.com/openfunction/pkg/client/clientset/versioned/typed/events/v1alpha1"
 	networkingv1alpha1 "github.com/openfunction/pkg/client/clientset/versioned/typed/networking/v1alpha1"
 )
@@ -32,6 +33,7 @@ import (
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	CoreV1beta1() corev1beta1.CoreV1beta1Interface
+	CoreV1beta2() corev1beta2.CoreV1beta2Interface
 	EventsV1alpha1() eventsv1alpha1.EventsV1alpha1Interface
 	NetworkingV1alpha1() networkingv1alpha1.NetworkingV1alpha1Interface
 }
@@ -41,6 +43,7 @@ type Interface interface {
 type Clientset struct {
 	*discovery.DiscoveryClient
 	coreV1beta1        *corev1beta1.CoreV1beta1Client
+	coreV1beta2        *corev1beta2.CoreV1beta2Client
 	eventsV1alpha1     *eventsv1alpha1.EventsV1alpha1Client
 	networkingV1alpha1 *networkingv1alpha1.NetworkingV1alpha1Client
 }
@@ -48,6 +51,11 @@ type Clientset struct {
 // CoreV1beta1 retrieves the CoreV1beta1Client
 func (c *Clientset) CoreV1beta1() corev1beta1.CoreV1beta1Interface {
 	return c.coreV1beta1
+}
+
+// CoreV1beta2 retrieves the CoreV1beta2Client
+func (c *Clientset) CoreV1beta2() corev1beta2.CoreV1beta2Interface {
+	return c.coreV1beta2
 }
 
 // EventsV1alpha1 retrieves the EventsV1alpha1Client
@@ -85,6 +93,10 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
+	cs.coreV1beta2, err = corev1beta2.NewForConfig(&configShallowCopy)
+	if err != nil {
+		return nil, err
+	}
 	cs.eventsV1alpha1, err = eventsv1alpha1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
@@ -106,6 +118,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
 	cs.coreV1beta1 = corev1beta1.NewForConfigOrDie(c)
+	cs.coreV1beta2 = corev1beta2.NewForConfigOrDie(c)
 	cs.eventsV1alpha1 = eventsv1alpha1.NewForConfigOrDie(c)
 	cs.networkingV1alpha1 = networkingv1alpha1.NewForConfigOrDie(c)
 
@@ -117,6 +130,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
 	cs.coreV1beta1 = corev1beta1.New(c)
+	cs.coreV1beta2 = corev1beta2.New(c)
 	cs.eventsV1alpha1 = eventsv1alpha1.New(c)
 	cs.networkingV1alpha1 = networkingv1alpha1.New(c)
 

@@ -17,7 +17,7 @@ limitations under the License.
 package core
 
 import (
-	openfunction "github.com/openfunction/apis/core/v1beta1"
+	openfunction "github.com/openfunction/apis/core/v1beta2"
 )
 
 const (
@@ -33,7 +33,7 @@ type BuilderRun interface {
 	// "" means build has not been completed.
 	// `Succeeded` means build completed.
 	// Other means build failed.
-	Result(builder *openfunction.Builder) (string, string, error)
+	Result(builder *openfunction.Builder) (string, string, string, error)
 	// Clean all resources which created by builder.
 	Clean(builder *openfunction.Builder) error
 	// Cancel the builder.
@@ -46,7 +46,7 @@ type ServingRun interface {
 	// '' means serving is starting.
 	// `Running` means serving is running.
 	// Other means serving failed.
-	Result(s *openfunction.Serving) (string, error)
+	Result(s *openfunction.Serving) (string, string, string, error)
 	// Clean all resources which created by serving.
 	Clean(s *openfunction.Serving) error
 }

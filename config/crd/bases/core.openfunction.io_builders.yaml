@@ -160,6 +160,220 @@ spec:
             type: object
         type: object
     served: true
+    storage: false
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.state
+      name: State
+      type: string
+    - jsonPath: .status.reason
+      name: Reason
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1beta2
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              builder:
+                type: string
+              builderCredentials:
+                properties:
+                  name:
+                    type: string
+                type: object
+              builderMaxAge:
+                type: string
+              dockerfile:
+                type: string
+              env:
+                additionalProperties:
+                  type: string
+                type: object
+              failedBuildsHistoryLimit:
+                format: int32
+                type: integer
+              image:
+                type: string
+              imageCredentials:
+                properties:
+                  name:
+                    type: string
+                type: object
+              shipwright:
+                properties:
+                  params:
+                    items:
+                      properties:
+                        configMapValue:
+                          properties:
+                            format:
+                              type: string
+                            key:
+                              type: string
+                            name:
+                              type: string
+                          required:
+                          - key
+                          - name
+                          type: object
+                        name:
+                          type: string
+                        secretValue:
+                          properties:
+                            format:
+                              type: string
+                            key:
+                              type: string
+                            name:
+                              type: string
+                          required:
+                          - key
+                          - name
+                          type: object
+                        value:
+                          type: string
+                        values:
+                          items:
+                            properties:
+                              configMapValue:
+                                properties:
+                                  format:
+                                    type: string
+                                  key:
+                                    type: string
+                                  name:
+                                    type: string
+                                required:
+                                - key
+                                - name
+                                type: object
+                              secretValue:
+                                properties:
+                                  format:
+                                    type: string
+                                  key:
+                                    type: string
+                                  name:
+                                    type: string
+                                required:
+                                - key
+                                - name
+                                type: object
+                              value:
+                                type: string
+                            type: object
+                          type: array
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  strategy:
+                    properties:
+                      kind:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  timeout:
+                    format: duration
+                    type: string
+                type: object
+              srcRepo:
+                properties:
+                  bundleContainer:
+                    properties:
+                      image:
+                        type: string
+                    required:
+                    - image
+                    type: object
+                  credentials:
+                    properties:
+                      name:
+                        type: string
+                    type: object
+                  revision:
+                    type: string
+                  sourceSubPath:
+                    type: string
+                  url:
+                    type: string
+                type: object
+              state:
+                type: string
+              successfulBuildsHistoryLimit:
+                format: int32
+                type: integer
+              timeout:
+                type: string
+            required:
+            - image
+            - srcRepo
+            type: object
+          status:
+            properties:
+              message:
+                type: string
+              output:
+                properties:
+                  digest:
+                    type: string
+                  size:
+                    format: int64
+                    type: integer
+                type: object
+              phase:
+                type: string
+              reason:
+                type: string
+              resourceRef:
+                additionalProperties:
+                  type: string
+                type: object
+              sources:
+                items:
+                  properties:
+                    bundle:
+                      properties:
+                        digest:
+                          type: string
+                      type: object
+                    git:
+                      properties:
+                        branchName:
+                          type: string
+                        commitAuthor:
+                          type: string
+                        commitSha:
+                          type: string
+                      type: object
+                    name:
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+              state:
+                type: string
+            type: object
+        type: object
+    served: true
     storage: true
     subresources:
       status: {}

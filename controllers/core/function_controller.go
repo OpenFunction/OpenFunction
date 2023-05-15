@@ -21,35 +21,35 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"reflect"
 	"sort"
 	"strings"
 	"text/template"
 	"time"
 
-	kservingv1 "knative.dev/serving/pkg/apis/serving/v1"
-
-	"k8s.io/apimachinery/pkg/fields"
-
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrlbuilder "sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	kservingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	k8sgatewayapiv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	openfunction "github.com/openfunction/apis/core/v1beta1"
+	openfunction "github.com/openfunction/apis/core/v1beta2"
 	networkingv1alpha1 "github.com/openfunction/apis/networking/v1alpha1"
 	"github.com/openfunction/pkg/constants"
 	"github.com/openfunction/pkg/core/serving/common"
@@ -151,6 +151,8 @@ func (r *FunctionReconciler) createBuilder(fn *openfunction.Function) error {
 		fn.Status.Build = &openfunction.Condition{}
 	}
 	fn.Status.Build.State = ""
+	fn.Status.Build.Reason = ""
+	fn.Status.Build.Message = ""
 	fn.Status.Build.ResourceRef = ""
 	if err := r.Status().Update(r.ctx, fn); err != nil {
 		log.Error(err, "Failed to reset function build status")
@@ -250,8 +252,12 @@ func (r *FunctionReconciler) updateFuncWithBuilderStatus(fn *openfunction.Functi
 	}
 
 	// If builder status changed, update function build status.
-	if fn.Status.Build.State != builder.Status.State {
+	if fn.Status.Build.State != builder.Status.State ||
+		fn.Status.Build.Reason != builder.Status.Reason ||
+		fn.Status.Build.Message != builder.Status.Message {
 		fn.Status.Build.State = builder.Status.State
+		fn.Status.Build.Reason = builder.Status.Reason
+		fn.Status.Build.Message = builder.Status.Message
 		// If build had complete, update function serving status.
 		if builder.Status.State == openfunction.Succeeded {
 			if builder.Status.Output != nil {
@@ -265,6 +271,8 @@ func (r *FunctionReconciler) updateFuncWithBuilderStatus(fn *openfunction.Functi
 			}
 
 			fn.Status.Serving.State = ""
+			fn.Status.Serving.Reason = ""
+			fn.Status.Serving.Message = ""
 		}
 
 		if err := r.Status().Update(r.ctx, fn); err != nil {
@@ -358,27 +366,15 @@ func (r *FunctionReconciler) pruneBuilder(fn *openfunction.Function) error {
 }
 
 func (r *FunctionReconciler) createBuilderSpec(fn *openfunction.Function) openfunction.BuilderSpec {
-
 	if fn.Spec.Build == nil {
 		return openfunction.BuilderSpec{}
 	}
 
 	spec := openfunction.BuilderSpec{
-		Params:             fn.Spec.Build.Params,
-		Env:                fn.Spec.Build.Env,
-		Builder:            fn.Spec.Build.Builder,
-		BuilderCredentials: fn.Spec.Build.BuilderCredentials,
-		Image:              fn.Spec.Image,
-		ImageCredentials:   fn.Spec.ImageCredentials,
-		Port:               fn.Spec.Port,
-		Shipwright:         fn.Spec.Build.Shipwright,
-		Dockerfile:         fn.Spec.Build.Dockerfile,
-		Timeout:            fn.Spec.Build.Timeout,
+		BuildImpl:        *fn.Spec.Build.DeepCopy(),
+		Image:            fn.Spec.Image,
+		ImageCredentials: fn.Spec.ImageCredentials,
 	}
-
-	spec.SrcRepo = &openfunction.GitRepo{}
-	spec.SrcRepo.Init()
-	fn.Spec.Build.SrcRepo.DeepCopyInto(spec.SrcRepo)
 
 	return spec
 }
@@ -402,6 +398,8 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 		fn.Status.Serving = &openfunction.Condition{}
 	}
 	fn.Status.Serving.State = ""
+	fn.Status.Serving.Reason = ""
+	fn.Status.Serving.Message = ""
 	fn.Status.Serving.ResourceRef = ""
 	fn.Status.Serving.ResourceHash = ""
 	if err := r.Status().Update(r.ctx, fn); err != nil {
@@ -500,8 +498,12 @@ func (r *FunctionReconciler) updateFuncWithServingStatus(fn *openfunction.Functi
 	}
 
 	// If serving status changed, update function serving status.
-	if fn.Status.Serving.State != serving.Status.State {
+	if fn.Status.Serving.State != serving.Status.State ||
+		fn.Status.Serving.Reason != serving.Status.Reason ||
+		fn.Status.Serving.Message != serving.Status.Message {
 		fn.Status.Serving.State = serving.Status.State
+		fn.Status.Serving.Reason = serving.Status.Reason
+		fn.Status.Serving.Message = serving.Status.Message
 
 		// If new serving is running, clean old serving.
 		if serving.Status.State == openfunction.Running {
@@ -553,7 +555,6 @@ func (r *FunctionReconciler) cleanServing(fn *openfunction.Function) error {
 }
 
 func (r *FunctionReconciler) createServingSpec(fn *openfunction.Function) openfunction.ServingSpec {
-
 	if fn.Spec.Serving == nil {
 		return openfunction.ServingSpec{}
 	}
@@ -562,27 +563,7 @@ func (r *FunctionReconciler) createServingSpec(fn *openfunction.Function) openfu
 		Version:          fn.Spec.Version,
 		Image:            getServingImage(fn),
 		ImageCredentials: fn.Spec.ImageCredentials,
-		Timeout:          fn.Spec.Serving.Timeout,
-	}
-
-	if fn.Spec.Port != nil {
-		port := *fn.Spec.Port
-		spec.Port = &port
-	}
-
-	if fn.Spec.Serving != nil {
-		spec.Runtime = fn.Spec.Serving.Runtime
-		spec.ScaleOptions = fn.Spec.Serving.ScaleOptions
-		spec.Bindings = fn.Spec.Serving.Bindings
-		spec.Pubsub = fn.Spec.Serving.Pubsub
-		spec.States = fn.Spec.Serving.States
-		spec.Inputs = fn.Spec.Serving.Inputs
-		spec.Outputs = fn.Spec.Serving.Outputs
-		spec.Params = fn.Spec.Serving.Params
-		spec.Labels = fn.Spec.Serving.Labels
-		spec.Annotations = fn.Spec.Serving.Annotations
-		spec.Template = fn.Spec.Serving.Template
-		spec.Triggers = fn.Spec.Serving.Triggers
+		ServingImpl:      *fn.Spec.Serving.DeepCopy(),
 	}
 
 	return spec
@@ -646,7 +627,10 @@ func (r *FunctionReconciler) needToCreateServing(fn *openfunction.Function) bool
 		WithValues("Function", fmt.Sprintf("%s/%s", fn.Namespace, fn.Name))
 
 	// The build is still in process, no need to create or update serving.
-	if fn.Status.Serving == nil {
+	if fn.Status.Serving == nil ||
+		(fn.Status.Build != nil &&
+			fn.Status.Build.State != openfunction.Succeeded &&
+			fn.Status.Build.State != openfunction.Skipped) {
 		log.V(1).Info("Build not completed")
 		return false
 	}
@@ -691,8 +675,12 @@ func (r *FunctionReconciler) createOrUpdateHTTPRoute(fn *openfunction.Function) 
 		return nil
 	}
 
+	if fn.Spec.Serving.Triggers == nil || fn.Spec.Serving.Triggers.Http == nil {
+		return nil
+	}
+
 	namespace := constants.DefaultGatewayNamespace
-	if fn.Spec.Route == nil {
+	if fn.Spec.Serving.Triggers.Http.Route == nil {
 		route := openfunction.RouteImpl{
 			CommonRouteSpec: openfunction.CommonRouteSpec{
 				GatewayRef: &openfunction.GatewayRef{
@@ -701,19 +689,20 @@ func (r *FunctionReconciler) createOrUpdateHTTPRoute(fn *openfunction.Function) 
 				},
 			},
 		}
-		fn.Spec.Route = &route
-	} else if fn.Spec.Route.GatewayRef == nil {
-		fn.Spec.Route.GatewayRef = &openfunction.GatewayRef{Name: constants.DefaultGatewayName, Namespace: &namespace}
+		fn.Spec.Serving.Triggers.Http.Route = &route
+	} else if fn.Spec.Serving.Triggers.Http.Route.GatewayRef == nil {
+		fn.Spec.Serving.Triggers.Http.Route.GatewayRef = &openfunction.GatewayRef{Name: constants.DefaultGatewayName, Namespace: &namespace}
 	}
 
+	route := fn.Spec.Serving.Triggers.Http.Route
 	gateway := &networkingv1alpha1.Gateway{}
 	key := client.ObjectKey{
-		Namespace: string(*fn.Spec.Route.GatewayRef.Namespace),
-		Name:      string(fn.Spec.Route.GatewayRef.Name),
+		Namespace: string(*route.GatewayRef.Namespace),
+		Name:      string(route.GatewayRef.Name),
 	}
 	if err := r.Get(r.ctx, key, gateway); err != nil {
 		log.Error(err, "Failed to get gateway",
-			"namespace", fn.Spec.Route.GatewayRef.Namespace, "name", fn.Spec.Route.GatewayRef.Name)
+			"namespace", route.GatewayRef.Namespace, "name", route.GatewayRef.Name)
 		return err
 	}
 
@@ -789,7 +778,7 @@ func (r *FunctionReconciler) mutateHTTPRoute(
 			parentRefNamespace = k8sgatewayapiv1alpha2.Namespace(gateway.Spec.GatewayDef.Namespace)
 		}
 
-		if fn.Spec.Route.Hostnames == nil {
+		if fn.Spec.Serving.Triggers.Http.Route.Hostnames == nil {
 			var hostnameBuffer bytes.Buffer
 
 			hostTemplate := template.Must(template.New("host").Parse(gateway.Spec.HostTemplate))
@@ -804,18 +793,18 @@ func (r *FunctionReconciler) mutateHTTPRoute(
 			hostname := k8sgatewayapiv1alpha2.Hostname(hostnameBuffer.String())
 			hostnames = append(hostnames, hostname)
 		} else {
-			hostnames = fn.Spec.Route.Hostnames
+			hostnames = fn.Spec.Serving.Triggers.Http.Route.Hostnames
 		}
-		if !containsHTTPHostname(fn.Spec.Route.Hostnames, clusterHostname) {
+		if !containsHTTPHostname(fn.Spec.Serving.Triggers.Http.Route.Hostnames, clusterHostname) {
 			hostnames = append(hostnames, clusterHostname)
 		}
 
 		var backendGroup k8sgatewayapiv1alpha2.Group = ""
 		var backendKind k8sgatewayapiv1alpha2.Kind = "Service"
 		var backendWeight int32 = 1
-		if fn.Spec.Route.Rules == nil {
+		if fn.Spec.Serving.Triggers.Http.Route.Rules == nil {
 			var path string
-			if fn.Spec.Route.Hostnames == nil {
+			if fn.Spec.Serving.Triggers.Http.Route.Hostnames == nil {
 				path = "/"
 			} else {
 				var pathBuffer bytes.Buffer
@@ -855,7 +844,7 @@ func (r *FunctionReconciler) mutateHTTPRoute(
 			}
 			rules = append(rules, rule)
 		} else {
-			for _, rule := range fn.Spec.Route.Rules {
+			for _, rule := range fn.Spec.Serving.Triggers.Http.Route.Rules {
 				rule.BackendRefs = []k8sgatewayapiv1alpha2.HTTPBackendRef{{
 					BackendRef: k8sgatewayapiv1alpha2.BackendRef{
 						BackendObjectReference: k8sgatewayapiv1alpha2.BackendObjectReference{
@@ -924,7 +913,7 @@ func (r *FunctionReconciler) mutateService(
 func (r *FunctionReconciler) CreateOrUpdateServiceForAsyncFunc(fn *openfunction.Function, s *openfunction.Serving) error {
 	log := r.Log.WithName("CreateOrUpdateServiceForAsyncFunc")
 
-	if fn.Spec.Serving.Runtime != openfunction.Async {
+	if fn.Spec.Serving.Triggers.Dapr == nil {
 		return nil
 	}
 
@@ -933,9 +922,6 @@ func (r *FunctionReconciler) CreateOrUpdateServiceForAsyncFunc(fn *openfunction.
 	}
 	op, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, service, func() error {
 		var port = int32(constants.DefaultFuncPort)
-		if fn.Spec.Port != nil {
-			port = *fn.Spec.Port
-		}
 		funcPort := corev1.ServicePort{
 			Name:       "http",
 			Protocol:   corev1.ProtocolTCP,
@@ -1084,8 +1070,10 @@ func (r *FunctionReconciler) cleanExpiredBuilder() {
 func (r *FunctionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &openfunction.Function{}, GatewayField, func(rawObj client.Object) []string {
 		fn := rawObj.(*openfunction.Function)
-		if fn.Spec.Route != nil {
-			return []string{fmt.Sprintf("%s,%s", *fn.Spec.Route.GatewayRef.Namespace, fn.Spec.Route.GatewayRef.Name)}
+		if fn.Spec.Serving.Triggers != nil &&
+			fn.Spec.Serving.Triggers.Http != nil &&
+			fn.Spec.Serving.Triggers.Http.Route != nil {
+			return []string{fmt.Sprintf("%s,%s", *fn.Spec.Serving.Triggers.Http.Route.GatewayRef.Namespace, fn.Spec.Serving.Triggers.Http.Route.GatewayRef.Name)}
 		} else {
 			return []string{fmt.Sprintf("%s,%s", constants.DefaultGatewayNamespace, constants.DefaultGatewayName)}
 		}
@@ -1097,13 +1085,36 @@ func (r *FunctionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&openfunction.Builder{}).
 		Owns(&openfunction.Serving{}).
 		Owns(&corev1.Service{}).
-		Owns(&k8sgatewayapiv1alpha2.HTTPRoute{}).
+		Owns(&k8sgatewayapiv1alpha2.HTTPRoute{}, ctrlbuilder.WithPredicates(predicate.Funcs{UpdateFunc: r.filterHttpRouteUpdateEvent})).
 		Watches(
 			&source.Kind{Type: &networkingv1alpha1.Gateway{}},
 			handler.EnqueueRequestsFromMapFunc(r.findObjectsForGateway),
 			ctrlbuilder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		).
 		Complete(r)
+}
+
+func (r *FunctionReconciler) filterHttpRouteUpdateEvent(e event.UpdateEvent) bool {
+	if e.ObjectOld == nil || e.ObjectNew == nil {
+		return false
+	}
+
+	oldRoute := e.ObjectOld.(*k8sgatewayapiv1alpha2.HTTPRoute).DeepCopy()
+	newRoute := e.ObjectNew.(*k8sgatewayapiv1alpha2.HTTPRoute).DeepCopy()
+
+	if !reflect.DeepEqual(oldRoute.Spec, newRoute.Spec) {
+		return true
+	}
+
+	oldRoute.ManagedFields = make([]metav1.ManagedFieldsEntry, 0)
+	newRoute.ManagedFields = make([]metav1.ManagedFieldsEntry, 0)
+	newRoute.ResourceVersion = ""
+	oldRoute.ResourceVersion = ""
+	if !reflect.DeepEqual(oldRoute.ObjectMeta, newRoute.ObjectMeta) {
+		return true
+	}
+
+	return false
 }
 
 func (r *FunctionReconciler) findObjectsForGateway(gateway client.Object) []reconcile.Request {

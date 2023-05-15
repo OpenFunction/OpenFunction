@@ -14,11 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta1
+package v1beta2
 
 import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	shipwrightv1alpha1 "github.com/shipwright-io/build/pkg/apis/build/v1alpha1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -33,37 +35,47 @@ const (
 	BuilderStateCancelled = "Cancelled"
 )
 
-// BuilderSpec defines the desired state of Builder
-type BuilderSpec struct {
+type Strategy struct {
+	// Name of the referent; More info: http://kubernetes.io/docs/user-guide/identifiers#names
+	Name string `json:"name"`
+	// BuildStrategyKind indicates the kind of the build strategy BuildStrategy or ClusterBuildStrategy, default to BuildStrategy.
+	Kind *string `json:"kind,omitempty"`
+}
+
+type ShipwrightEngine struct {
+	// Strategy references the BuildStrategy to use to build the image.
+	// +optional
+	Strategy *Strategy `json:"strategy,omitempty"`
 	// Params is a list of key/value that could be used to set strategy parameters.
-	Params map[string]string `json:"params,omitempty"`
-	// Environment params to pass to the builder.
-	Env map[string]string `json:"env,omitempty"`
-	// Builder refers to the image containing the build tools inside which
-	// the source code would be built.
+	// When using _params_, users should avoid:
+	// Defining a parameter name that doesn't match one of the `spec.parameters` defined in the `BuildStrategy`.
+	// Defining a parameter name that collides with the Shipwright reserved parameters including BUILDER_IMAGE,DOCKERFILE,CONTEXT_DIR and any name starting with shp-.
+	Params []shipwrightv1alpha1.ParamValue `json:"params,omitempty"`
+	// Timeout defines the maximum amount of time the Build should take to execute.
 	//
 	// +optional
-	Builder *string `json:"builder"`
+	// +kubebuilder:validation:Format=duration
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
+}
+
+type BuildImpl struct {
+	// Builder refers to the image containing the build tools to build the source code.
+	//
+	// +optional
+	Builder *string `json:"builder,omitempty"`
 	// BuilderCredentials references a Secret that contains credentials to access
 	// the builder image repository.
 	//
 	// +optional
 	BuilderCredentials *v1.LocalObjectReference `json:"builderCredentials,omitempty"`
-	// The configuration for `Shipwright` build engine.
+	// The configuration for the `Shipwright` build engine.
 	Shipwright *ShipwrightEngine `json:"shipwright,omitempty"`
-	// Git repository info of a function
+
+	// Environment variables to pass to the builder.
+	Env map[string]string `json:"env,omitempty"`
+	// Function Source code repository
 	SrcRepo *GitRepo `json:"srcRepo"`
-	// Function image name
-	Image string `json:"image"`
-	// ImageCredentials references a Secret that contains credentials to access
-	// the image repository.
-	//
-	// +optional
-	ImageCredentials *v1.LocalObjectReference `json:"imageCredentials,omitempty"`
-	// The port on which the function will be invoked
-	Port *int32 `json:"port,omitempty"`
-	// Dockerfile is the path to the Dockerfile to be used for
-	// build strategies that rely on the Dockerfile for building an image.
+	// Dockerfile is the path to the Dockerfile used by build strategies that rely on the Dockerfile to build an image.
 	//
 	// +optional
 	Dockerfile *string `json:"dockerfile,omitempty"`
@@ -71,13 +83,36 @@ type BuilderSpec struct {
 	//
 	// +optional
 	Timeout *metav1.Duration `json:"timeout,omitempty"`
-	// State is used for canceling a buildrun (and maybe more later on).
+
+	// The number of successful builds to retain, default is 0.
 	// +optional
-	State BuilderState `json:"state,omitempty"`
+	SuccessfulBuildsHistoryLimit *int32 `json:"successfulBuildsHistoryLimit,omitempty"`
+
+	// The number of failed builds to retain, default is 1.
+	// +optional
+	FailedBuildsHistoryLimit *int32 `json:"failedBuildsHistoryLimit,omitempty"`
+	// The duration to retain a completed builder, defaults to 0 (forever).
+	// +optional
+	BuilderMaxAge *metav1.Duration `json:"builderMaxAge,omitempty"`
 }
 
-// Output holds the results from the output step (build-and-push)
-type Output struct {
+// BuilderSpec defines the desired state of Builder
+type BuilderSpec struct {
+	// Function image name
+	Image string `json:"image"`
+	// ImageCredentials references a Secret that contains credentials to access
+	// the image repository.
+	//
+	// +optional
+	ImageCredentials *v1.LocalObjectReference `json:"imageCredentials,omitempty"`
+	// State is used for canceling a buildrun (and maybe more later on).
+	// +optional
+	State     BuilderState `json:"state,omitempty"`
+	BuildImpl `json:",inline"`
+}
+
+// BuilderOutput holds the results from the output step (build-and-push)
+type BuilderOutput struct {
 	// Digest holds the digest of output image
 	Digest string `json:"digest,omitempty"`
 
@@ -87,15 +122,16 @@ type Output struct {
 
 // BuilderStatus defines the observed state of Builder
 type BuilderStatus struct {
-	Phase  string `json:"phase,omitempty"`
-	State  string `json:"state,omitempty"`
-	Reason string `json:"reason,omitempty"`
+	Phase   string `json:"phase,omitempty"`
+	State   string `json:"state,omitempty"`
+	Reason  string `json:"reason,omitempty"`
+	Message string `json:"message,omitempty"`
 	// Associate resources.
 	ResourceRef map[string]string `json:"resourceRef,omitempty"`
 	// Output holds the results emitted from step definition of an output
 	//
 	// +optional
-	Output *Output `json:"output,omitempty"`
+	Output *BuilderOutput `json:"output,omitempty"`
 	// Sources holds the results emitted from the step definition
 	// of different sources
 	//
@@ -105,6 +141,7 @@ type BuilderStatus struct {
 
 //+genclient
 //+kubebuilder:object:root=true
+//+kubebuilder:storageversion
 //+kubebuilder:resource:shortName=fb
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`

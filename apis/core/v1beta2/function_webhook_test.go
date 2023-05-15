@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta1
+package v1beta2
 
 import (
 	//"fmt"
@@ -22,7 +22,6 @@ import (
 	"testing"
 	"time"
 
-	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	kedav1alpha1 "github.com/kedacore/keda/v2/api/v1alpha1"
 	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
 	v1 "k8s.io/api/core/v1"
@@ -43,8 +42,6 @@ func Test_Validate(t *testing.T) {
 	stabilizationWindowSecondsNegative := int32(-1)
 	stabilizationWindowSecondsLimit := int32(3601)
 	var selectPolicy autoscalingv2beta2.ScalingPolicySelect = "test"
-	restartPolicy := v1.RestartPolicy("test")
-	var scaleTargetKind ScaleTargetKind = ""
 
 	tests := []struct {
 		name    string
@@ -212,24 +209,13 @@ func Test_Validate(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "function.spec.serving.runtime",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving:          &ServingImpl{Runtime: Runtime("keda-http")},
-				},
-			},
-			wantErr: true,
-		},
-		{
 			name: "function.spec.serving.scaleOptions.minReplicas",
 			r: Function{
 				Spec: FunctionSpec{
 					Image:            "test",
 					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
 					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
+						Triggers: &Triggers{Http: &HttpTrigger{}},
 						ScaleOptions: &ScaleOptions{
 							MinReplicas: &minReplicasNegative,
 						},
@@ -245,7 +231,7 @@ func Test_Validate(t *testing.T) {
 					Image:            "test",
 					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
 					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
+						Triggers: &Triggers{Http: &HttpTrigger{}},
 						ScaleOptions: &ScaleOptions{
 							MaxReplicas: &maxReplicasNegative,
 						},
@@ -261,7 +247,7 @@ func Test_Validate(t *testing.T) {
 					Image:            "test",
 					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
 					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
+						Triggers: &Triggers{Http: &HttpTrigger{}},
 						ScaleOptions: &ScaleOptions{
 							MinReplicas: &minReplicas,
 							MaxReplicas: &maxReplicas,
@@ -278,27 +264,9 @@ func Test_Validate(t *testing.T) {
 					Image:            "test",
 					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
 					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
+						Triggers: &Triggers{Http: &HttpTrigger{}},
 						ScaleOptions: &ScaleOptions{
 							Keda: &KedaScaleOptions{},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "function.spec.serving.scaleOptions.keda.scaledObject.workloadType",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						ScaleOptions: &ScaleOptions{
-							Keda: &KedaScaleOptions{
-								ScaledObject: &KedaScaledObject{WorkloadType: "test"},
-							},
 						},
 					},
 				},
@@ -312,10 +280,12 @@ func Test_Validate(t *testing.T) {
 					Image:            "test",
 					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
 					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
+						Triggers: &Triggers{Http: &HttpTrigger{}},
 						ScaleOptions: &ScaleOptions{
 							Keda: &KedaScaleOptions{
-								ScaledObject: &KedaScaledObject{PollingInterval: &pollingInterval},
+								ScaledObject: &KedaScaledObject{
+									PollingInterval: &pollingInterval,
+								},
 							},
 						},
 					},
@@ -330,66 +300,11 @@ func Test_Validate(t *testing.T) {
 					Image:            "test",
 					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
 					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						ScaleOptions: &ScaleOptions{
-							Keda: &KedaScaleOptions{
-								ScaledObject: &KedaScaledObject{CooldownPeriod: &cooldownPeriod},
-							},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "function.spec.serving.scaleOptions.keda.scaledObject.minReplicaCount",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						ScaleOptions: &ScaleOptions{
-							Keda: &KedaScaleOptions{
-								ScaledObject: &KedaScaledObject{MinReplicaCount: &minReplicasNegative},
-							},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "function.spec.serving.scaleOptions.keda.scaledObject.maxReplicaCount",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						ScaleOptions: &ScaleOptions{
-							Keda: &KedaScaleOptions{
-								ScaledObject: &KedaScaledObject{MaxReplicaCount: &maxReplicasNegative},
-							},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "function.spec.serving.scaleOptions.keda.scaledObject.minReplicaCount and maxReplicaCount",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
+						Triggers: &Triggers{Http: &HttpTrigger{}},
 						ScaleOptions: &ScaleOptions{
 							Keda: &KedaScaleOptions{
 								ScaledObject: &KedaScaledObject{
-									MinReplicaCount: &minReplicas,
-									MaxReplicaCount: &maxReplicas,
+									CooldownPeriod: &cooldownPeriod,
 								},
 							},
 						},
@@ -405,7 +320,7 @@ func Test_Validate(t *testing.T) {
 					Image:            "test",
 					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
 					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
+						Triggers: &Triggers{Http: &HttpTrigger{}},
 						ScaleOptions: &ScaleOptions{
 							Keda: &KedaScaleOptions{
 								ScaledObject: &KedaScaledObject{
@@ -433,7 +348,7 @@ func Test_Validate(t *testing.T) {
 					Image:            "test",
 					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
 					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
+						Triggers: &Triggers{Http: &HttpTrigger{}},
 						ScaleOptions: &ScaleOptions{
 							Keda: &KedaScaleOptions{
 								ScaledObject: &KedaScaledObject{
@@ -461,7 +376,7 @@ func Test_Validate(t *testing.T) {
 					Image:            "test",
 					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
 					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
+						Triggers: &Triggers{Http: &HttpTrigger{}},
 						ScaleOptions: &ScaleOptions{
 							Keda: &KedaScaleOptions{
 								ScaledObject: &KedaScaledObject{
@@ -489,7 +404,7 @@ func Test_Validate(t *testing.T) {
 					Image:            "test",
 					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
 					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
+						Triggers: &Triggers{Http: &HttpTrigger{}},
 						ScaleOptions: &ScaleOptions{
 							Keda: &KedaScaleOptions{
 								ScaledObject: &KedaScaledObject{
@@ -519,7 +434,7 @@ func Test_Validate(t *testing.T) {
 					Image:            "test",
 					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
 					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
+						Triggers: &Triggers{Http: &HttpTrigger{}},
 						ScaleOptions: &ScaleOptions{
 							Keda: &KedaScaleOptions{
 								ScaledObject: &KedaScaledObject{
@@ -552,7 +467,7 @@ func Test_Validate(t *testing.T) {
 					Image:            "test",
 					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
 					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
+						Triggers: &Triggers{Http: &HttpTrigger{}},
 						ScaleOptions: &ScaleOptions{
 							Keda: &KedaScaleOptions{
 								ScaledObject: &KedaScaledObject{
@@ -580,7 +495,7 @@ func Test_Validate(t *testing.T) {
 					Image:            "test",
 					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
 					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
+						Triggers: &Triggers{Http: &HttpTrigger{}},
 						ScaleOptions: &ScaleOptions{
 							Keda: &KedaScaleOptions{
 								ScaledObject: &KedaScaledObject{
@@ -608,7 +523,7 @@ func Test_Validate(t *testing.T) {
 					Image:            "test",
 					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
 					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
+						Triggers: &Triggers{Http: &HttpTrigger{}},
 						ScaleOptions: &ScaleOptions{
 							Keda: &KedaScaleOptions{
 								ScaledObject: &KedaScaledObject{
@@ -638,7 +553,7 @@ func Test_Validate(t *testing.T) {
 					Image:            "test",
 					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
 					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
+						Triggers: &Triggers{Http: &HttpTrigger{}},
 						ScaleOptions: &ScaleOptions{
 							Keda: &KedaScaleOptions{
 								ScaledObject: &KedaScaledObject{
@@ -665,427 +580,20 @@ func Test_Validate(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "function.spec.serving.scaleOptions.keda.scaledJob.restartPolicy",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						ScaleOptions: &ScaleOptions{
-							Keda: &KedaScaleOptions{
-								ScaledJob: &KedaScaledJob{RestartPolicy: &restartPolicy},
-							},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "function.spec.serving.scaleOptions.keda.scaledJob.pollingInterval",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						ScaleOptions: &ScaleOptions{
-							Keda: &KedaScaleOptions{
-								ScaledJob: &KedaScaledJob{PollingInterval: &pollingInterval},
-							},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "function.spec.serving.scaleOptions.keda.scaledJob.successfulJobsHistoryLimit",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						ScaleOptions: &ScaleOptions{
-							Keda: &KedaScaleOptions{
-								ScaledJob: &KedaScaledJob{SuccessfulJobsHistoryLimit: &successfulBuildsHistoryLimit},
-							},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "function.spec.serving.scaleOptions.keda.scaledJob.failedBuildsHistoryLimit",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						ScaleOptions: &ScaleOptions{
-							Keda: &KedaScaleOptions{
-								ScaledJob: &KedaScaledJob{FailedJobsHistoryLimit: &failedBuildsHistoryLimit},
-							},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "function.spec.serving.scaleOptions.keda.scaledJob.maxReplicaCount",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						ScaleOptions: &ScaleOptions{
-							Keda: &KedaScaleOptions{
-								ScaledJob: &KedaScaledJob{MaxReplicaCount: &maxReplicasNegative},
-							},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "function.spec.serving.scaleOptions.keda.scaleJob.scalingStrategy.strategy",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						ScaleOptions: &ScaleOptions{
-							Keda: &KedaScaleOptions{
-								ScaledJob: &KedaScaledJob{
-									ScalingStrategy: kedav1alpha1.ScalingStrategy{
-										Strategy: "test",
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "function.spec.serving.scaleOptions.keda.scaleJob.scalingStrategy.customScalingQueueLengthDeduction",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						ScaleOptions: &ScaleOptions{
-							Keda: &KedaScaleOptions{
-								ScaledJob: &KedaScaledJob{
-									ScalingStrategy: kedav1alpha1.ScalingStrategy{
-										Strategy: "custom",
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "function.spec.serving.scaleOptions.keda.scaleJob.scalingStrategy.customScalingRunningJobPercentage",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						ScaleOptions: &ScaleOptions{
-							Keda: &KedaScaleOptions{
-								ScaledJob: &KedaScaledJob{
-									ScalingStrategy: kedav1alpha1.ScalingStrategy{
-										Strategy:                          "custom",
-										CustomScalingQueueLengthDeduction: &maxReplicas,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "function.spec.serving.scaleOptions.keda.scaleJob.scalingStrategy.customScalingQueueLengthDeduction",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						ScaleOptions: &ScaleOptions{
-							Keda: &KedaScaleOptions{
-								ScaledJob: &KedaScaledJob{
-									ScalingStrategy: kedav1alpha1.ScalingStrategy{
-										CustomScalingQueueLengthDeduction: &maxReplicasNegative,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "function.spec.serving.scaleOptions.keda.scaleJob.scalingStrategy.customScalingRunningJobPercentage",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						ScaleOptions: &ScaleOptions{
-							Keda: &KedaScaleOptions{
-								ScaledJob: &KedaScaledJob{
-									ScalingStrategy: kedav1alpha1.ScalingStrategy{
-										CustomScalingRunningJobPercentage: "%t",
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "function.spec.serving.inputs[0].name",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						Inputs: []*DaprIO{
-							{Name: ""},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "function.spec.serving.inputs[0].component",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						Inputs: []*DaprIO{
-							{Name: "test"},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "function.spec.serving.inputs[0].component",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						Inputs: []*DaprIO{
-							{
-								Name:      "test",
-								Component: "test",
-							},
-						},
-						Pubsub: map[string]*componentsv1alpha1.ComponentSpec{
-							"test": {Type: "pubsub.kafka"},
-						},
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "function.spec.serving.outputs[0].name",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						Outputs: []*DaprIO{
-							{Name: ""},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "function.spec.serving.outputs[0].component",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						Outputs: []*DaprIO{
-							{Name: "test"},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "function.spec.serving.outputs[0].component",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						Outputs: []*DaprIO{
-							{
-								Name:      "test",
-								Component: "test",
-							},
-						},
-						Pubsub: map[string]*componentsv1alpha1.ComponentSpec{
-							"test": {Type: "pubsub.kafka"},
-						},
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "function.spec.serving.pubsub.key",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						Bindings: map[string]*componentsv1alpha1.ComponentSpec{
-							"test": {},
-						},
-						Pubsub: map[string]*componentsv1alpha1.ComponentSpec{
-							"test": {Type: "pubsub.kafka"},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "function.spec.serving.pubsub.test.type",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						Pubsub: map[string]*componentsv1alpha1.ComponentSpec{
-							"test": {Type: ""},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "function.spec.serving.pubsub.test.type",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						Pubsub: map[string]*componentsv1alpha1.ComponentSpec{
-							"test": {Type: "pubsubtest"},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "function.spec.serving.bindings.key",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						Bindings: map[string]*componentsv1alpha1.ComponentSpec{
-							"test": {},
-						},
-						Pubsub: map[string]*componentsv1alpha1.ComponentSpec{
-							"test": {Type: "pubsub.kafka"},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "function.spec.serving.bindings.test.type",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						Bindings: map[string]*componentsv1alpha1.ComponentSpec{
-							"test": {Type: ""},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "function.spec.serving.bindings.test.type",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						Bindings: map[string]*componentsv1alpha1.ComponentSpec{
-							"test": {Type: "bindingstest"},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
 			name: "function.spec.serving.triggers.[0].type",
 			r: Function{
 				Spec: FunctionSpec{
 					Image:            "test",
 					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
 					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						Triggers: []Triggers{
-							{
-								ScaleTriggers: kedav1alpha1.ScaleTriggers{Type: ""},
+						Triggers: &Triggers{Http: &HttpTrigger{}},
+						ScaleOptions: &ScaleOptions{
+							Keda: &KedaScaleOptions{
+								Triggers: []kedav1alpha1.ScaleTriggers{
+									{
+										Type: "",
+									},
+								},
 							},
 						},
 					},
@@ -1100,10 +608,14 @@ func Test_Validate(t *testing.T) {
 					Image:            "test",
 					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
 					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						Triggers: []Triggers{
-							{
-								ScaleTriggers: kedav1alpha1.ScaleTriggers{Type: "activemq"},
+						Triggers: &Triggers{Http: &HttpTrigger{}},
+						ScaleOptions: &ScaleOptions{
+							Keda: &KedaScaleOptions{
+								Triggers: []kedav1alpha1.ScaleTriggers{
+									{
+										Type: "activemq",
+									},
+								},
 							},
 						},
 					},
@@ -1118,13 +630,15 @@ func Test_Validate(t *testing.T) {
 					Image:            "test",
 					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
 					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						Triggers: []Triggers{
-							{
-								ScaleTriggers: kedav1alpha1.ScaleTriggers{
-									Type:              "activemq",
-									Metadata:          map[string]string{"key": "value"},
-									AuthenticationRef: &kedav1alpha1.ScaledObjectAuthRef{Kind: "test"},
+						Triggers: &Triggers{Http: &HttpTrigger{}},
+						ScaleOptions: &ScaleOptions{
+							Keda: &KedaScaleOptions{
+								Triggers: []kedav1alpha1.ScaleTriggers{
+									{
+										Type:              "activemq",
+										Metadata:          map[string]string{"key": "value"},
+										AuthenticationRef: &kedav1alpha1.ScaledObjectAuthRef{Kind: "test"},
+									},
 								},
 							},
 						},
@@ -1140,36 +654,16 @@ func Test_Validate(t *testing.T) {
 					Image:            "test",
 					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
 					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						Triggers: []Triggers{
-							{
-								ScaleTriggers: kedav1alpha1.ScaleTriggers{
-									Type:             "activemq",
-									Metadata:         map[string]string{"key": "value"},
-									FallbackReplicas: &minReplicasNegative,
+						Triggers: &Triggers{Http: &HttpTrigger{}},
+						ScaleOptions: &ScaleOptions{
+							Keda: &KedaScaleOptions{
+								Triggers: []kedav1alpha1.ScaleTriggers{
+									{
+										Type:             "activemq",
+										Metadata:         map[string]string{"key": "value"},
+										FallbackReplicas: &minReplicasNegative,
+									},
 								},
-							},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "function.spec.serving.triggers.[0].targetKind",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving: &ServingImpl{
-						Runtime: Runtime("knative"),
-						Triggers: []Triggers{
-							{
-								ScaleTriggers: kedav1alpha1.ScaleTriggers{
-									Type:     "activemq",
-									Metadata: map[string]string{"key": "value"},
-								},
-								TargetKind: &scaleTargetKind,
 							},
 						},
 					},
