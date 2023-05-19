@@ -25,6 +25,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	corev1beta1 "github.com/openfunction/apis/core/v1beta1"
+	corev1beta2 "github.com/openfunction/apis/core/v1beta2"
 	eventsv1alpha1 "github.com/openfunction/apis/events/v1alpha1"
 	networkingv1alpha1 "github.com/openfunction/apis/networking/v1alpha1"
 )
@@ -34,6 +35,7 @@ var codecs = serializer.NewCodecFactory(scheme)
 
 var localSchemeBuilder = runtime.SchemeBuilder{
 	corev1beta1.AddToScheme,
+	corev1beta2.AddToScheme,
 	eventsv1alpha1.AddToScheme,
 	networkingv1alpha1.AddToScheme,
 }

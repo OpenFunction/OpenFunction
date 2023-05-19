@@ -125,6 +125,42 @@ type GatewaySpec struct {
 	GatewaySpec K8sGatewaySpec `json:"gatewaySpec"`
 }
 
+type Condition struct {
+	Type    string                 `json:"type" protobuf:"bytes,1,opt,name=type"`
+	Status  metav1.ConditionStatus `json:"status" protobuf:"bytes,2,opt,name=status"`
+	Reason  string                 `json:"reason" protobuf:"bytes,5,opt,name=reason"`
+	Message string                 `json:"message" protobuf:"bytes,6,opt,name=message"`
+}
+
+type ListenerStatus struct {
+	// Name is the name of the Listener that this status corresponds to.
+	Name k8sgatewayapiv1alpha2.SectionName `json:"name"`
+
+	// SupportedKinds is the list indicating the Kinds supported by this
+	// listener. This MUST represent the kinds an implementation supports for
+	// that Listener configuration.
+	//
+	// If kinds are specified in Spec that are not supported, they MUST NOT
+	// appear in this list and an implementation MUST set the "ResolvedRefs"
+	// condition to "False" with the "InvalidRouteKinds" reason. If both valid
+	// and invalid Route kinds are specified, the implementation MUST
+	// reference the valid Route kinds that have been specified.
+	//
+	// +kubebuilder:validation:MaxItems=8
+	SupportedKinds []k8sgatewayapiv1alpha2.RouteGroupKind `json:"supportedKinds"`
+
+	// AttachedRoutes represents the total number of Routes that have been
+	// successfully attached to this Listener.
+	AttachedRoutes int32 `json:"attachedRoutes"`
+
+	// Conditions describe the current condition of this listener.
+	//
+	// +listType=map
+	// +listMapKey=type
+	// +kubebuilder:validation:MaxItems=8
+	Conditions []Condition `json:"conditions"`
+}
+
 // GatewayStatus defines the observed state of Gateway
 type GatewayStatus struct {
 	// Addresses list the addresses that have actually been bound to the Gateway.
@@ -145,8 +181,8 @@ type GatewayStatus struct {
 	// +listType=map
 	// +listMapKey=type
 	// +kubebuilder:validation:MaxItems=8
-	// +kubebuilder:default={{type: "Scheduled", status: "Unknown", reason:"NotReconciled", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	// +kubebuilder:default={{type: "Scheduled", status: "Unknown", reason:"NotReconciled", message:"Waiting for controller"}}
+	Conditions []Condition `json:"conditions,omitempty"`
 
 	// Listeners provide status for each unique listener port defined in the Spec.
 	//
@@ -154,7 +190,7 @@ type GatewayStatus struct {
 	// +listType=map
 	// +listMapKey=name
 	// +kubebuilder:validation:MaxItems=64
-	Listeners []k8sgatewayapiv1alpha2.ListenerStatus `json:"listeners,omitempty"`
+	Listeners []ListenerStatus `json:"listeners,omitempty"`
 }
 
 //+kubebuilder:object:root=true

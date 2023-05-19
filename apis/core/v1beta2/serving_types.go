@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta1
+package v1beta2
 
 import (
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
@@ -27,36 +27,78 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 const (
-	Knative Runtime = "knative"
-	Async   Runtime = "async"
-
-	DaprBindings = "bindings"
-	DaprPubsub   = "pubsub"
+	HookPolicyAppend   = "Append"
+	HookPolicyOverride = "Override"
 
 	WorkloadTypeJob         = "Job"
 	WorkloadTypeStatefulSet = "StatefulSet"
 	WorkloadTypeDeployment  = "Deployment"
 )
 
-// Runtime describes the type of the backend runtime.
-// +kubebuilder:validation:Enum=knative;async
-type Runtime string
+type Triggers struct {
+	Http   *HttpTrigger   `json:"http,omitempty"`
+	Dapr   []*DaprTrigger `json:"dapr,omitempty"`
+	Inputs []*Input       `json:"inputs,omitempty"`
+}
 
-// ScaleTargetKind represents the kind of trigger target.
-// +kubebuilder:validation:Enum=object;job
-type ScaleTargetKind string
+type HttpTrigger struct {
+	// The port on which the function will be invoked
+	Port *int32 `json:"port,omitempty"`
+	// Information needed to make HTTPRoute.
+	// Will attempt to make HTTPRoute using the default Gateway resource if Route is nil.
+	//
+	// +optional
+	Route *RouteImpl `json:"route,omitempty"`
+}
+
+type DaprTrigger struct {
+	*DaprComponentRef `json:",inline"`
+	// Deprecated: Only for compatibility with v1beta1
+	InputName string `json:"inputName,omitempty"`
+}
+
+type DaprComponentRef struct {
+	// The name of the dapr component, the component can be defined in
+	// the `bindings`, `pubsub`, or `states`, or an existing component.
+	Name string `json:"name"`
+	// Type is the type of the component, if it is not set, controller will get it automatically.
+	Type  string `json:"type,omitempty"`
+	Topic string `json:"topic,omitempty"`
+}
+
+type DaprInput struct {
+	*DaprComponentRef `json:",inline"`
+}
+
+type Input struct {
+	Dapr *DaprInput `json:"dap,omitemptyr"`
+}
+
+type DaprOutput struct {
+	*DaprComponentRef `json:",inline"`
+	// Metadata is the metadata for dapr Com.
+	// +optional
+	Metadata map[string]string `json:"metadata,omitempty"`
+	// Operation field tells the Dapr component which operation it should perform.
+	// +optional
+	Operation string `json:"operation,omitempty"`
+	// Deprecated: Only for compatibility with v1beta1
+	OutputName string `json:"outputName,omitempty"`
+}
+
+type Output struct {
+	Dapr *DaprOutput `json:"dapr,omitempty"`
+}
+
+type State struct {
+	Spec *componentsv1alpha1.ComponentSpec `json:"spec,omitempty"`
+}
 
 type KedaScaledObject struct {
-	// How to run the function, known values are Deployment or StatefulSet, default is Deployment.
-	WorkloadType string `json:"workloadType,omitempty"`
 	// +optional
 	PollingInterval *int32 `json:"pollingInterval,omitempty"`
 	// +optional
 	CooldownPeriod *int32 `json:"cooldownPeriod,omitempty"`
-	// +optional
-	MinReplicaCount *int32 `json:"minReplicaCount,omitempty"`
-	// +optional
-	MaxReplicaCount *int32 `json:"maxReplicaCount,omitempty"`
 	// +optional
 	Advanced *kedav1alpha1.AdvancedConfig `json:"advanced,omitempty"`
 }
@@ -74,31 +116,18 @@ type KedaScaledJob struct {
 	// +optional
 	FailedJobsHistoryLimit *int32 `json:"failedJobsHistoryLimit,omitempty"`
 	// +optional
-	MaxReplicaCount *int32 `json:"maxReplicaCount,omitempty"`
-	// +optional
 	ScalingStrategy kedav1alpha1.ScalingStrategy `json:"scalingStrategy,omitempty"`
 }
 
-type Triggers struct {
-	kedav1alpha1.ScaleTriggers `json:",inline"`
+type KedaScaleOptions struct {
 	// +optional
-	TargetKind *ScaleTargetKind `json:"targetKind,omitempty"`
-}
-
-type DaprIO struct {
-	// The name of DaprIO.
-	Name string `json:"name"`
-	// Component indicates the name of components in Dapr
-	Component string `json:"component"`
-	// Topic name of mq, required when type is pubsub
+	ScaledObject *KedaScaledObject `json:"scaledObject,omitempty"`
 	// +optional
-	Topic string `json:"topic,omitempty"`
-	// Parameters for dapr input/output.
+	ScaledJob *KedaScaledJob `json:"scaledJob,omitempty"`
+	// Triggers are used to specify the trigger sources of the function.
+	// The Keda (ScaledObject, ScaledJob) configuration in ScaleOptions cannot take effect without Triggers being set.
 	// +optional
-	Params map[string]string `json:"params,omitempty"`
-	// Operation field tells the Dapr component which operation it should perform.
-	// +optional
-	Operation string `json:"operation,omitempty"`
+	Triggers []kedav1alpha1.ScaleTriggers `json:"triggers,omitempty"`
 }
 
 type ScaleOptions struct {
@@ -112,11 +141,79 @@ type ScaleOptions struct {
 	Knative *map[string]string `json:"knative,omitempty"`
 }
 
-type KedaScaleOptions struct {
+type Hooks struct {
+	Pre    []string `json:"pre,omitempty"`
+	Post   []string `json:"post,omitempty"`
+	Policy string   `json:"policy,omitempty"`
+}
+
+type TracingConfig struct {
+	Enabled  bool              `json:"enabled" yaml:"enabled"`
+	Provider *TracingProvider  `json:"provider" yaml:"provider"`
+	Tags     map[string]string `json:"tags,omitempty" yaml:"tags,omitempty"`
+	Baggage  map[string]string `json:"baggage" yaml:"baggage"`
+}
+
+type TracingProvider struct {
+	Name      string    `json:"name" yaml:"name"`
+	OapServer string    `json:"oapServer,omitempty" yaml:"oapServer,omitempty"`
+	Exporter  *Exporter `json:"exporter,omitempty" yaml:"exporter,omitempty"`
+}
+
+type Exporter struct {
+	Name        string `json:"name" yaml:"name"`
+	Endpoint    string `json:"endpoint" yaml:"endpoint"`
+	Headers     string `json:"headers,omitempty" yaml:"headers,omitempty"`
+	Compression string `json:"compression,omitempty" yaml:"compression,omitempty"`
+	Timeout     string `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	Protocol    string `json:"protocol,omitempty" yaml:"protocol,omitempty"`
+}
+
+type ServingImpl struct {
+	// Triggers used to trigge the Function.
 	// +optional
-	ScaledObject *KedaScaledObject `json:"scaledObject,omitempty"`
+	Triggers *Triggers `json:"triggers"`
+	// The ScaleOptions will help us to set up guidelines for the autoscaling of function workloads.
 	// +optional
-	ScaledJob *KedaScaledJob `json:"scaledJob,omitempty"`
+	ScaleOptions *ScaleOptions `json:"scaleOptions,omitempty"`
+	// Function outputs from Dapr components including binding, pubsub
+	// +optional
+	Outputs []*Output `json:"outputs,omitempty"`
+	// Configurations of dapr bindings components.
+	// +optional
+	Bindings map[string]*componentsv1alpha1.ComponentSpec `json:"bindings,omitempty"`
+	// Configurations of dapr pubsub components.
+	// +optional
+	Pubsub map[string]*componentsv1alpha1.ComponentSpec `json:"pubsub,omitempty"`
+	// Configurations of dapr state components.
+	// It can refer to an existing state when the `state.spec` is nil.
+	// +optional
+	States map[string]*State `json:"states,omitempty"`
+	// Parameters to pass to the serving.
+	// All parameters will be injected into the pod as environment variables.
+	// Function code can use these parameters by getting environment variables
+	Params map[string]string `json:"params,omitempty"`
+	// Parameters of asyncFunc runtime, must not be nil when runtime is OpenFuncAsync.
+	Labels map[string]string `json:"labels,omitempty"`
+	// Annotations that will be added to the workload.
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
+	// Template describes the pods that will be created.
+	// The container named `function` is the container which is used to run the image built by the builder.
+	// If it is not set, the controller will automatically add one.
+	// +optional
+	Template *v1.PodSpec `json:"template,omitempty"`
+	// Timeout defines the maximum amount of time the Serving should take to execute before the Serving is running.
+	// +optional
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
+	// Hooks define the hooks that will execute before or after function execution.
+	// +optional
+	Hooks *Hooks `json:"hooks,omitempty"`
+	// Tracing is the config of tracing.
+	// +optional
+	Tracing *TracingConfig `json:"tracing,omitempty"`
+	// How to run the function, known values are Deployment or StatefulSet, default is Deployment.
+	WorkloadType string `json:"workloadType,omitempty"`
 }
 
 // ServingSpec defines the desired state of Serving
@@ -129,57 +226,15 @@ type ServingSpec struct {
 	// the image repository.
 	// +optional
 	ImageCredentials *v1.LocalObjectReference `json:"imageCredentials,omitempty"`
-	// The port on which the function will be invoked
-	Port *int32 `json:"port,omitempty"`
-	// The configuration of the backend runtime for running function.
-	Runtime Runtime `json:"runtime"`
-	// Function inputs from Dapr components including binding, pubsub
-	// Available for Async Runtime only.
-	// +optional
-	Inputs []*DaprIO `json:"inputs,omitempty"`
-	// Function outputs from Dapr components including binding, pubsub
-	// +optional
-	Outputs []*DaprIO `json:"outputs,omitempty"`
-	// The ScaleOptions will help us to set up guidelines for the autoscaling of function workloads.
-	// +optional
-	ScaleOptions *ScaleOptions `json:"scaleOptions,omitempty"`
-	// Configurations of dapr bindings components.
-	// +optional
-	Bindings map[string]*componentsv1alpha1.ComponentSpec `json:"bindings,omitempty"`
-	// Configurations of dapr pubsub components.
-	// +optional
-	Pubsub map[string]*componentsv1alpha1.ComponentSpec `json:"pubsub,omitempty"`
-	// Configurations of dapr state components.
-	// +optional
-	States map[string]*componentsv1alpha1.ComponentSpec `json:"states,omitempty"`
-	// Triggers are used to specify the trigger sources of the function.
-	// The Keda (ScaledObject, ScaledJob) configuration in ScaleOptions cannot take effect without Triggers being set.
-	// +optional
-	Triggers []Triggers `json:"triggers,omitempty"`
-	// Parameters to pass to the serving.
-	// All parameters will be injected into the pod as environment variables.
-	// Function code can use these parameters by getting environment variables
-	Params map[string]string `json:"params,omitempty"`
-	// Parameters of OpenFuncAsync runtime.
-	// +optional
-	Labels map[string]string `json:"labels,omitempty"`
-	// Annotations that will be add to the workload.
-	// +optional
-	Annotations map[string]string `json:"annotations,omitempty"`
-	// Template describes the pods that will be created.
-	// The container named `function` is the container which is used to run the image built by the builder.
-	// If it is not set, the controller will automatically add one.
-	// +optional
-	Template *v1.PodSpec `json:"template,omitempty"`
-	// Timeout defines the maximum amount of time the Serving should take to execute before the Serving is running.
-	// +optional
-	Timeout *metav1.Duration `json:"timeout,omitempty"`
+	ServingImpl      `json:",inline"`
 }
 
 // ServingStatus defines the observed state of Serving
 type ServingStatus struct {
-	Phase string `json:"phase,omitempty"`
-	State string `json:"state,omitempty"`
+	Phase   string `json:"phase,omitempty"`
+	State   string `json:"state,omitempty"`
+	Reason  string `json:"reason,omitempty"`
+	Message string `json:"message,omitempty"`
 	// Associate resources.
 	ResourceRef map[string]string `json:"resourceRef,omitempty"`
 	// Service holds the service name used to access the serving.
@@ -189,6 +244,7 @@ type ServingStatus struct {
 
 //+genclient
 //+kubebuilder:object:root=true
+//+kubebuilder:storageversion
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 //+kubebuilder:printcolumn:name="State",type=string,JSONPath=`.status.state`

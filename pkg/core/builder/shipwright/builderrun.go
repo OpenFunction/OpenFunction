@@ -32,7 +32,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	openfunction "github.com/openfunction/apis/core/v1beta1"
+	openfunction "github.com/openfunction/apis/core/v1beta2"
 	"github.com/openfunction/pkg/core"
 	"github.com/openfunction/pkg/util"
 )
@@ -131,7 +131,7 @@ func (r *builderRun) Start(builder *openfunction.Builder) error {
 	return nil
 }
 
-func (r *builderRun) Result(builder *openfunction.Builder) (string, string, error) {
+func (r *builderRun) Result(builder *openfunction.Builder) (string, string, string, error) {
 	log := r.log.WithName("Result").
 		WithValues("Builder", fmt.Sprintf("%s/%s", builder.Namespace, builder.Name))
 
@@ -143,17 +143,17 @@ func (r *builderRun) Result(builder *openfunction.Builder) (string, string, erro
 	}
 	if err := r.Get(r.ctx, client.ObjectKeyFromObject(shipwrightBuild), shipwrightBuild); util.IgnoreNotFound(err) != nil {
 		log.Error(err, "Failed to get Build", "Build", shipwrightBuild.Name)
-		return "", "", util.IgnoreNotFound(err)
+		return "", "", "", util.IgnoreNotFound(err)
 	}
 
 	if shipwrightBuild.Status.Registered == nil {
-		return "", "", nil
+		return "", "", "", nil
 	}
 
 	if shipwrightBuild.Status.Registered == shipwrightv1alpha1.ConditionStatusPtr(corev1.ConditionFalse) {
-		return openfunction.Failed, string(*shipwrightBuild.Status.Reason), nil
+		return openfunction.Failed, string(*shipwrightBuild.Status.Reason), *shipwrightBuild.Status.Message, nil
 	} else if shipwrightBuild.Status.Registered == shipwrightv1alpha1.ConditionStatusPtr(corev1.ConditionUnknown) {
-		return "", "", nil
+		return "", "", "", nil
 	}
 
 	shipwrightBuildRun := &shipwrightv1alpha1.BuildRun{
@@ -164,11 +164,11 @@ func (r *builderRun) Result(builder *openfunction.Builder) (string, string, erro
 	}
 	if err := r.Get(r.ctx, client.ObjectKeyFromObject(shipwrightBuildRun), shipwrightBuildRun); util.IgnoreNotFound(err) != nil {
 		log.Error(err, "Failed to get BuildRun", "BuildRun", shipwrightBuildRun.Name)
-		return "", "", util.IgnoreNotFound(err)
+		return "", "", "", util.IgnoreNotFound(err)
 	}
 
 	if shipwrightBuildRun.Status.CompletionTime == nil {
-		return "", "", nil
+		return "", "", "", nil
 	}
 
 	for _, c := range shipwrightBuildRun.Status.Conditions {
@@ -176,15 +176,15 @@ func (r *builderRun) Result(builder *openfunction.Builder) (string, string, erro
 			if c.Status == corev1.ConditionFalse {
 				switch c.Reason {
 				case "BuildRunTimeout":
-					return openfunction.Timeout, c.Reason, nil
+					return openfunction.Timeout, c.Reason, c.Message, nil
 				case shipwrightv1alpha1.BuildRunStateCancel:
-					return openfunction.Canceled, c.Reason, nil
+					return openfunction.Canceled, c.Reason, c.Message, nil
 				default:
-					return openfunction.Failed, c.Reason, nil
+					return openfunction.Failed, c.Reason, c.Message, nil
 				}
 			} else if c.Status == corev1.ConditionTrue {
 				if shipwrightBuildRun.Status.Output != nil {
-					builder.Status.Output = &openfunction.Output{
+					builder.Status.Output = &openfunction.BuilderOutput{
 						Digest: shipwrightBuildRun.Status.Output.Digest,
 						Size:   shipwrightBuildRun.Status.Output.Size,
 					}
@@ -212,14 +212,14 @@ func (r *builderRun) Result(builder *openfunction.Builder) (string, string, erro
 					builder.Status.Sources = append(builder.Status.Sources, sr)
 				}
 
-				return openfunction.Succeeded, openfunction.Succeeded, nil
+				return openfunction.Succeeded, openfunction.Succeeded, openfunction.Succeeded, nil
 			} else {
-				return "", "", nil
+				return "", "", "", nil
 			}
 		}
 	}
 
-	return "", "", nil
+	return "", "", "", nil
 }
 
 // Clean up redundant builds and buildruns caused by the `Start` function failed.
@@ -332,14 +332,8 @@ func (r *builderRun) createShipwrightBuild(builder *openfunction.Builder) *shipw
 		}
 	}
 
-	for k, v := range builder.Spec.Params {
-		val := v
-		shipwrightBuild.Spec.ParamValues = append(shipwrightBuild.Spec.ParamValues, shipwrightv1alpha1.ParamValue{
-			Name: k,
-			SingleValue: &shipwrightv1alpha1.SingleValue{
-				Value: &val,
-			},
-		})
+	if builder.Spec.Shipwright != nil {
+		shipwrightBuild.Spec.ParamValues = append(shipwrightBuild.Spec.ParamValues, builder.Spec.Shipwright.Params...)
 	}
 
 	for k, v := range builder.Labels {

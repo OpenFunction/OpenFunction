@@ -27,6 +27,8 @@ import (
 	clientset "github.com/openfunction/pkg/client/clientset/versioned"
 	corev1beta1 "github.com/openfunction/pkg/client/clientset/versioned/typed/core/v1beta1"
 	fakecorev1beta1 "github.com/openfunction/pkg/client/clientset/versioned/typed/core/v1beta1/fake"
+	corev1beta2 "github.com/openfunction/pkg/client/clientset/versioned/typed/core/v1beta2"
+	fakecorev1beta2 "github.com/openfunction/pkg/client/clientset/versioned/typed/core/v1beta2/fake"
 	eventsv1alpha1 "github.com/openfunction/pkg/client/clientset/versioned/typed/events/v1alpha1"
 	fakeeventsv1alpha1 "github.com/openfunction/pkg/client/clientset/versioned/typed/events/v1alpha1/fake"
 	networkingv1alpha1 "github.com/openfunction/pkg/client/clientset/versioned/typed/networking/v1alpha1"
@@ -83,6 +85,11 @@ var _ clientset.Interface = &Clientset{}
 // CoreV1beta1 retrieves the CoreV1beta1Client
 func (c *Clientset) CoreV1beta1() corev1beta1.CoreV1beta1Interface {
 	return &fakecorev1beta1.FakeCoreV1beta1{Fake: &c.Fake}
+}
+
+// CoreV1beta2 retrieves the CoreV1beta2Client
+func (c *Clientset) CoreV1beta2() corev1beta2.CoreV1beta2Interface {
+	return &fakecorev1beta2.FakeCoreV1beta2{Fake: &c.Fake}
 }
 
 // EventsV1alpha1 retrieves the EventsV1alpha1Client

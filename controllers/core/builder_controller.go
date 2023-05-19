@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	openfunction "github.com/openfunction/apis/core/v1beta1"
+	openfunction "github.com/openfunction/apis/core/v1beta2"
 	"github.com/openfunction/pkg/core"
 	"github.com/openfunction/pkg/core/builder/shipwright"
 	"github.com/openfunction/pkg/util"
@@ -157,7 +157,7 @@ func (r *BuilderReconciler) getBuilderResult(builder *openfunction.Builder, buil
 	log := r.Log.WithName("GetBuilderResult").
 		WithValues("Builder", fmt.Sprintf("%s/%s", builder.Namespace, builder.Name))
 
-	res, reason, err := builderRun.Result(builder)
+	res, reason, message, err := builderRun.Result(builder)
 	if err != nil {
 		log.Error(err, "Get build result error")
 		return err
@@ -168,9 +168,12 @@ func (r *BuilderReconciler) getBuilderResult(builder *openfunction.Builder, buil
 		return nil
 	}
 
-	if res != builder.Status.State {
+	if res != builder.Status.State ||
+		reason != builder.Status.Reason ||
+		message != builder.Status.Message {
 		builder.Status.State = res
 		builder.Status.Reason = reason
+		builder.Status.Message = message
 		if err := r.Status().Update(r.ctx, builder); err != nil {
 			return err
 		}

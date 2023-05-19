@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	openfunction "github.com/openfunction/apis/core/v1beta1"
+	openfunction "github.com/openfunction/apis/core/v1beta2"
 	"github.com/openfunction/pkg/constants"
 	"github.com/openfunction/pkg/core"
 	"github.com/openfunction/pkg/core/serving/knative"
@@ -96,16 +96,6 @@ func (r *ServingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	servingRun := r.getServingRun(&s)
-	if util.InterfaceIsNil(servingRun) {
-		log.Error(nil, "Unknown runtime", "runtime", s.Spec.Runtime)
-		s.Status.Phase = openfunction.ServingPhase
-		s.Status.State = openfunction.UnknownRuntime
-		if err := r.Status().Update(r.ctx, &s); err != nil {
-			log.Error(err, "Failed to update serving status")
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{}, nil
-	}
 
 	// Serving start timeout, update serving status.
 	if s.Spec.Timeout != nil &&
@@ -212,14 +202,10 @@ func (r *ServingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 }
 
 func (r *ServingReconciler) getServingRun(s *openfunction.Serving) core.ServingRun {
-
-	switch s.Spec.Runtime {
-	case openfunction.Async:
-		return openfuncasync.NewServingRun(r.ctx, r.Client, r.Scheme, r.Log)
-	case openfunction.Knative:
+	if s.Spec.Triggers.Http != nil {
 		return knative.NewServingRun(r.ctx, r.Client, r.Scheme, r.Log)
-	default:
-		return nil
+	} else {
+		return openfuncasync.NewServingRun(r.ctx, r.Client, r.Scheme, r.Log)
 	}
 }
 
@@ -228,7 +214,7 @@ func (r *ServingReconciler) getServingResult(s *openfunction.Serving, servingRun
 	log := r.Log.WithName("GetServingResult").
 		WithValues("Serving", fmt.Sprintf("%s/%s", s.Namespace, s.Name))
 
-	res, err := servingRun.Result(s)
+	res, reason, message, err := servingRun.Result(s)
 	if err != nil {
 		log.Error(err, "Get serving result error")
 		return err
@@ -239,8 +225,12 @@ func (r *ServingReconciler) getServingResult(s *openfunction.Serving, servingRun
 		return nil
 	}
 
-	if res != s.Status.State {
+	if res != s.Status.State ||
+		reason != s.Status.Reason ||
+		message != s.Status.Message {
 		s.Status.State = res
+		s.Status.Reason = reason
+		s.Status.Message = message
 		if err := r.Status().Update(r.ctx, s); err != nil {
 			return err
 		}

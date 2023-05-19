@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta1
+package v1beta2
 
 import (
 	"fmt"
@@ -34,24 +34,38 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
+//var (
+//	shipwrightBuildStrategyKinds = map[shipwrightv1alpha1.BuildStrategyKind]bool{
+//		shipwrightv1alpha1.NamespacedBuildStrategyKind: true,
+//		shipwrightv1alpha1.ClusterBuildStrategyKind:    true}
+//	shipwrightBuildStrategyKindsSlice = convertMapKeysToStringSlice(shipwrightBuildStrategyKinds)
+//	kedaScaledObjectAuthRefKinds      = map[string]bool{"TriggerAuthentication": true, "ClusterTriggerAuthentication": true}
+//	kedaScaledObjectAuthRefKindsSlice = convertMapKeysToStringSlice(kedaScaledObjectAuthRefKinds)
+//	scalingPolicySelects              = map[v2beta2.ScalingPolicySelect]bool{
+//		v2beta2.MaxPolicySelect:      true,
+//		v2beta2.MinPolicySelect:      true,
+//		v2beta2.DisabledPolicySelect: true,
+//	}
+//	scalingPolicySelectsSlice = convertMapKeysToStringSlice(scalingPolicySelects)
+//	HPAScalingPolicyTypes     = map[v2beta2.HPAScalingPolicyType]bool{
+//		v2beta2.PodsScalingPolicy:    true,
+//		v2beta2.PercentScalingPolicy: true,
+//	}
+//	HPAScalingPolicyTypesSlice = convertMapKeysToStringSlice(HPAScalingPolicyTypes)
+//)
+
 var (
 	shipwrightBuildStrategyKinds = map[shipwrightv1alpha1.BuildStrategyKind]bool{
 		shipwrightv1alpha1.NamespacedBuildStrategyKind: true,
 		shipwrightv1alpha1.ClusterBuildStrategyKind:    true}
-	shipwrightBuildStrategyKindsSlice  = convertMapKeysToStringSlice(shipwrightBuildStrategyKinds)
-	funcRuntimes                       = map[Runtime]bool{Knative: true, Async: true}
-	funcRuntimesSlice                  = convertMapKeysToStringSlice(funcRuntimes)
-	kedaScaledObjectWorkloadTypes      = map[string]bool{"Deployment": true, "StatefulSet": true}
-	kedaScaledObjectWorkloadTypesSlice = convertMapKeysToStringSlice(kedaScaledObjectWorkloadTypes)
-	kedaScaledJobRestartPolices        = map[v1.RestartPolicy]bool{
+	shipwrightBuildStrategyKindsSlice = convertMapKeysToStringSlice(shipwrightBuildStrategyKinds)
+	kedaScaledJobRestartPolices       = map[v1.RestartPolicy]bool{
 		v1.RestartPolicyAlways:    true,
 		v1.RestartPolicyOnFailure: true,
 		v1.RestartPolicyNever:     true,
 	}
-	kedaScaledJobRestartPolicesSlice  = convertMapKeysToStringSlice(kedaScaledJobRestartPolices)
-	kedaScaledObjectAuthRefKinds      = map[string]bool{"TriggerAuthentication": true, "ClusterTriggerAuthentication": true}
-	kedaScaledObjectAuthRefKindsSlice = convertMapKeysToStringSlice(kedaScaledObjectAuthRefKinds)
-	scalingPolicySelects              = map[v2beta2.ScalingPolicySelect]bool{
+	kedaScaledJobRestartPolicesSlice = convertMapKeysToStringSlice(kedaScaledJobRestartPolices)
+	scalingPolicySelects             = map[v2beta2.ScalingPolicySelect]bool{
 		v2beta2.MaxPolicySelect:      true,
 		v2beta2.MinPolicySelect:      true,
 		v2beta2.DisabledPolicySelect: true,
@@ -64,8 +78,6 @@ var (
 	HPAScalingPolicyTypesSlice          = convertMapKeysToStringSlice(HPAScalingPolicyTypes)
 	kedaScaledJobScalingStrategies      = map[string]bool{"default": true, "custom": true, "accurate": true}
 	kedaScaledJobScalingStrategiesSlice = convertMapKeysToStringSlice(kedaScaledJobScalingStrategies)
-	scaleTargetKinds                    = map[ScaleTargetKind]bool{ScaledObject: true, ScaledJob: true}
-	scaleTargetKindsSlice               = convertMapKeysToStringSlice(scaleTargetKinds)
 )
 
 // log is for logging in this package.
@@ -78,7 +90,7 @@ func (r *Function) SetupWebhookWithManager(mgr ctrl.Manager) error {
 }
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// +kubebuilder:webhook:path=/mutate-core-openfunction-io-v1beta1-function,mutating=true,failurePolicy=fail,groups=core.openfunction.io,resources=functions,verbs=create;update,versions=v1beta1,name=mfunctions.of.io,sideEffects=None,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/mutate-core-openfunction-io-v1beta2-function,mutating=true,failurePolicy=fail,groups=core.openfunction.io,resources=functions,verbs=create;update,versions=v1beta1,name=mfunctions.of.io,sideEffects=None,admissionReviewVersions=v1
 var _ webhook.Defaulter = &Function{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
@@ -89,14 +101,16 @@ func (r *Function) Default() {
 		r.Spec.Version = &version
 	}
 
-	if r.Spec.Port == nil {
-		port := int32(constants.DefaultFuncPort)
-		r.Spec.Port = &port
-	}
+	if r.Spec.Serving != nil &&
+		r.Spec.Serving.Triggers != nil &&
+		r.Spec.Serving.Triggers.Http != nil {
+		if r.Spec.Serving.Triggers.Http.Port == nil {
+			port := int32(constants.DefaultFuncPort)
+			r.Spec.Serving.Triggers.Http.Port = &port
+		}
 
-	if r.Spec.Serving != nil && r.Spec.Serving.Runtime == Knative {
 		namespace := constants.DefaultGatewayNamespace
-		if r.Spec.Route == nil {
+		if r.Spec.Serving.Triggers.Http.Route == nil {
 			route := RouteImpl{
 				CommonRouteSpec: CommonRouteSpec{
 					GatewayRef: &GatewayRef{
@@ -105,9 +119,9 @@ func (r *Function) Default() {
 					},
 				},
 			}
-			r.Spec.Route = &route
-		} else if r.Spec.Route.GatewayRef == nil {
-			r.Spec.Route.GatewayRef = &GatewayRef{Name: constants.DefaultGatewayName, Namespace: &namespace}
+			r.Spec.Serving.Triggers.Http.Route = &route
+		} else if r.Spec.Serving.Triggers.Http.Route.GatewayRef == nil {
+			r.Spec.Serving.Triggers.Http.Route.GatewayRef = &GatewayRef{Name: constants.DefaultGatewayName, Namespace: &namespace}
 		}
 	}
 
@@ -153,7 +167,7 @@ func (r Function) HandleWorkloadRuntime() {
 	}
 }
 
-// +kubebuilder:webhook:path=/validate-core-openfunction-io-v1beta1-function,mutating=false,failurePolicy=fail,groups=core.openfunction.io,resources=functions,verbs=create;update,versions=v1beta1,name=vfunctions.of.io,sideEffects=None,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/validate-core-openfunction-io-v1beta2-function,mutating=false,failurePolicy=fail,groups=core.openfunction.io,resources=functions,verbs=create;update,versions=v1beta1,name=vfunctions.of.io,sideEffects=None,admissionReviewVersions=v1
 var _ webhook.Validator = &Function{}
 
 func (r *Function) ValidateCreate() error {
@@ -161,7 +175,7 @@ func (r *Function) ValidateCreate() error {
 	return r.Validate()
 }
 
-func (r *Function) ValidateUpdate(old runtime.Object) error {
+func (r *Function) ValidateUpdate(_ runtime.Object) error {
 	functionlog.Info("validate update", "name", r.Name)
 	return r.Validate()
 }
@@ -177,13 +191,9 @@ func (r *Function) Validate() error {
 	}
 
 	if r.Spec.Build != nil {
-		if r.Spec.ImageCredentials == nil {
-			return field.Required(field.NewPath("spec", "imageCredentials"),
-				"must be specified when `spec.build` is enabled")
-		}
 		if r.Spec.ImageCredentials != nil && r.Spec.ImageCredentials.Name == "" {
 			return field.Required(field.NewPath("spec", "imageCredentials", "name"),
-				"must be specified when `spec.build` is enabled")
+				"must be specified when `spec.build.imageCredentials` is enabled")
 		}
 		if err := r.ValidateBuild(); err != nil {
 			return err
@@ -257,13 +267,10 @@ func (r *Function) ValidateBuild() error {
 }
 
 func (r *Function) ValidateServing() error {
-	if r.Spec.Serving.Runtime == "" {
-		return field.Required(field.NewPath("spec", "serving", "runtime"), "must be specified")
-	}
-
-	if _, ok := funcRuntimes[r.Spec.Serving.Runtime]; !ok {
-		return field.NotSupported(field.NewPath("spec", "serving", "runtime"),
-			r.Spec.Serving.Runtime, funcRuntimesSlice)
+	if r.Spec.Serving.Triggers.Http == nil &&
+		(r.Spec.Serving.Triggers.Dapr == nil || len(r.Spec.Serving.Triggers.Dapr) == 0) {
+		return field.Required(field.NewPath("spec", "serving", "Triggers"),
+			"must specify one of: `http` or `dapr`")
 	}
 
 	if r.Spec.Serving.ScaleOptions != nil {
@@ -288,6 +295,7 @@ func (r *Function) ValidateServing() error {
 			return field.Invalid(field.NewPath("spec", "serving", "scaleOptions", "minReplicas"),
 				minReplicas, "cannot be greater than maxReplicas")
 		}
+
 		if scaleOptions.Keda != nil {
 			if scaleOptions.Keda.ScaledJob != nil && scaleOptions.Keda.ScaledObject != nil {
 				return field.Required(
@@ -296,14 +304,6 @@ func (r *Function) ValidateServing() error {
 			}
 			if scaleOptions.Keda.ScaledObject != nil {
 				scaledObject := scaleOptions.Keda.ScaledObject
-				if scaledObject.WorkloadType != "" {
-					if _, ok := kedaScaledObjectWorkloadTypes[scaledObject.WorkloadType]; !ok {
-						return field.NotSupported(
-							field.NewPath("spec", "serving", "scaleOptions", "keda", "scaledObject", "workloadType"),
-							scaledObject.WorkloadType,
-							kedaScaledObjectWorkloadTypesSlice)
-					}
-				}
 				if scaledObject.PollingInterval != nil && *scaledObject.PollingInterval < 0 {
 					return field.Invalid(
 						field.NewPath("spec", "serving", "scaleOptions", "keda", "scaledObject", "pollingInterval"),
@@ -315,33 +315,6 @@ func (r *Function) ValidateServing() error {
 						field.NewPath("spec", "serving", "scaleOptions", "keda", "scaledObject", "cooldownPeriod"),
 						scaledObject.CooldownPeriod,
 						"cannot be less than 0")
-				}
-
-				minReplicaCount := int32(0)
-				maxReplicaCount := int32(100)
-				if scaledObject.MinReplicaCount != nil {
-					minReplicaCount = *scaledObject.MinReplicaCount
-				}
-				if scaledObject.MaxReplicaCount != nil {
-					maxReplicaCount = *scaledObject.MaxReplicaCount
-				}
-				if minReplicaCount < 0 {
-					return field.Invalid(
-						field.NewPath("spec", "serving", "scaleOptions", "keda", "scaledObject", "minReplicaCount"),
-						minReplicaCount,
-						"cannot be less than 0")
-				}
-				if maxReplicaCount < 0 {
-					return field.Invalid(
-						field.NewPath("spec", "serving", "scaleOptions", "keda", "scaledObject", "maxReplicaCount"),
-						maxReplicaCount,
-						"cannot be less than 0")
-				}
-				if minReplicaCount > maxReplicaCount {
-					return field.Invalid(
-						field.NewPath("spec", "serving", "scaleOptions", "keda", "scaledObject", "minReplicaCount"),
-						minReplicaCount,
-						"must be less than maxReplicaCount")
 				}
 
 				if scaledObject.Advanced != nil {
@@ -378,12 +351,7 @@ func (r *Function) ValidateServing() error {
 						scaleJob.FailedJobsHistoryLimit,
 						"must not be less than 0")
 				}
-				if scaleJob.MaxReplicaCount != nil && *scaleJob.MaxReplicaCount <= 0 {
-					return field.Invalid(
-						field.NewPath("spec", "serving", "scaleOptions", "keda", "scaleJob", "maxReplicaCount"),
-						scaleJob.MaxReplicaCount,
-						"must not be less than 0")
-				}
+
 				if err := r.ValidateKedaScaledJobScalingStrategy(); err != nil {
 					return err
 				}
@@ -391,127 +359,6 @@ func (r *Function) ValidateServing() error {
 		}
 	}
 
-	if r.Spec.Serving.Inputs != nil {
-		for index, input := range r.Spec.Serving.Inputs {
-			if input.Name == "" {
-				return field.Required(field.NewPath("spec", "serving", "inputs", fmt.Sprintf("[%d]", index), "name"),
-					"must be specified")
-			}
-			keyInPubsub, keyInBindings := false, false
-			if r.Spec.Serving.Pubsub != nil {
-				_, keyInPubsub = r.Spec.Serving.Pubsub[input.Component]
-			}
-			if r.Spec.Serving.Bindings != nil {
-				_, keyInBindings = r.Spec.Serving.Bindings[input.Component]
-			}
-			if !keyInPubsub && !keyInBindings {
-				return field.Invalid(field.NewPath("spec", "serving", "inputs", fmt.Sprintf("[%d]", index), "component"),
-					input.Component,
-					"must be in the set of the key of spec.serving.bindings or spec.serving.pubsub")
-			}
-		}
-	}
-
-	if r.Spec.Serving.Outputs != nil {
-		for index, output := range r.Spec.Serving.Outputs {
-			if output.Name == "" {
-				return field.Required(field.NewPath("spec", "serving", "outputs", fmt.Sprintf("[%d]", index), "name"),
-					"must be specified")
-			}
-			keyInPubsub, keyInBindings := false, false
-			if r.Spec.Serving.Pubsub != nil {
-				_, keyInPubsub = r.Spec.Serving.Pubsub[output.Component]
-			}
-			if r.Spec.Serving.Bindings != nil {
-				_, keyInBindings = r.Spec.Serving.Bindings[output.Component]
-			}
-			if !keyInPubsub && !keyInBindings {
-				return field.Invalid(field.NewPath("spec", "serving", "outputs", fmt.Sprintf("[%d]", index), "component"),
-					output.Component,
-					"must be in the set of the key of spec.serving.bindings or spec.serving.pubsub")
-			}
-		}
-	}
-
-	if r.Spec.Serving.Pubsub != nil {
-		for key, componentSpec := range r.Spec.Serving.Pubsub {
-			if r.Spec.Serving.Bindings != nil {
-				if _, ok := r.Spec.Serving.Bindings[key]; ok {
-					return field.Invalid(field.NewPath("spec", "serving", "pubsub", key),
-						key,
-						"cannot use the same name as the bindings component")
-				}
-			}
-			if componentSpec.Type == "" {
-				return field.Required(field.NewPath("spec", "serving", "pubsub", key, "type"),
-					"must be specified")
-			}
-			reg := regexp.MustCompile(`^pubsub\..*$`)
-			if !reg.MatchString(componentSpec.Type) {
-				return field.Invalid(field.NewPath("spec", "serving", "pubsub", key, "type"),
-					componentSpec.Type,
-					"the prefix should be pubsub.")
-			}
-		}
-	}
-
-	if r.Spec.Serving.Bindings != nil {
-		for key, componentSpec := range r.Spec.Serving.Bindings {
-			if r.Spec.Serving.Pubsub != nil {
-				if _, ok := r.Spec.Serving.Pubsub[key]; ok {
-					return field.Invalid(field.NewPath("spec", "serving", "bindings", key),
-						key,
-						"cannot use the same name as the pubsub component")
-				}
-			}
-			if componentSpec.Type == "" {
-				return field.Required(field.NewPath("spec", "serving", "bindings", key, "type"),
-					"must be specified")
-			}
-			reg := regexp.MustCompile(`^bindings\..*$`)
-			if !reg.MatchString(componentSpec.Type) {
-				return field.Invalid(field.NewPath("spec", "serving", "bindings", key, "type"),
-					componentSpec.Type,
-					"the prefix should be bindings.")
-			}
-		}
-	}
-
-	if r.Spec.Serving.Triggers != nil {
-		for index, trigger := range r.Spec.Serving.Triggers {
-			if trigger.Type == "" {
-				return field.Required(field.NewPath("spec", "serving", "triggers", fmt.Sprintf("[%d]", index), "type"),
-					"must be specified")
-			}
-			if trigger.Metadata == nil {
-				return field.Required(field.NewPath("spec", "serving", "triggers", fmt.Sprintf("[%d]", index), "metadata"),
-					"must be specified")
-			}
-			if trigger.AuthenticationRef != nil {
-				if trigger.AuthenticationRef.Kind != "" {
-					if _, ok := kedaScaledObjectAuthRefKinds[trigger.AuthenticationRef.Kind]; !ok {
-						return field.NotSupported(field.NewPath("spec", "serving", "triggers", fmt.Sprintf("[%d]", index), "authenticationRef", "kind"),
-							trigger.AuthenticationRef.Kind,
-							kedaScaledObjectAuthRefKindsSlice)
-					}
-				}
-			}
-
-			if trigger.FallbackReplicas != nil && *trigger.FallbackReplicas <= 0 {
-				return field.Invalid(field.NewPath("spec", "serving", "triggers", fmt.Sprintf("[%d]", index), "fallbackReplicas"),
-					trigger.FallbackReplicas,
-					"must be greater than 0")
-			}
-
-			if trigger.TargetKind != nil {
-				if _, ok := scaleTargetKinds[*trigger.TargetKind]; !ok {
-					return field.NotSupported(field.NewPath("spec", "serving", "triggers", fmt.Sprintf("[%d]", index), "targetKind"),
-						trigger.TargetKind,
-						scaleTargetKindsSlice)
-				}
-			}
-		}
-	}
 	return nil
 }
 
@@ -641,16 +488,12 @@ func convertMapKeysToStringSlice(m interface{}) []string {
 				keys = append(keys, key.Interface().(string))
 			case shipwrightv1alpha1.BuildStrategyKind:
 				keys = append(keys, string(key.Interface().(shipwrightv1alpha1.BuildStrategyKind)))
-			case Runtime:
-				keys = append(keys, string(key.Interface().(Runtime)))
 			case v1.RestartPolicy:
 				keys = append(keys, string(key.Interface().(v1.RestartPolicy)))
 			case v2beta2.ScalingPolicySelect:
 				keys = append(keys, string(key.Interface().(v2beta2.ScalingPolicySelect)))
 			case v2beta2.HPAScalingPolicyType:
 				keys = append(keys, string(key.Interface().(v2beta2.HPAScalingPolicyType)))
-			case ScaleTargetKind:
-				keys = append(keys, string(key.Interface().(ScaleTargetKind)))
 			}
 		}
 		return keys

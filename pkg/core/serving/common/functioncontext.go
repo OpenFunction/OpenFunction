@@ -16,12 +16,9 @@ limitations under the License.
 
 package common
 
-const (
-	bindings = "bindings"
-	topic    = "pubsub"
-)
+import openfunction "github.com/openfunction/apis/core/v1beta2"
 
-type functionContext struct {
+type functionContextV1beta1 struct {
 	Name           string                     `json:"name"`
 	Version        string                     `json:"version"`
 	Inputs         map[string]*functionInput  `json:"inputs,omitempty"`
@@ -82,4 +79,24 @@ type plugins struct {
 	Order []string `yaml:"order,omitempty"`
 	Pre   []string `yaml:"pre,omitempty"`
 	Post  []string `yaml:"post,omitempty"`
+}
+
+type functionComponent struct {
+	ComponentName string            `json:"componentName"`
+	ComponentType string            `json:"componentType"`
+	Topic         string            `json:"topic,omitempty"`
+	Metadata      map[string]string `json:"metadata,omitempty"`
+	Operation     string            `json:"operation,omitempty"`
+}
+
+type functionContextV1beta2 struct {
+	Name      string                        `json:"name"`
+	Version   string                        `json:"version"`
+	Triggers  *openfunction.Triggers        `json:"triggers,omitempty"`
+	Inputs    map[string]*functionComponent `json:"inputs,omitempty"`
+	Outputs   map[string]*functionComponent `json:"outputs,omitempty"`
+	States    map[string]*functionComponent `json:"states,omitempty"`
+	PreHooks  []string                      `json:"preHooks,omitempty"`
+	PostHooks []string                      `json:"postHooks,omitempty"`
+	Tracing   *openfunction.TracingConfig   `json:"tracing,omitempty"`
 }
