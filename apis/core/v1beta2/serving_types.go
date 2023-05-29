@@ -170,9 +170,9 @@ type Exporter struct {
 }
 
 type ServingImpl struct {
-	// Triggers used to trigge the Function.
+	// Triggers used to trigger the Function.
 	// +optional
-	Triggers *Triggers `json:"triggers"`
+	Triggers *Triggers `json:"triggers,omitempty"`
 	// The ScaleOptions will help us to set up guidelines for the autoscaling of function workloads.
 	// +optional
 	ScaleOptions *ScaleOptions `json:"scaleOptions,omitempty"`

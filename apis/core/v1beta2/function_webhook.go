@@ -101,6 +101,21 @@ func (r *Function) Default() {
 		r.Spec.Version = &version
 	}
 
+	if r.Spec.Serving.Triggers == nil {
+		r.Spec.Serving.Triggers = &Triggers{}
+	}
+
+	if len(r.Spec.Serving.Triggers.Dapr) == 0 {
+		if r.Spec.Serving.Triggers.Http == nil {
+			r.Spec.Serving.Triggers.Http = &HttpTrigger{}
+		}
+
+		if r.Spec.Serving.Triggers.Http.Port == nil || *r.Spec.Serving.Triggers.Http.Port == 0 {
+			port := int32(constants.DefaultFuncPort)
+			r.Spec.Serving.Triggers.Http.Port = &port
+		}
+	}
+
 	if r.Spec.Serving != nil &&
 		r.Spec.Serving.Triggers != nil &&
 		r.Spec.Serving.Triggers.Http != nil {
@@ -267,12 +282,6 @@ func (r *Function) ValidateBuild() error {
 }
 
 func (r *Function) ValidateServing() error {
-	if r.Spec.Serving.Triggers.Http == nil &&
-		(r.Spec.Serving.Triggers.Dapr == nil || len(r.Spec.Serving.Triggers.Dapr) == 0) {
-		return field.Required(field.NewPath("spec", "serving", "Triggers"),
-			"must specify one of: `http` or `dapr`")
-	}
-
 	if r.Spec.Serving.ScaleOptions != nil {
 		scaleOptions := r.Spec.Serving.ScaleOptions
 		minReplicas := int32(0)
