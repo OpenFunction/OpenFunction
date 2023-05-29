@@ -333,7 +333,7 @@ func (r *builderRun) createShipwrightBuild(builder *openfunction.Builder) *shipw
 	}
 
 	if builder.Spec.Shipwright != nil {
-		shipwrightBuild.Spec.ParamValues = append(shipwrightBuild.Spec.ParamValues, builder.Spec.Shipwright.Params...)
+		appendParams(shipwrightBuild, builder)
 	}
 
 	for k, v := range builder.Labels {
@@ -377,6 +377,37 @@ func (r *builderRun) createShipwrightBuild(builder *openfunction.Builder) *shipw
 
 	shipwrightBuild.SetOwnerReferences(nil)
 	return shipwrightBuild
+}
+
+func appendParams(shipwrightBuild *shipwrightv1alpha1.Build, b *openfunction.Builder) {
+	for _, p := range b.Spec.Shipwright.Params {
+		if p == nil {
+			continue
+		}
+
+		param := shipwrightv1alpha1.ParamValue{
+			SingleValue: nil,
+			Name:        p.Name,
+		}
+
+		if p.SingleValue != nil {
+			param.SingleValue = &shipwrightv1alpha1.SingleValue{
+				Value:          p.Value,
+				ConfigMapValue: p.ConfigMapValue,
+				SecretValue:    p.SecretValue,
+			}
+		}
+
+		for _, v := range p.Values {
+			param.Values = append(param.Values, shipwrightv1alpha1.SingleValue{
+				Value:          v.Value,
+				ConfigMapValue: v.ConfigMapValue,
+				SecretValue:    v.SecretValue,
+			})
+		}
+
+		shipwrightBuild.Spec.ParamValues = append(shipwrightBuild.Spec.ParamValues, param)
+	}
 }
 
 func (r *builderRun) createShipwrightBuildRun(builder *openfunction.Builder, name string) *shipwrightv1alpha1.BuildRun {

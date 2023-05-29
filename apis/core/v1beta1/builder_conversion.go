@@ -20,7 +20,6 @@ package v1beta1
    standard packages.
 */
 import (
-	shipwrightv1alpha1 "github.com/shipwright-io/build/pkg/apis/build/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 
 	"github.com/openfunction/apis/core/v1beta2"
@@ -83,8 +82,8 @@ func (src *Builder) ConvertTo(dstRaw conversion.Hub) error {
 		if src.Spec.Params != nil {
 			for k, v := range src.Spec.Params {
 				value := v
-				dst.Spec.Shipwright.Params = append(dst.Spec.Shipwright.Params, shipwrightv1alpha1.ParamValue{
-					SingleValue: &shipwrightv1alpha1.SingleValue{
+				dst.Spec.Shipwright.Params = append(dst.Spec.Shipwright.Params, &v1beta2.ParamValue{
+					SingleValue: &v1beta2.SingleValue{
 						Value: &value,
 					},
 					Name: k,

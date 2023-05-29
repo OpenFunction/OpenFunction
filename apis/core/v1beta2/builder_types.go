@@ -42,6 +42,40 @@ type Strategy struct {
 	Kind *string `json:"kind,omitempty"`
 }
 
+// The value type contains the properties for a value, this allows for an
+// easy extension in the future to support more kinds
+type SingleValue struct {
+
+	// The value of the parameter
+	// +optional
+	Value *string `json:"value"`
+
+	// The ConfigMap value of the parameter
+	// +optional
+	ConfigMapValue *shipwrightv1alpha1.ObjectKeyRef `json:"configMapValue,omitempty"`
+
+	// The secret value of the parameter
+	// +optional
+	SecretValue *shipwrightv1alpha1.ObjectKeyRef `json:"secretValue,omitempty"`
+}
+
+// ParamValue is a key/value that populates a strategy parameter
+// used in the execution of the strategy steps
+type ParamValue struct {
+
+	// Inline the properties of a value
+	// +optional
+	*SingleValue `json:",inline"`
+
+	// Name of the parameter
+	// +required
+	Name string `json:"name"`
+
+	// Values of an array parameter
+	// +optional
+	Values []SingleValue `json:"values,omitempty"`
+}
+
 type ShipwrightEngine struct {
 	// Strategy references the BuildStrategy to use to build the image.
 	// +optional
@@ -50,7 +84,7 @@ type ShipwrightEngine struct {
 	// When using _params_, users should avoid:
 	// Defining a parameter name that doesn't match one of the `spec.parameters` defined in the `BuildStrategy`.
 	// Defining a parameter name that collides with the Shipwright reserved parameters including BUILDER_IMAGE,DOCKERFILE,CONTEXT_DIR and any name starting with shp-.
-	Params []shipwrightv1alpha1.ParamValue `json:"params,omitempty"`
+	Params []*ParamValue `json:"params,omitempty"`
 	// Timeout defines the maximum amount of time the Build should take to execute.
 	//
 	// +optional

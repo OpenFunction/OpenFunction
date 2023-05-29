@@ -48,6 +48,7 @@ spec:
     - args:
         - -app=/workspace/source/$(params.CONTEXT_DIR)
         - -cache-dir=/cache
+        - -cache-image=$(params.CACHE_IMAGE)
         - -uid=$(params.USER_ID)
         - -gid=$(params.GROUP_ID)
         - -layers=/layers
