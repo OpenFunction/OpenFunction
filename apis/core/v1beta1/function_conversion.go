@@ -15,7 +15,6 @@ package v1beta1
 
 import (
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
-	shipwrightv1alpha1 "github.com/shipwright-io/build/pkg/apis/build/v1alpha1"
 	"gopkg.in/yaml.v3"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 
@@ -151,8 +150,8 @@ func (src *Function) convertBuildTo(dst *v1beta2.Function) error {
 		if src.Spec.Build.Params != nil {
 			for k, v := range src.Spec.Build.Params {
 				value := v
-				dst.Spec.Build.Shipwright.Params = append(dst.Spec.Build.Shipwright.Params, shipwrightv1alpha1.ParamValue{
-					SingleValue: &shipwrightv1alpha1.SingleValue{
+				dst.Spec.Build.Shipwright.Params = append(dst.Spec.Build.Shipwright.Params, &v1beta2.ParamValue{
+					SingleValue: &v1beta2.SingleValue{
 						Value: &value,
 					},
 					Name: k,
