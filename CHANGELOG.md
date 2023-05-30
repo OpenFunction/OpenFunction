@@ -40,7 +40,7 @@ In this release, we add core v1beta2 API, and the core v1beta1 API is deprecated
 #### Enhancement
 
 - Delete the `lastTransitionTime` field from the gateway status to prevent frequent triggering of reconcile [OpenFunction#442](https://github.com/OpenFunction/OpenFunction/pull/442).
-- Set scopes when create dapr components [OpenFunction#429](https://github.com/OpenFunction/OpenFunction/pull/429).
+- Allow to set scopes when creating Dapr components [OpenFunction#429](https://github.com/OpenFunction/OpenFunction/pull/429).
 - Support setting cache image to improve build performance when using openfunction strategy [OpenFunction#444](https://github.com/OpenFunction/OpenFunction/pull/444).
 - Support setting bash image of openfunction strategy [OpenFunction#445](https://github.com/OpenFunction/OpenFunction/pull/445).
 
