@@ -35,7 +35,7 @@ In this release, we add core v1beta2 API, and the core v1beta1 API is deprecated
 #### Features
 
 - Add core [v1beta2 API](https://github.com/OpenFunction/OpenFunction/blob/main/docs/proposals/20230424-unify-the-definition-of-functions.md) [OpenFunction#442](https://github.com/OpenFunction/OpenFunction/pull/442).
-- Support dapr state management [OpenFunction#427](https://github.com/OpenFunction/OpenFunction/pull/427).
+- Support [Dapr state management](https://github.com/OpenFunction/OpenFunction/blob/main/docs/proposals/20230330-support-dapr-state-management.md) [OpenFunction#427](https://github.com/OpenFunction/OpenFunction/pull/427).
 
 #### Enhancement
 
