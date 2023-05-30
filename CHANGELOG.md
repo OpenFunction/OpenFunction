@@ -14,6 +14,7 @@
   * [0.8.1-rc.0 / 2022-11-23](#081-rc0--2022-11-23)
   * [0.8.1 / 2022-12-01](#081--2022-12-01)
   * [1.0.0-rc.0 / 2023-02-23](#100-rc0--2023-02-23)
+  * [1.1.0/ 2023-05-30](#110--2023-05-30)
 - [OpenFunction/samples](#openfunctionsamples)
 - [OpenFunction/website](#openfunctionwebsite)
 - [OpenFunction/builder](#openfunctionbuilder)
@@ -24,6 +25,28 @@
 - [OpenFunction/events-handlers](#openfunctionevents-handlers)
 
 # OpenFunction
+
+## 1.1.0 / 2023-05-30
+
+### OpenFunction
+
+The core v1beta2 API added.
+
+#### Features
+
+- Add core v1beta2 API, use `triggers` instead of `inputs` [OpenFunction#442](https://github.com/OpenFunction/OpenFunction/pull/442).
+- Support dapr state management [OpenFunction#427](https://github.com/OpenFunction/OpenFunction/pull/427).
+
+#### Enhancement
+
+- Delete the `lastTransitionTime` field from the gateway status to prevent frequent triggering of reconcile [OpenFunction#442](https://github.com/OpenFunction/OpenFunction/pull/442).
+- Set scopes when create dapr components [OpenFunction#429](https://github.com/OpenFunction/OpenFunction/pull/429).
+- Support setting cache image to improve build performance when using openfunction strategy [OpenFunction#444](https://github.com/OpenFunction/OpenFunction/pull/444).
+- Support setting bash image of openfunction strategy [OpenFunction#445](https://github.com/OpenFunction/OpenFunction/pull/445).
+
+#### BUGFIX
+
+- Fix bug that the serving will restart immediately after the function image modified [OpenFunction#442](https://github.com/OpenFunction/OpenFunction/pull/442).
 
 ## 1.0.0-rc.0 / 2023-02-23
 
