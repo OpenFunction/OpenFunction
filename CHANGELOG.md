@@ -30,7 +30,7 @@
 
 ### OpenFunction
 
-The core v1beta2 API added.
+In this release, we add core v1beta2 API, and the core v1beta1 API is deprecated and will be removed in the future. There're quite a few refactoring in v1beta2, you can find more details in this [proposal](https://github.com/OpenFunction/OpenFunction/blob/main/docs/proposals/20230424-unify-the-definition-of-functions.md)
 
 #### Features
 
