@@ -500,6 +500,7 @@ func (dst *Function) convertBuildFrom(src *v1beta2.Function) error {
 		dst.Spec.Build.Shipwright.Timeout = src.Spec.Build.Shipwright.Timeout
 
 		if src.Spec.Build.Shipwright.Params != nil {
+			dst.Spec.Build.Params = make(map[string]string)
 			for _, item := range src.Spec.Build.Shipwright.Params {
 				if item.SingleValue == nil || item.SingleValue.Value == nil {
 					continue

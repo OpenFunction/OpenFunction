@@ -178,6 +178,7 @@ func (dst *Builder) ConvertFrom(srcRaw conversion.Hub) error {
 		}
 
 		if src.Spec.Shipwright.Params != nil {
+			dst.Spec.Params = make(map[string]string)
 			for _, item := range src.Spec.Shipwright.Params {
 				if item.SingleValue == nil || item.SingleValue.Value == nil {
 					continue
