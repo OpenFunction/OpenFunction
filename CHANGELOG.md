@@ -46,7 +46,7 @@ In this release, we add core v1beta2 API, and the core v1beta1 API is deprecated
 
 #### BUGFIX
 
-- Fix bug that the serving will restart immediately after the function image modified [OpenFunction#442](https://github.com/OpenFunction/OpenFunction/pull/442).
+- Restart the serving only after the function image is built when there are code changes [OpenFunction#442](https://github.com/OpenFunction/OpenFunction/pull/442).
 
 ## 1.0.0-rc.0 / 2023-02-23
 
