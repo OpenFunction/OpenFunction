@@ -23,7 +23,7 @@ This page describes the release process and the currently planned schedule for u
 | v1.0.0-rc      | 2023-02-23             | Wrongerror @wrongerror    |
 | v1.0.0         | 2023-03-08             | Wrongerror @wrongerror    |
 | v1.1.0         | 2023-05-30             | Wanjun Lei @wanjunlei     |
-
+| v1.1.1         | 2023-06-14             | Wanjun Lei @wanjunlei     |
 
 # How to cut a new release
 
