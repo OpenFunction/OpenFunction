@@ -82,7 +82,7 @@ const (
 
 	bindingsPrefix = "bindings"
 	pubsubPrefix   = "pubsub"
-	statesPrefix   = "states"
+	statePrefix    = "state"
 )
 
 func CreateComponents(
@@ -105,7 +105,7 @@ func CreateComponents(
 
 	for name, component := range s.Spec.States {
 		if component.Spec != nil {
-			components[statesPrefix+"-"+name] = component.Spec.DeepCopy()
+			components[statePrefix+"-"+name] = component.Spec.DeepCopy()
 		}
 	}
 
