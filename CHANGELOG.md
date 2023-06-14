@@ -15,6 +15,7 @@
   * [0.8.1 / 2022-12-01](#081--2022-12-01)
   * [1.0.0-rc.0 / 2023-02-23](#100-rc0--2023-02-23)
   * [1.1.0/ 2023-05-30](#110--2023-05-30)
+  * [1.1.1/ 2023-06-14](#111--2023-06-14)
 - [OpenFunction/samples](#openfunctionsamples)
 - [OpenFunction/website](#openfunctionwebsite)
 - [OpenFunction/builder](#openfunctionbuilder)
@@ -25,6 +26,14 @@
 - [OpenFunction/events-handlers](#openfunctionevents-handlers)
 
 # OpenFunction
+
+## 1.1.1 / 2023-06-14
+
+### OpenFunction
+
+#### BUGFIX
+
+- Fix bug can not find state store [OpenFunction#456](https://github.com/OpenFunction/OpenFunction/pull/456).
 
 ## 1.1.0 / 2023-05-30
 
