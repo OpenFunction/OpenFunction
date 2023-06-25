@@ -135,9 +135,14 @@ func (r *builderRun) Result(builder *openfunction.Builder) (string, string, stri
 	log := r.log.WithName("Result").
 		WithValues("Builder", fmt.Sprintf("%s/%s", builder.Namespace, builder.Name))
 
+	shipwrightBuildName := getName(builder, shipwrightBuildName)
+	if shipwrightBuildName == "" {
+		return "", "", "", nil
+	}
+
 	shipwrightBuild := &shipwrightv1alpha1.Build{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      getName(builder, shipwrightBuildName),
+			Name:      shipwrightBuildName,
 			Namespace: builder.Namespace,
 		},
 	}
@@ -156,9 +161,14 @@ func (r *builderRun) Result(builder *openfunction.Builder) (string, string, stri
 		return "", "", "", nil
 	}
 
+	shipwrightBuildRunName := getName(builder, shipwrightBuildRunName)
+	if shipwrightBuildRunName == "" {
+		return "", "", "", nil
+	}
+
 	shipwrightBuildRun := &shipwrightv1alpha1.BuildRun{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      getName(builder, shipwrightBuildRunName),
+			Name:      shipwrightBuildRunName,
 			Namespace: builder.Namespace,
 		},
 	}
@@ -263,9 +273,14 @@ func (r *builderRun) Cancel(builder *openfunction.Builder) error {
 	log := r.log.WithName("Cancel").
 		WithValues("Builder", fmt.Sprintf("%s/%s", builder.Namespace, builder.Name))
 
+	shipwrightBuildRunName := getName(builder, shipwrightBuildRunName)
+	if shipwrightBuildRunName == "" {
+		return nil
+	}
+
 	shipwrightBuildRun := &shipwrightv1alpha1.BuildRun{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      getName(builder, shipwrightBuildRunName),
+			Name:      shipwrightBuildRunName,
 			Namespace: builder.Namespace,
 		},
 	}
