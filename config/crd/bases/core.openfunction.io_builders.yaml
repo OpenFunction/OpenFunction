@@ -173,6 +173,9 @@ spec:
     - jsonPath: .status.reason
       name: Reason
       type: string
+    - jsonPath: .status.buildTime
+      name: BuildTime
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -328,6 +331,8 @@ spec:
             type: object
           status:
             properties:
+              buildTime:
+                type: string
               message:
                 type: string
               output:

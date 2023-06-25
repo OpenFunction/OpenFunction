@@ -153,6 +153,7 @@ func (r *FunctionReconciler) createBuilder(fn *openfunction.Function) error {
 	fn.Status.Build.State = ""
 	fn.Status.Build.Reason = ""
 	fn.Status.Build.Message = ""
+	fn.Status.Build.BuildTime = nil
 	fn.Status.Build.ResourceRef = ""
 	if err := r.Status().Update(r.ctx, fn); err != nil {
 		log.Error(err, "Failed to reset function build status")
@@ -211,7 +212,7 @@ func (r *FunctionReconciler) createBuilder(fn *openfunction.Function) error {
 	fn.Status.Build = &openfunction.Condition{
 		State:        openfunction.Created,
 		ResourceRef:  builder.Name,
-		ResourceHash: util.Hash(builder.Spec),
+		ResourceHash: getBuilderHash(builder.Spec),
 	}
 	if err := r.Status().Update(r.ctx, fn); err != nil {
 		log.Error(err, "Failed to update function build status")
@@ -258,6 +259,7 @@ func (r *FunctionReconciler) updateFuncWithBuilderStatus(fn *openfunction.Functi
 		fn.Status.Build.State = builder.Status.State
 		fn.Status.Build.Reason = builder.Status.Reason
 		fn.Status.Build.Message = builder.Status.Message
+		fn.Status.Build.BuildTime = builder.Status.BuildTime
 		// If build had complete, update function serving status.
 		if builder.Status.State == openfunction.Succeeded {
 			if builder.Status.Output != nil {
@@ -596,7 +598,7 @@ func (r *FunctionReconciler) needToCreateBuilder(fn *openfunction.Function) bool
 		return true
 	}
 
-	newHash := util.Hash(r.createBuilderSpec(fn))
+	newHash := getBuilderHash(r.createBuilderSpec(fn))
 	// Builder changed, need to create.
 	if newHash != fn.Status.Build.ResourceHash {
 		log.V(1).Info("builder changed", "old", fn.Status.Build.ResourceHash, "new", newHash)
@@ -619,6 +621,17 @@ func (r *FunctionReconciler) needToCreateBuilder(fn *openfunction.Function) bool
 	}
 
 	return false
+}
+
+func getBuilderHash(spec openfunction.BuilderSpec) string {
+	newSpec := spec.DeepCopy()
+	newSpec.SuccessfulBuildsHistoryLimit = nil
+	newSpec.FailedBuildsHistoryLimit = nil
+	newSpec.BuilderMaxAge = nil
+	newSpec.Timeout = nil
+	newSpec.State = ""
+
+	return util.Hash(newSpec)
 }
 
 func (r *FunctionReconciler) needToCreateServing(fn *openfunction.Function) bool {

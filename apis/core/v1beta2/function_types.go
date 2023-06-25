@@ -137,13 +137,14 @@ type FunctionSpec struct {
 }
 
 type Condition struct {
-	State                     string `json:"state,omitempty"`
-	Reason                    string `json:"reason,omitempty"`
-	Message                   string `json:"message,omitempty"`
-	ResourceRef               string `json:"resourceRef,omitempty"`
-	LastSuccessfulResourceRef string `json:"lastSuccessfulResourceRef,omitempty"`
-	ResourceHash              string `json:"resourceHash,omitempty"`
-	Service                   string `json:"service,omitempty"`
+	State                     string           `json:"state,omitempty"`
+	Reason                    string           `json:"reason,omitempty"`
+	Message                   string           `json:"message,omitempty"`
+	ResourceRef               string           `json:"resourceRef,omitempty"`
+	LastSuccessfulResourceRef string           `json:"lastSuccessfulResourceRef,omitempty"`
+	ResourceHash              string           `json:"resourceHash,omitempty"`
+	Service                   string           `json:"service,omitempty"`
+	BuildTime                 *metav1.Duration `json:"buildTime,omitempty"`
 }
 
 type FunctionAddress struct {
