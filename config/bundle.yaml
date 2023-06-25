@@ -188,8 +188,8 @@ spec:
     - jsonPath: .status.reason
       name: Reason
       type: string
-    - jsonPath: .status.buildTime
-      name: BuildTime
+    - jsonPath: .status.buildDuration
+      name: BuildDuration
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
@@ -346,7 +346,7 @@ spec:
             type: object
           status:
             properties:
-              buildTime:
+              buildDuration:
                 type: string
               message:
                 type: string
@@ -9367,7 +9367,7 @@ spec:
                 type: array
               build:
                 properties:
-                  buildTime:
+                  buildDuration:
                     type: string
                   lastSuccessfulResourceRef:
                     type: string
@@ -9460,7 +9460,7 @@ spec:
                 type: object
               serving:
                 properties:
-                  buildTime:
+                  buildDuration:
                     type: string
                   lastSuccessfulResourceRef:
                     type: string

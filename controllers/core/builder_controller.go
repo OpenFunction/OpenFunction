@@ -105,7 +105,7 @@ func (r *BuilderReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		builder.Status.State = openfunction.Timeout
 		builder.Status.Reason = openfunction.Timeout
 		builder.Status.Message = openfunction.Timeout
-		builder.Status.BuildTime = builder.Spec.Timeout
+		builder.Status.BuildDuration = builder.Spec.Timeout
 
 		if err := r.Status().Update(r.ctx, builder); err != nil {
 			log.Error(err, "Failed to update builder status")
@@ -179,7 +179,7 @@ func (r *BuilderReconciler) getBuilderResult(builder *openfunction.Builder, buil
 		builder.Status.Reason = reason
 		builder.Status.Message = message
 		if !builder.CreationTimestamp.IsZero() {
-			builder.Status.BuildTime = &metav1.Duration{
+			builder.Status.BuildDuration = &metav1.Duration{
 				Duration: metav1.Now().UTC().Sub(builder.CreationTimestamp.UTC()).Truncate(time.Second),
 			}
 		}
@@ -257,7 +257,7 @@ func (r *BuilderReconciler) buildTimeout(builder *openfunction.Builder) error {
 		b.Status.State = openfunction.Timeout
 		b.Status.Reason = openfunction.Timeout
 		b.Status.Message = openfunction.Timeout
-		b.Status.BuildTime = builder.Spec.Timeout
+		b.Status.BuildDuration = builder.Spec.Timeout
 		return r.Status().Update(r.ctx, b)
 	}
 

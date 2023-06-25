@@ -8193,7 +8193,7 @@ spec:
                 type: array
               build:
                 properties:
-                  buildTime:
+                  buildDuration:
                     type: string
                   lastSuccessfulResourceRef:
                     type: string
@@ -8286,7 +8286,7 @@ spec:
                 type: object
               serving:
                 properties:
-                  buildTime:
+                  buildDuration:
                     type: string
                   lastSuccessfulResourceRef:
                     type: string

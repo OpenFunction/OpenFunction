@@ -144,7 +144,7 @@ type Condition struct {
 	LastSuccessfulResourceRef string           `json:"lastSuccessfulResourceRef,omitempty"`
 	ResourceHash              string           `json:"resourceHash,omitempty"`
 	Service                   string           `json:"service,omitempty"`
-	BuildTime                 *metav1.Duration `json:"buildTime,omitempty"`
+	BuildDuration             *metav1.Duration `json:"buildDuration,omitempty"`
 }
 
 type FunctionAddress struct {

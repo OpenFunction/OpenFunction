@@ -153,7 +153,7 @@ func (r *FunctionReconciler) createBuilder(fn *openfunction.Function) error {
 	fn.Status.Build.State = ""
 	fn.Status.Build.Reason = ""
 	fn.Status.Build.Message = ""
-	fn.Status.Build.BuildTime = nil
+	fn.Status.Build.BuildDuration = nil
 	fn.Status.Build.ResourceRef = ""
 	if err := r.Status().Update(r.ctx, fn); err != nil {
 		log.Error(err, "Failed to reset function build status")
@@ -259,7 +259,7 @@ func (r *FunctionReconciler) updateFuncWithBuilderStatus(fn *openfunction.Functi
 		fn.Status.Build.State = builder.Status.State
 		fn.Status.Build.Reason = builder.Status.Reason
 		fn.Status.Build.Message = builder.Status.Message
-		fn.Status.Build.BuildTime = builder.Status.BuildTime
+		fn.Status.Build.BuildDuration = builder.Status.BuildDuration
 		// If build had complete, update function serving status.
 		if builder.Status.State == openfunction.Succeeded {
 			if builder.Status.Output != nil {

@@ -156,11 +156,11 @@ type BuilderOutput struct {
 
 // BuilderStatus defines the observed state of Builder
 type BuilderStatus struct {
-	Phase     string           `json:"phase,omitempty"`
-	State     string           `json:"state,omitempty"`
-	Reason    string           `json:"reason,omitempty"`
-	Message   string           `json:"message,omitempty"`
-	BuildTime *metav1.Duration `json:"buildTime,omitempty"`
+	Phase         string           `json:"phase,omitempty"`
+	State         string           `json:"state,omitempty"`
+	Reason        string           `json:"reason,omitempty"`
+	Message       string           `json:"message,omitempty"`
+	BuildDuration *metav1.Duration `json:"buildDuration,omitempty"`
 	// Associate resources.
 	ResourceRef map[string]string `json:"resourceRef,omitempty"`
 	// Output holds the results emitted from step definition of an output
@@ -182,7 +182,7 @@ type BuilderStatus struct {
 //+kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 //+kubebuilder:printcolumn:name="State",type=string,JSONPath=`.status.state`
 //+kubebuilder:printcolumn:name="Reason",type=string,JSONPath=`.status.reason`
-//+kubebuilder:printcolumn:name="BuildTime",type=string,JSONPath=`.status.buildTime`
+//+kubebuilder:printcolumn:name="BuildDuration",type=string,JSONPath=`.status.buildDuration`
 //+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // Builder is the Schema for the builders API
