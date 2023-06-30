@@ -27,12 +27,6 @@ import (
 	"text/template"
 	"time"
 
-	ctrlbuilder "sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/source"
-
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -41,12 +35,18 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/tools/events"
 	kservingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	ctrlbuilder "sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 	k8sgatewayapiv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	openfunction "github.com/openfunction/apis/core/v1beta2"
@@ -56,7 +56,12 @@ import (
 	"github.com/openfunction/pkg/util"
 )
 
-const GatewayField = ".spec.route.gatewayRef"
+const (
+	GatewayField = ".spec.route.gatewayRef"
+
+	buildAction   = "Build"
+	servingAction = "Serving"
+)
 
 // FunctionReconciler reconciles a Function object
 type FunctionReconciler struct {
@@ -65,15 +70,18 @@ type FunctionReconciler struct {
 	Scheme   *runtime.Scheme
 	ctx      context.Context
 	interval time.Duration
+
+	eventRecorder events.EventRecorder
 }
 
-func NewFunctionReconciler(mgr manager.Manager, interval time.Duration) *FunctionReconciler {
+func NewFunctionReconciler(mgr manager.Manager, interval time.Duration, eventRecorder events.EventRecorder) *FunctionReconciler {
 
 	r := &FunctionReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Log:      ctrl.Log.WithName("controllers").WithName("Function"),
-		interval: interval,
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		Log:           ctrl.Log.WithName("controllers").WithName("Function"),
+		interval:      interval,
+		eventRecorder: eventRecorder,
 	}
 
 	r.startFunctionWatcher()
@@ -88,6 +96,7 @@ func NewFunctionReconciler(mgr manager.Manager, interval time.Duration) *Functio
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=networking.openfunction.io,resources=gateways,verbs=get;list;watch
 //+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=events.k8s.io,resources=events,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -281,6 +290,8 @@ func (r *FunctionReconciler) updateFuncWithBuilderStatus(fn *openfunction.Functi
 			log.Error(err, "Failed to update function status")
 			return err
 		}
+
+		r.recordEvent(fn, &builder, buildAction, fn.Status.Build.State, fn.Status.Build.Message)
 	}
 
 	return r.pruneBuilder(fn)
@@ -517,11 +528,13 @@ func (r *FunctionReconciler) updateFuncWithServingStatus(fn *openfunction.Functi
 			}
 			log.V(1).Info("Serving is running", "serving", serving.Name)
 		}
-	}
 
-	if err := r.Status().Update(r.ctx, fn); err != nil {
-		log.Error(err, "Failed to update function status")
-		return err
+		if err := r.Status().Update(r.ctx, fn); err != nil {
+			log.Error(err, "Failed to update function status")
+			return err
+		}
+
+		r.recordEvent(fn, &serving, servingAction, fn.Status.Serving.State, fn.Status.Serving.Message)
 	}
 
 	return nil
@@ -972,6 +985,10 @@ func (r *FunctionReconciler) updateFuncWithHTTPRouteStatus(
 	if len(httpRoute.Status.RouteStatus.Parents) != 0 {
 		fn.Status.Route.Conditions = httpRoute.Status.Parents[0].Conditions
 	}
+	// Set a fixed value to prevent the Status of the Function from being updated frequently when the traffic is heavy.
+	for index := 0; index < len(fn.Status.Route.Conditions); index++ {
+		fn.Status.Route.Conditions[index].LastTransitionTime = fn.CreationTimestamp
+	}
 	fn.Status.Route.Hosts = httpRoute.Spec.Hostnames
 	for _, httpRule := range httpRoute.Spec.Rules {
 		for _, match := range httpRule.Matches {
@@ -1077,6 +1094,56 @@ func (r *FunctionReconciler) cleanExpiredBuilder() {
 			}
 		}
 	}
+}
+
+func (r *FunctionReconciler) recordEvent(fn *openfunction.Function, related runtime.Object, action, state, message string) {
+	log := r.Log.WithName("RecordEvent").
+		WithValues("Function", fmt.Sprintf("%s/%s", fn.Namespace, fn.Name))
+
+	eventType := corev1.EventTypeNormal
+	if state == openfunction.Timeout ||
+		state == openfunction.Failed ||
+		state == openfunction.Canceled {
+		eventType = corev1.EventTypeWarning
+	}
+
+	reason := ""
+	note := ""
+	switch action {
+	case buildAction:
+		switch state {
+		case openfunction.Building:
+			reason = "BuildStarted"
+			note = "Build started"
+		case openfunction.Succeeded:
+			reason = "BuildCompleted"
+			note = "Build completed"
+		case openfunction.Failed:
+			reason = "BuildFailed"
+			note = fmt.Sprintf("Build failed: %s", message)
+		case openfunction.Timeout:
+			reason = "BuildTimeout"
+			note = "Build timeout"
+		case openfunction.Canceled:
+			reason = "BuildCanceled"
+			note = "Build cancelled"
+		}
+	case servingAction:
+		switch state {
+		case openfunction.Starting:
+			reason = "Starting"
+			note = "Serving is starting"
+		case openfunction.Running:
+			reason = "Running"
+			note = "Serving is running"
+		case openfunction.Failed:
+			reason = "ServingFailed"
+			note = fmt.Sprintf("Serving start failed: %s", message)
+		}
+	}
+
+	r.eventRecorder.Eventf(fn, related, eventType, reason, action, note)
+	log.V(1).Info("Record Event", "Reason", reason)
 }
 
 // SetupWithManager sets up the controller with the Manager.

@@ -26,6 +26,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -48,15 +49,18 @@ type ServingReconciler struct {
 	ctx           context.Context
 	timers        map[string]*time.Timer
 	defaultConfig map[string]string
+
+	eventRecorder events.EventRecorder
 }
 
-func NewServingReconciler(mgr manager.Manager) *ServingReconciler {
+func NewServingReconciler(mgr manager.Manager, eventRecorder events.EventRecorder) *ServingReconciler {
 
 	r := &ServingReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		Log:    ctrl.Log.WithName("controllers").WithName("Serving"),
-		timers: make(map[string]*time.Timer),
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		Log:           ctrl.Log.WithName("controllers").WithName("Serving"),
+		timers:        make(map[string]*time.Timer),
+		eventRecorder: eventRecorder,
 	}
 
 	return r
@@ -106,6 +110,8 @@ func (r *ServingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 				log.Error(err, "Failed to update serving status")
 				return ctrl.Result{}, err
 			}
+
+			r.recordEvent(&s)
 		}
 		return ctrl.Result{}, nil
 	}
@@ -142,6 +148,8 @@ func (r *ServingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			log.Error(err, "Failed to update serving status")
 			return ctrl.Result{}, err
 		}
+
+		r.recordEvent(&s)
 		return ctrl.Result{}, nil
 	}
 
@@ -196,6 +204,8 @@ func (r *ServingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
+	r.recordEvent(&s)
+
 	log.V(1).Info("Serving is starting")
 
 	return ctrl.Result{}, nil
@@ -234,6 +244,8 @@ func (r *ServingReconciler) getServingResult(s *openfunction.Serving, servingRun
 		if err := r.Status().Update(r.ctx, s); err != nil {
 			return err
 		}
+
+		r.recordEvent(s)
 
 		r.stopTimer(fmt.Sprintf("%s/%s", s.Namespace, s.Name))
 		log.V(1).Info("Update serving status", "state", res)
@@ -282,6 +294,8 @@ func (r *ServingReconciler) startTimer(serving *openfunction.Serving) {
 				s.Status.State = openfunction.Timeout
 				if err := r.Status().Update(r.ctx, s); err != nil {
 					log.Error(err, "Failed to update serving status")
+				} else {
+					r.recordEvent(s)
 				}
 			}
 		}
@@ -298,6 +312,29 @@ func (r *ServingReconciler) stopTimer(key string) {
 		delete(r.timers, key)
 		log.Info("Timer stopped")
 	}
+}
+
+func (r *ServingReconciler) recordEvent(serving *openfunction.Serving) {
+	log := r.Log.WithName("RecordEvent").
+		WithValues("Serving", fmt.Sprintf("%s/%s", serving.Namespace, serving.Name))
+
+	eventType := corev1.EventTypeNormal
+	if serving.Status.State == openfunction.Failed {
+		eventType = corev1.EventTypeWarning
+	}
+
+	note := ""
+	switch serving.Status.State {
+	case openfunction.Starting:
+		note = "Serving is starting"
+	case openfunction.Running:
+		note = "Serving is running"
+	case openfunction.Failed:
+		note = fmt.Sprintf("Serving start failed: %s", serving.Status.Message)
+	}
+
+	r.eventRecorder.Eventf(serving, nil, eventType, serving.Status.State, servingAction, note)
+	log.V(1).Info("Record Event", "Reason", serving.Status.State)
 }
 
 // SetupWithManager sets up the controller with the Manager.

@@ -23,8 +23,10 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -42,15 +44,18 @@ type BuilderReconciler struct {
 	Scheme *runtime.Scheme
 	ctx    context.Context
 	timers map[string]*time.Timer
+
+	eventRecorder events.EventRecorder
 }
 
-func NewBuilderReconciler(mgr manager.Manager) *BuilderReconciler {
+func NewBuilderReconciler(mgr manager.Manager, eventRecorder events.EventRecorder) *BuilderReconciler {
 
 	r := &BuilderReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		Log:    ctrl.Log.WithName("controllers").WithName("Builder"),
-		timers: make(map[string]*time.Timer),
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		Log:           ctrl.Log.WithName("controllers").WithName("Builder"),
+		timers:        make(map[string]*time.Timer),
+		eventRecorder: eventRecorder,
 	}
 
 	return r
@@ -112,6 +117,8 @@ func (r *BuilderReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			return ctrl.Result{}, err
 		}
 
+		r.recordEvent(builder)
+
 		return ctrl.Result{}, nil
 	}
 
@@ -145,6 +152,8 @@ func (r *BuilderReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		log.Error(err, "Failed to update builder status")
 		return ctrl.Result{}, err
 	}
+
+	r.recordEvent(builder)
 
 	log.V(1).Info("Builder is running")
 
@@ -186,6 +195,8 @@ func (r *BuilderReconciler) getBuilderResult(builder *openfunction.Builder, buil
 		if err := r.Status().Update(r.ctx, builder); err != nil {
 			return err
 		}
+
+		r.recordEvent(builder)
 
 		r.stopTimer(fmt.Sprintf("%s/%s", builder.Namespace, builder.Name))
 		log.V(1).Info("Update builder status", "state", res)
@@ -258,7 +269,12 @@ func (r *BuilderReconciler) buildTimeout(builder *openfunction.Builder) error {
 		b.Status.Reason = openfunction.Timeout
 		b.Status.Message = openfunction.Timeout
 		b.Status.BuildDuration = builder.Spec.Timeout
-		return r.Status().Update(r.ctx, b)
+		err := r.Status().Update(r.ctx, b)
+		if err == nil {
+			r.recordEvent(builder)
+		}
+
+		return err
 	}
 
 	return nil
@@ -272,6 +288,37 @@ func (r *BuilderReconciler) stopTimer(key string) {
 		delete(r.timers, key)
 		log.Info("Timer stopped")
 	}
+}
+
+func (r *BuilderReconciler) recordEvent(builder *openfunction.Builder) {
+	log := r.Log.WithName("RecordEvent").
+		WithValues("Builder", fmt.Sprintf("%s/%s", builder.Namespace, builder.Name))
+
+	eventType := corev1.EventTypeNormal
+	if builder.Status.State != openfunction.Building &&
+		builder.Status.State != openfunction.Succeeded {
+		eventType = corev1.EventTypeWarning
+	}
+
+	reason := builder.Status.State
+	note := ""
+	switch builder.Status.State {
+	case openfunction.Building:
+		reason = "Started"
+		note = "Build started"
+	case openfunction.Succeeded:
+		reason = "Completed"
+		note = "Build completed"
+	case openfunction.Failed:
+		note = fmt.Sprintf("Build failed: %s", builder.Status.Message)
+	case openfunction.Timeout:
+		note = "Build timeout"
+	case openfunction.Canceled:
+		note = "Build canceled"
+	}
+
+	r.eventRecorder.Eventf(builder, nil, eventType, reason, buildAction, note)
+	log.V(1).Info("Record Event", "Reason", reason)
 }
 
 // SetupWithManager sets up the controller with the Manager.
