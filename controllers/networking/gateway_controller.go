@@ -21,9 +21,8 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"strings"
-
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/equality"

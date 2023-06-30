@@ -19,6 +19,8 @@ package main
 import (
 	"flag"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	corev1beta1 "github.com/openfunction/apis/core/v1beta1"
@@ -30,7 +32,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	typedeventsv1 "k8s.io/client-go/kubernetes/typed/events/v1"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/client-go/tools/events"
 	knserving "knative.dev/serving/pkg/client/clientset/versioned/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -104,15 +108,36 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = core.NewFunctionReconciler(mgr, interval).SetupWithManager(mgr); err != nil {
+	eventsV1Client, err := typedeventsv1.NewForConfig(ctrl.GetConfigOrDie())
+	if err != nil {
+		setupLog.Error(err, "unable to get events client")
+		os.Exit(1)
+	}
+	eventBroadcaster := events.NewBroadcaster(&events.EventSinkImpl{Interface: eventsV1Client})
+	termCh := make(chan os.Signal, 1)
+	signal.Notify(termCh, os.Interrupt, syscall.SIGTERM)
+	stopCh := make(chan struct{}, 1)
+	go func() {
+		for {
+			select {
+			case <-termCh:
+				stopCh <- struct{}{}
+				return
+			}
+		}
+	}()
+	eventBroadcaster.StartRecordingToSink(stopCh)
+	eventRecorder := eventBroadcaster.NewRecorder(mgr.GetScheme(), "openfunction")
+
+	if err = core.NewFunctionReconciler(mgr, interval, eventRecorder).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create function controller")
 		os.Exit(1)
 	}
-	if err = core.NewBuilderReconciler(mgr).SetupWithManager(mgr, builder.Registry(mgr)); err != nil {
+	if err = core.NewBuilderReconciler(mgr, eventRecorder).SetupWithManager(mgr, builder.Registry(mgr)); err != nil {
 		setupLog.Error(err, "unable to create builder controller")
 		os.Exit(1)
 	}
-	if err = core.NewServingReconciler(mgr).SetupWithManager(mgr, serving.Registry(mgr)); err != nil {
+	if err = core.NewServingReconciler(mgr, eventRecorder).SetupWithManager(mgr, serving.Registry(mgr)); err != nil {
 		setupLog.Error(err, "unable to create serving controller")
 		os.Exit(1)
 	}
