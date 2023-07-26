@@ -39,12 +39,12 @@ Add an `HTTPScaledObject ` type in `OpenFunction/apis/core/v1beta2/serving_types
 
 ```go
 type HTTPScaledObject struct {
-    // Minimum amount of replicas to have in the deployment (Default 0)
-    // +optional
-    MinReplicaCount *int32 `json:"minReplicaCount,omitempty"`
-    // Maximum amount of replicas to have in the deployment (Default 100)
-    // +optional
-    MaxReplicaCount *int32 `json:"maxReplicaCount,omitempty"`
+	// Minimum amount of replicas to have in the deployment (Default 0)
+	// +optional
+	MinReplicaCount *int32 `json:"minReplicaCount,omitempty"`
+	// Maximum amount of replicas to have in the deployment (Default 100)
+	// +optional
+	MaxReplicaCount *int32 `json:"maxReplicaCount,omitempty"`
 	// Target metric value
 	// +optional
 	TargetPendingRequests *int32 `json:"targetPendingRequests,omitempty"`
@@ -56,7 +56,7 @@ type HTTPScaledObject struct {
 type KedaScaleOptions struct {
 	// +optional
 	ScaledObject *KedaScaledObject `json:"scaledObject,omitempty"`
-    // +optional
+	// +optional
 	HTTPScaledObject *HTTPScaledObject `json:"httpScaledObject,omitempty"`
 	// +optional
 	ScaledJob *KedaScaledJob `json:"scaledJob,omitempty"`
@@ -92,19 +92,19 @@ spec:
       revision: "main"
   serving:
     triggers:
-      # http:
-      #   port: "8080"
-      #   route:
-      #     hostnames:
-      #       - "async-demo.com"
-      #     rules:
-      #       - matches:
-      #           - path:
-      #               type: PathPrefix
-      #               value: /
-      #         backendRefs:
-      #           - name: async-demo-svc
-      #             port: 8080
+      http:
+        port: "8080"
+        route:
+          hostnames:
+            - "async-demo.com"
+          rules:
+            - matches:
+                - path:
+                    type: PathPrefix
+                    value: /
+              backendRefs:
+                - name: async-demo-svc
+                  port: 8080
         inputs:
           - type: binding.kafka 
             name: kafka-input
@@ -242,7 +242,7 @@ spec:
     metadata:
       address: <redis-master.default.svc.cluster.local:6379>
       listName: <async-input||order_1>
-      listLength: "1"  # 
+      listLength: "1"
 ```
 
 #### Step 4: Trigger the Function
@@ -262,11 +262,11 @@ The `HTTPScaledObject` can fetch the required `hosts[]`、`port`、`pathPrefixes
 ```go
 func (r *ServingReconciler) getServingRun(s *openfunction.Serving) core.ServingRun {
 	if s.Spec.Triggers.Http != nil {
-        if s.Spec.ScaleOptions.Keda.HttpScaledObject != nil {
-		    return openfuncsync.NewServingRun(r.ctx, r.Client, r.Scheme, r.Log)
-        } else {
-            return knative.NewServingRun(r.ctx, r.Client, r.Scheme, r.Log)
-        }
+		if s.Spec.ScaleOptions.Keda.HttpScaledObject != nil {
+			return openfuncsync.NewServingRun(r.ctx, r.Client, r.Scheme, r.Log)
+		} else {
+			return knative.NewServingRun(r.ctx, r.Client, r.Scheme, r.Log)
+		}
 	} else {
 		return openfuncasync.NewServingRun(r.ctx, r.Client, r.Scheme, r.Log)
 	}
