@@ -39,12 +39,6 @@ Add an `HTTPScaledObject ` type in `OpenFunction/apis/core/v1beta2/serving_types
 
 ```go
 type HTTPScaledObject struct {
-	// Minimum amount of replicas to have in the deployment (Default 0)
-	// +optional
-	MinReplicaCount *int32 `json:"minReplicaCount,omitempty"`
-	// Maximum amount of replicas to have in the deployment (Default 100)
-	// +optional
-	MaxReplicaCount *int32 `json:"maxReplicaCount,omitempty"`
 	// Target metric value
 	// +optional
 	TargetPendingRequests *int32 `json:"targetPendingRequests,omitempty"`
