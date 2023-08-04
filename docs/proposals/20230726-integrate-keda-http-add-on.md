@@ -68,6 +68,17 @@ To differ `keda-http addon` runtime from `knative` runtime, we can add an `Engin
 ```go
 type Engine string
 
+const (
+	HookPolicyAppend   = "Append"
+	HookPolicyOverride = "Override"
+
+	WorkloadTypeJob                = "Job"
+	WorkloadTypeStatefulSet        = "StatefulSet"
+	WorkloadTypeDeployment         = "Deployment"
+	HttpRuntimeKnative      Engine = "knative"
+	HttpRuntimeKeda         Engine = "keda"
+)
+
 type HttpTrigger struct {
 	// The port on which the function will be invoked
 	Port *int32 `json:"port,omitempty"`
@@ -87,7 +98,7 @@ The [controllers/core/serving_controller.go#L214](https://github.com/OpenFunctio
 ```go
 func (r *ServingReconciler) getServingRun(s *openfunction.Serving) core.ServingRun {
 	if s.Spec.Triggers.Http != nil {
-		if strings.EqualFold(string(*s.Spec.Triggers.Http.Engine), "Keda") {
+		if *s.Spec.Triggers.Http.Engine == openfunction.HttpRuntimeKeda {
 			return kedahttp.NewServingRun(r.ctx, r.Client, r.Scheme, r.Log)
 		} else {
 			return knative.NewServingRun(r.ctx, r.Client, r.Scheme, r.Log)
@@ -120,7 +131,7 @@ spec:
     srcRepo:
       url: "https://github.com/OpenFunction/samples.git"
       sourceSubPath: "functions/kedahttp/hello-world-go"
-      revision: "master"
+      revision: "main"
   serving:
     triggers:
       http:
