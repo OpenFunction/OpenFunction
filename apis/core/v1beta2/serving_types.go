@@ -101,6 +101,8 @@ type KedaScaledObject struct {
 	CooldownPeriod *int32 `json:"cooldownPeriod,omitempty"`
 	// +optional
 	Advanced *kedav1alpha1.AdvancedConfig `json:"advanced,omitempty"`
+	// +optional
+	Fallback *kedav1alpha1.Fallback `json:"fallback,omitempty"`
 }
 
 type KedaScaledJob struct {

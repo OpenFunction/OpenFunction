@@ -22,7 +22,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	apiv1alpha1 "github.com/kedacore/keda/v2/apis/keda/v1alpha1"
+	kedav1alpha1 "github.com/kedacore/keda/v2/apis/keda/v1alpha1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/openfunction/apis/core/v1beta1"
@@ -388,7 +388,7 @@ func (in *GenericScaleOption) DeepCopyInto(out *GenericScaleOption) {
 	}
 	if in.Advanced != nil {
 		in, out := &in.Advanced, &out.Advanced
-		*out = new(apiv1alpha1.AdvancedConfig)
+		*out = new(kedav1alpha1.AdvancedConfig)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.Metadata != nil {
@@ -400,7 +400,7 @@ func (in *GenericScaleOption) DeepCopyInto(out *GenericScaleOption) {
 	}
 	if in.AuthRef != nil {
 		in, out := &in.AuthRef, &out.AuthRef
-		*out = new(apiv1alpha1.ScaledObjectAuthRef)
+		*out = new(kedav1alpha1.ScaledObjectAuthRef)
 		**out = **in
 	}
 }

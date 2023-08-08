@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -29,6 +30,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/discovery"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	typedeventsv1 "k8s.io/client-go/kubernetes/typed/events/v1"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -127,6 +129,18 @@ func main() {
 	}()
 	eventBroadcaster.StartRecordingToSink(stopCh)
 	eventRecorder := eventBroadcaster.NewRecorder(mgr.GetScheme(), "openfunction")
+
+	// Check if HPA v2 is supported in the cluster
+	if dc, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig()); err == nil {
+		hpagv := "autoscaling/v2"
+		if _, err := dc.ServerResourcesForGroupVersion(hpagv); err != nil {
+			setupLog.Error(err, fmt.Sprintf("HPA v2 (%s) is not supported in the cluster", hpagv))
+			os.Exit(1)
+		}
+	} else {
+		setupLog.Error(err, "unable to create discovery client")
+		os.Exit(1)
+	}
 
 	if err = core.NewFunctionReconciler(mgr, interval, eventRecorder).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create function controller")
