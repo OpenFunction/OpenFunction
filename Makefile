@@ -20,7 +20,7 @@ IMG ?= openfunction/openfunction:$(VERSION)
 IMG_DEV ?= openfunctiondev/openfunction:$(VERSION)
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 #CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
-CRD_OPTIONS ?= "crd:preserveUnknownFields=false,maxDescLen=0"
+CRD_OPTIONS ?= "crd"
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -55,9 +55,9 @@ help: ## Display this help.
 
 ##@ Development
 
-manifests: generate fmt vet controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+manifests: kustomize generate fmt vet controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role paths="./..." output:crd:artifacts:config=config/crd/bases
-	kubectl kustomize config/default | sed -e '/creationTimestamp: null/d' | sed -e 's/openfunction-system/openfunction/g' | sed -e 's/openfunction\:latest/openfunction\:$(VERSION)/g' | sed -e 's/app.kubernetes.io\/version\: latest/app.kubernetes.io\/version\: $(VERSION)/g' > config/bundle.yaml
+	$(KUSTOMIZE) build config/default | sed -e '/creationTimestamp: null/d' | sed -e 's/openfunction-system/openfunction/g' | sed -e 's/openfunction\:latest/openfunction\:$(VERSION)/g' | sed -e 's/app.kubernetes.io\/version\: latest/app.kubernetes.io\/version\: $(VERSION)/g' > config/bundle.yaml
 	cat config/configmap/openfunction-config.yaml >> config/bundle.yaml
 
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -116,20 +116,20 @@ docker-push-dev: ## Push dev docker image with the openfunction.
 ##@ Deployment
 
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/crd | kubectl create -f -
+	$(KUSTOMIZE) build config/crd | kubectl apply --server-side=true -f -
 
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | kubectl delete -f -
 
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/default | kubectl apply -f -
+	$(KUSTOMIZE) build config/default | kubectl apply --server-side=true -f -
 
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
 
-dev:
-	kubectl kustomize config/default | sed -e '/creationTimestamp/d' | sed -e 's/openfunction-system/openfunction/g' | sed -e 's/openfunction\/openfunction/openfunctiondev\/openfunction/g' > config/bundle.yaml
-	kubectl kustomize config/samples/ | sed -e 's/openfunction\/sample-go-func/openfunctiondev\/sample-go-func/g' > config/samples/function-sample-dev.yaml
+dev: kustomize
+	$(KUSTOMIZE) config/default | sed -e '/creationTimestamp/d' | sed -e 's/openfunction-system/openfunction/g' | sed -e 's/openfunction\/openfunction/openfunctiondev\/openfunction/g' > config/bundle.yaml
+	$(KUSTOMIZE) config/samples/ | sed -e 's/openfunction\/sample-go-func/openfunctiondev\/sample-go-func/g' > config/samples/function-sample-dev.yaml
 
 clean:
 	git checkout config/bundle.yaml
@@ -155,15 +155,15 @@ e2e-events: skywalking-e2e yq
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
-	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.4.1)
+	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.11.1)
 
 KUSTOMIZE = $(shell pwd)/bin/kustomize
 kustomize: ## Download kustomize locally if necessary.
-	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v4@v4.5.2)
+	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v4@v4.5.7)
 
 E2E = $(shell pwd)/bin/e2e
 skywalking-e2e: ## Download skywalking-e2e locally if necessary.
-	$(call go-get-tool,$(E2E),github.com/apache/skywalking-infra-e2e/cmd/e2e@2a33478)
+	$(call go-get-tool,$(E2E),github.com/apache/skywalking-infra-e2e/cmd/e2e@v1.2.0)
 
 YQ = $(shell pwd)/bin/yq
 yq: ## Download yq locally if necessary.
