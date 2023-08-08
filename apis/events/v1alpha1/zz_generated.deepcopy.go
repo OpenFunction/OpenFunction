@@ -22,7 +22,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	apiv1alpha1 "github.com/kedacore/keda/v2/api/v1alpha1"
+	apiv1alpha1 "github.com/kedacore/keda/v2/apis/keda/v1alpha1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/openfunction/apis/core/v1beta1"

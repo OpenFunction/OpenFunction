@@ -23,10 +23,8 @@ import (
 	"syscall"
 	"time"
 
-	corev1beta1 "github.com/openfunction/apis/core/v1beta1"
-
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
-	kedav1alpha1 "github.com/kedacore/keda/v2/api/v1alpha1"
+	kedav1alpha1 "github.com/kedacore/keda/v2/apis/keda/v1alpha1"
 	shipwrightv1alpha1 "github.com/shipwright-io/build/pkg/apis/build/v1alpha1"
 	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -41,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	k8sgatewayapiv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	corev1beta1 "github.com/openfunction/apis/core/v1beta1"
 	corev1beta2 "github.com/openfunction/apis/core/v1beta2"
 	openfunctionevent "github.com/openfunction/apis/events/v1alpha1"
 	networkingv1alpha1 "github.com/openfunction/apis/networking/v1alpha1"

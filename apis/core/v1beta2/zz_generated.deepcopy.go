@@ -23,7 +23,7 @@ package v1beta2
 
 import (
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
-	apiv1alpha1 "github.com/kedacore/keda/v2/api/v1alpha1"
+	apiv1alpha1 "github.com/kedacore/keda/v2/apis/keda/v1alpha1"
 	"github.com/shipwright-io/build/pkg/apis/build/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"

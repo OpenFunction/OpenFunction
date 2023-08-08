@@ -25,7 +25,9 @@ import (
 	"github.com/openfunction/pkg/constants"
 
 	shipwrightv1alpha1 "github.com/shipwright-io/build/pkg/apis/build/v1alpha1"
+	hpav2 "k8s.io/api/autoscaling/v2"
 	"k8s.io/api/autoscaling/v2beta2"
+	hpav2beta2 "k8s.io/api/autoscaling/v2beta2"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -65,8 +67,8 @@ var (
 		v1.RestartPolicyNever:     true,
 	}
 	kedaScaledJobRestartPolicesSlice = convertMapKeysToStringSlice(kedaScaledJobRestartPolices)
-	scalingPolicySelects             = map[v2beta2.ScalingPolicySelect]bool{
-		v2beta2.MaxPolicySelect:      true,
+	scalingPolicySelects             = map[hpav2beta2.ScalingPolicySelect]bool{
+		hpav2.MaxPolicySelect:        true,
 		v2beta2.MinPolicySelect:      true,
 		v2beta2.DisabledPolicySelect: true,
 	}
