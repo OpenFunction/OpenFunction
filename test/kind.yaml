@@ -28,7 +28,7 @@ kubeadmConfigPatches:
 # patch it further using a JSON 6902 patch
 kubeadmConfigPatchesJSON6902:
   - group: kubeadm.k8s.io
-    version: v1beta2
+    version: v1beta3
     kind: ClusterConfiguration
     patch: |
       - op: add
@@ -36,11 +36,9 @@ kubeadmConfigPatchesJSON6902:
         value: my-hostname
 # 1 control plane node (workder)
 nodes:
-  # the control plane node (worker) config
+  # the control plane node config
   - role: control-plane
-#    image: kindest/node:v1.23.4@sha256:0e34f0d0fd448aa2f2819cfd74e99fe5793a6e4938b328f657c8e3f81ee0dfb9
-#    image: kindest/node:v1.22.7@sha256:1dfd72d193bf7da64765fd2f2898f78663b9ba366c2aa74be1fd7498a1873166
-    image: kindest/node:v1.21.10@sha256:84709f09756ba4f863769bdcabe5edafc2ada72d3c8c44d6515fc581b66b029c
+    image: kindest/node:v1.26.6@sha256:6e2d8b28a5b601defe327b98bd1c2d1930b49e5d8c512e1895099e4504007adb
     extraPortMappings:
       - containerPort: 31234
         hostPort: 80

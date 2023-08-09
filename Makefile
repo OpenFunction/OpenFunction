@@ -170,7 +170,7 @@ kustomize: ## Download kustomize locally if necessary.
 
 E2E = $(shell pwd)/bin/e2e
 skywalking-e2e: ## Download skywalking-e2e locally if necessary.
-	$(call go-get-tool,$(E2E),github.com/apache/skywalking-infra-e2e/cmd/e2e@v1.2.0)
+	$(call go-get-tool,$(E2E),github.com/apache/skywalking-infra-e2e/cmd/e2e@v1.2.1-0.20230623134912-0a5b398fc966)
 
 YQ = $(shell pwd)/bin/yq
 yq: ## Download yq locally if necessary.
