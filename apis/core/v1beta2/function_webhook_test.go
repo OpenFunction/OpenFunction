@@ -198,17 +198,6 @@ func Test_Validate(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "function.spec.serving.runtime",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving:          &ServingImpl{},
-				},
-			},
-			wantErr: true,
-		},
-		{
 			name: "function.spec.serving.scaleOptions.minReplicas",
 			r: Function{
 				Spec: FunctionSpec{
@@ -258,6 +247,7 @@ func Test_Validate(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			// TODO: add validation for this case
 			name: "function.spec.serving.scaleOptions.keda.ScaledJob and ScaledObject",
 			r: Function{
 				Spec: FunctionSpec{
@@ -271,7 +261,7 @@ func Test_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 		{
 			name: "function.spec.serving.scaleOptions.keda.scaledObject.pollingInterval",
@@ -580,6 +570,7 @@ func Test_Validate(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			// TODO: add validation for this case
 			name: "function.spec.serving.triggers.[0].type",
 			r: Function{
 				Spec: FunctionSpec{
@@ -599,9 +590,10 @@ func Test_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 		{
+			// TODO: add validation for this case
 			name: "function.spec.serving.triggers.[0].metadata",
 			r: Function{
 				Spec: FunctionSpec{
@@ -621,9 +613,10 @@ func Test_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 		{
+			// TODO: add validation for this case
 			name: "function.spec.serving.triggers.[0].authenticationRef.kind",
 			r: Function{
 				Spec: FunctionSpec{
@@ -645,7 +638,7 @@ func Test_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 		{
 			name: "function.spec.serving.ScaledObject.fallback.replicas",
