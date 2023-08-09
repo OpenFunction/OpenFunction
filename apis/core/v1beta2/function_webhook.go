@@ -143,7 +143,7 @@ func (r *Function) Default() {
 	r.HandleWorkloadRuntime()
 }
 
-func (r Function) HandleWorkloadRuntime() {
+func (r *Function) HandleWorkloadRuntime() {
 	if r.Annotations == nil {
 		r.Annotations = make(map[string]string)
 	}
@@ -331,6 +331,11 @@ func (r *Function) ValidateServing() error {
 						return err
 					}
 				}
+				if scaledObject.Fallback != nil {
+					if err := r.ValidateKedaScaledObjectFallback(); err != nil {
+						return err
+					}
+				}
 			}
 			if scaleOptions.Keda.ScaledJob != nil {
 				scaleJob := scaleOptions.Keda.ScaledJob
@@ -443,6 +448,25 @@ func (r *Function) ValidateKedaScaledObjectAdvanced() error {
 						"must be greater than 0")
 				}
 			}
+		}
+	}
+	return nil
+}
+
+func (r *Function) ValidateKedaScaledObjectFallback() error {
+	fallback := r.Spec.Serving.ScaleOptions.Keda.ScaledObject.Fallback
+	if fallback != nil {
+		if fallback.FailureThreshold < 1 {
+			return field.Invalid(field.NewPath("spec", "serving", "scaleOptions",
+				"keda", "scaleObject", "fallback", "failureThreshold"),
+				fallback.FailureThreshold,
+				"must be greater than or equal to 1")
+		}
+		if fallback.Replicas < 0 {
+			return field.Invalid(field.NewPath("spec", "serving", "scaleOptions",
+				"keda", "scaleObject", "fallback", "replicas"),
+				fallback.Replicas,
+				"must be greater than or equal to 0")
 		}
 	}
 	return nil

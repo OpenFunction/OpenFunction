@@ -116,13 +116,13 @@ docker-push-dev: ## Push dev docker image with the openfunction.
 ##@ Deployment
 
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/crd | kubectl apply --server-side=true -f -
+	$(KUSTOMIZE) build config/crd | kubectl apply --server-side=true --force-conflicts -f -
 
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | kubectl delete -f -
 
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/default | kubectl apply --server-side=true -f -
+	$(KUSTOMIZE) build config/default | kubectl apply --server-side=true --force-conflicts -f -
 
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/default | kubectl delete -f -

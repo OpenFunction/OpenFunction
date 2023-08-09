@@ -515,6 +515,7 @@ func (r *servingRun) createScaler(s *openfunction.Serving, workload runtime.Obje
 			scaledObject.Spec.PollingInterval = keda.ScaledObject.PollingInterval
 			scaledObject.Spec.CooldownPeriod = keda.ScaledObject.CooldownPeriod
 			scaledObject.Spec.Advanced = keda.ScaledObject.Advanced
+			scaledObject.Spec.Fallback = keda.ScaledObject.Fallback
 		}
 
 		obj = scaledObject
