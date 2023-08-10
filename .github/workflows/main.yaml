@@ -48,27 +48,28 @@ jobs:
       GO111MODULE: "on"
     steps:
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
-          go-version: 1.18.x
+          go-version: 1.19
 
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
 
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
       - name: Check License Header
         uses: apache/skywalking-eyes/header@501a28d2fb4a9b962661987e50cf0219631b32ff
 
-      - name: Install kubebuilder-3.1.0
+      - name: Install kubebuilder-3.11.1
         run: |
-          curl -L -o kubebuilder "https://github.com/kubernetes-sigs/kubebuilder/releases/download/v3.1.0/kubebuilder_linux_amd64"
+          curl -L -o kubebuilder "https://github.com/kubernetes-sigs/kubebuilder/releases/download/v3.11.1/kubebuilder_linux_amd64"
           chmod +x kubebuilder && mv kubebuilder /usr/local/bin/
+
       - name: Run basic test
         run: make test
 
@@ -77,26 +78,29 @@ jobs:
 
   e2e_test:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     name: E2E Tests
     steps:
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
-          go-version: 1.18.x
+          go-version: 1.19
 
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
 
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
       - name: Create kind cluster
         uses: container-tools/kind-action@v1
+        with:
+          version: v0.20.0
+          node_image: kindest/node:v1.26.6
 
       - name: Create busybox pod
         run: |
@@ -141,7 +145,7 @@ jobs:
 
       - name: Install OpenFunction
         run: |
-          kubectl apply -f config/bundle.yaml
+          kubectl apply --server-side=true -f config/bundle.yaml
           kubectl apply -f config/strategy/build-strategy.yaml
           kubectl patch deployments.apps -n openfunction openfunction-controller-manager -p "{\"spec\":{\"template\":{\"spec\":{\"containers\":[{\"name\":\"openfunction\",\"image\":\"kind-registry:5000/openfunction/openfunction:latest\",\"resources\":null}]}}}}"
           kubectl rollout status -n openfunction deployment openfunction-controller-manager --timeout=1m

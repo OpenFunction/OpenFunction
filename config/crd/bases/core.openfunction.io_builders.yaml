@@ -1,10 +1,9 @@
-
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.4.1
+    controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
   name: builders.core.openfunction.io
 spec:
@@ -34,93 +33,151 @@ spec:
     name: v1beta1
     schema:
       openAPIV3Schema:
+        description: Builder is the Schema for the builders API
         properties:
           apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
           spec:
+            description: BuilderSpec defines the desired state of Builder
             properties:
               builder:
+                description: Builder refers to the image containing the build tools
+                  inside which the source code would be built.
                 type: string
               builderCredentials:
+                description: BuilderCredentials references a Secret that contains
+                  credentials to access the builder image repository.
                 properties:
                   name:
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                      TODO: Add other useful fields. apiVersion, kind, uid?'
                     type: string
                 type: object
+                x-kubernetes-map-type: atomic
               dockerfile:
+                description: Dockerfile is the path to the Dockerfile to be used for
+                  build strategies that rely on the Dockerfile for building an image.
                 type: string
               env:
                 additionalProperties:
                   type: string
+                description: Environment params to pass to the builder.
                 type: object
               image:
+                description: Function image name
                 type: string
               imageCredentials:
+                description: ImageCredentials references a Secret that contains credentials
+                  to access the image repository.
                 properties:
                   name:
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                      TODO: Add other useful fields. apiVersion, kind, uid?'
                     type: string
                 type: object
+                x-kubernetes-map-type: atomic
               params:
                 additionalProperties:
                   type: string
+                description: Params is a list of key/value that could be used to set
+                  strategy parameters.
                 type: object
               port:
+                description: The port on which the function will be invoked
                 format: int32
                 type: integer
               shipwright:
+                description: The configuration for `Shipwright` build engine.
                 properties:
                   strategy:
+                    description: Strategy references the BuildStrategy to use to build
+                      the image.
                     properties:
                       kind:
+                        description: BuildStrategyKind indicates the kind of the build
+                          strategy BuildStrategy or ClusterBuildStrategy, default
+                          to BuildStrategy.
                         type: string
                       name:
+                        description: 'Name of the referent; More info: http://kubernetes.io/docs/user-guide/identifiers#names'
                         type: string
                     required:
                     - name
                     type: object
                   timeout:
+                    description: Timeout defines the maximum amount of time the Build
+                      should take to execute.
                     format: duration
                     type: string
                 type: object
               srcRepo:
+                description: Git repository info of a function
                 properties:
                   bundleContainer:
+                    description: BundleContainer
                     properties:
                       image:
+                        description: Image reference, i.e. quay.io/org/image:tag
                         type: string
                     required:
                     - image
                     type: object
                   credentials:
+                    description: Credentials references a Secret that contains credentials
+                      to access the repository.
                     properties:
                       name:
+                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?'
                         type: string
                     type: object
+                    x-kubernetes-map-type: atomic
                   revision:
+                    description: Git revision to check out (branch, tag, sha, ref…)
+                      (default:"")
                     type: string
                   sourceSubPath:
+                    description: A subpath within the `source` input where the source
+                      to build is located.
                     type: string
                   url:
+                    description: Git url to clone
                     type: string
                 type: object
               state:
+                description: State is used for canceling a buildrun (and maybe more
+                  later on).
                 type: string
               timeout:
+                description: Timeout defines the maximum amount of time the Build
+                  should take to execute.
                 type: string
             required:
             - image
             - srcRepo
             type: object
           status:
+            description: BuilderStatus defines the observed state of Builder
             properties:
               output:
+                description: Output holds the results emitted from step definition
+                  of an output
                 properties:
                   digest:
+                    description: Digest holds the digest of output image
                     type: string
                   size:
+                    description: Size holds the compressed size of output image
                     format: int64
                     type: integer
                 type: object
@@ -131,25 +188,42 @@ spec:
               resourceRef:
                 additionalProperties:
                   type: string
+                description: Associate resources.
                 type: object
               sources:
+                description: Sources holds the results emitted from the step definition
+                  of different sources
                 items:
+                  description: SourceResult holds the results emitted from the different
+                    sources
                   properties:
                     bundle:
+                      description: Bundle holds the results emitted from from the
+                        step definition of bundle source
                       properties:
                         digest:
+                          description: Digest hold the image digest result
                           type: string
                       type: object
                     git:
+                      description: Git holds the results emitted from from the step
+                        definition of a git source
                       properties:
                         branchName:
+                          description: BranchName holds the default branch name of
+                            the git source this will be set only when revision is
+                            not specified in Build object
                           type: string
                         commitAuthor:
+                          description: CommitAuthor holds the commit author of a git
+                            source
                           type: string
                         commitSha:
+                          description: CommitSha holds the commit sha of git source
                           type: string
                       type: object
                     name:
+                      description: Name is the name of source
                       type: string
                   required:
                   - name
@@ -182,101 +256,171 @@ spec:
     name: v1beta2
     schema:
       openAPIV3Schema:
+        description: Builder is the Schema for the builders API
         properties:
           apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
           spec:
+            description: BuilderSpec defines the desired state of Builder
             properties:
               builder:
+                description: Builder refers to the image containing the build tools
+                  to build the source code.
                 type: string
               builderCredentials:
+                description: BuilderCredentials references a Secret that contains
+                  credentials to access the builder image repository.
                 properties:
                   name:
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                      TODO: Add other useful fields. apiVersion, kind, uid?'
                     type: string
                 type: object
+                x-kubernetes-map-type: atomic
               builderMaxAge:
+                description: The duration to retain a completed builder, defaults
+                  to 0 (forever).
                 type: string
               dockerfile:
+                description: Dockerfile is the path to the Dockerfile used by build
+                  strategies that rely on the Dockerfile to build an image.
                 type: string
               env:
                 additionalProperties:
                   type: string
+                description: Environment variables to pass to the builder.
                 type: object
               failedBuildsHistoryLimit:
+                description: The number of failed builds to retain, default is 1.
                 format: int32
                 type: integer
               image:
+                description: Function image name
                 type: string
               imageCredentials:
+                description: ImageCredentials references a Secret that contains credentials
+                  to access the image repository.
                 properties:
                   name:
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                      TODO: Add other useful fields. apiVersion, kind, uid?'
                     type: string
                 type: object
+                x-kubernetes-map-type: atomic
               shipwright:
+                description: The configuration for the `Shipwright` build engine.
                 properties:
                   params:
+                    description: 'Params is a list of key/value that could be used
+                      to set strategy parameters. When using _params_, users should
+                      avoid: Defining a parameter name that doesn''t match one of
+                      the `spec.parameters` defined in the `BuildStrategy`. Defining
+                      a parameter name that collides with the Shipwright reserved
+                      parameters including BUILDER_IMAGE,DOCKERFILE,CONTEXT_DIR and
+                      any name starting with shp-.'
                     items:
+                      description: ParamValue is a key/value that populates a strategy
+                        parameter used in the execution of the strategy steps
                       properties:
                         configMapValue:
+                          description: The ConfigMap value of the parameter
                           properties:
                             format:
+                              description: An optional format to add pre- or suffix
+                                to the object value. For example 'KEY=${SECRET_VALUE}'
+                                or 'KEY=${CONFIGMAP_VALUE}' depending on the context.
                               type: string
                             key:
+                              description: Key inside the object
                               type: string
                             name:
+                              description: Name of the object
                               type: string
                           required:
                           - key
                           - name
                           type: object
                         name:
+                          description: Name of the parameter
                           type: string
                         secretValue:
+                          description: The secret value of the parameter
                           properties:
                             format:
+                              description: An optional format to add pre- or suffix
+                                to the object value. For example 'KEY=${SECRET_VALUE}'
+                                or 'KEY=${CONFIGMAP_VALUE}' depending on the context.
                               type: string
                             key:
+                              description: Key inside the object
                               type: string
                             name:
+                              description: Name of the object
                               type: string
                           required:
                           - key
                           - name
                           type: object
                         value:
+                          description: The value of the parameter
                           type: string
                         values:
+                          description: Values of an array parameter
                           items:
+                            description: SingleValue is the value type contains the
+                              properties for a value, this allows for an easy extension
+                              in the future to support more kinds
                             properties:
                               configMapValue:
+                                description: The ConfigMap value of the parameter
                                 properties:
                                   format:
+                                    description: An optional format to add pre- or
+                                      suffix to the object value. For example 'KEY=${SECRET_VALUE}'
+                                      or 'KEY=${CONFIGMAP_VALUE}' depending on the
+                                      context.
                                     type: string
                                   key:
+                                    description: Key inside the object
                                     type: string
                                   name:
+                                    description: Name of the object
                                     type: string
                                 required:
                                 - key
                                 - name
                                 type: object
                               secretValue:
+                                description: The secret value of the parameter
                                 properties:
                                   format:
+                                    description: An optional format to add pre- or
+                                      suffix to the object value. For example 'KEY=${SECRET_VALUE}'
+                                      or 'KEY=${CONFIGMAP_VALUE}' depending on the
+                                      context.
                                     type: string
                                   key:
+                                    description: Key inside the object
                                     type: string
                                   name:
+                                    description: Name of the object
                                     type: string
                                 required:
                                 - key
                                 - name
                                 type: object
                               value:
+                                description: The value of the parameter
                                 type: string
                             type: object
                           type: array
@@ -285,61 +429,93 @@ spec:
                       type: object
                     type: array
                   strategy:
+                    description: Strategy references the BuildStrategy to use to build
+                      the image.
                     properties:
                       kind:
+                        description: BuildStrategyKind indicates the kind of the build
+                          strategy BuildStrategy or ClusterBuildStrategy, default
+                          to BuildStrategy.
                         type: string
                       name:
+                        description: 'Name of the referent; More info: http://kubernetes.io/docs/user-guide/identifiers#names'
                         type: string
                     required:
                     - name
                     type: object
                   timeout:
+                    description: Timeout defines the maximum amount of time the Build
+                      should take to execute.
                     format: duration
                     type: string
                 type: object
               srcRepo:
+                description: Function Source code repository
                 properties:
                   bundleContainer:
+                    description: BundleContainer
                     properties:
                       image:
+                        description: Image reference, i.e. quay.io/org/image:tag
                         type: string
                     required:
                     - image
                     type: object
                   credentials:
+                    description: Credentials references a Secret that contains credentials
+                      to access the repository.
                     properties:
                       name:
+                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?'
                         type: string
                     type: object
+                    x-kubernetes-map-type: atomic
                   revision:
+                    description: Git revision to check out (branch, tag, sha, ref…)
+                      (default:"")
                     type: string
                   sourceSubPath:
+                    description: A subpath within the `source` input where the source
+                      to build is located.
                     type: string
                   url:
+                    description: Git url to clone
                     type: string
                 type: object
               state:
+                description: State is used for canceling a buildrun (and maybe more
+                  later on).
                 type: string
               successfulBuildsHistoryLimit:
+                description: The number of successful builds to retain, default is
+                  0.
                 format: int32
                 type: integer
               timeout:
+                description: Timeout defines the maximum amount of time the Build
+                  should take to execute.
                 type: string
             required:
             - image
             - srcRepo
             type: object
           status:
+            description: BuilderStatus defines the observed state of Builder
             properties:
               buildDuration:
                 type: string
               message:
                 type: string
               output:
+                description: Output holds the results emitted from step definition
+                  of an output
                 properties:
                   digest:
+                    description: Digest holds the digest of output image
                     type: string
                   size:
+                    description: Size holds the compressed size of output image
                     format: int64
                     type: integer
                 type: object
@@ -350,25 +526,42 @@ spec:
               resourceRef:
                 additionalProperties:
                   type: string
+                description: Associate resources.
                 type: object
               sources:
+                description: Sources holds the results emitted from the step definition
+                  of different sources
                 items:
+                  description: SourceResult holds the results emitted from the different
+                    sources
                   properties:
                     bundle:
+                      description: Bundle holds the results emitted from from the
+                        step definition of bundle source
                       properties:
                         digest:
+                          description: Digest hold the image digest result
                           type: string
                       type: object
                     git:
+                      description: Git holds the results emitted from from the step
+                        definition of a git source
                       properties:
                         branchName:
+                          description: BranchName holds the default branch name of
+                            the git source this will be set only when revision is
+                            not specified in Build object
                           type: string
                         commitAuthor:
+                          description: CommitAuthor holds the commit author of a git
+                            source
                           type: string
                         commitSha:
+                          description: CommitSha holds the commit sha of git source
                           type: string
                       type: object
                     name:
+                      description: Name is the name of source
                       type: string
                   required:
                   - name
@@ -382,9 +575,3 @@ spec:
     storage: true
     subresources:
       status: {}
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []

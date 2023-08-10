@@ -18,19 +18,19 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	corev1beta1 "github.com/openfunction/apis/core/v1beta1"
-
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
-	kedav1alpha1 "github.com/kedacore/keda/v2/api/v1alpha1"
+	kedav1alpha1 "github.com/kedacore/keda/v2/apis/keda/v1alpha1"
 	shipwrightv1alpha1 "github.com/shipwright-io/build/pkg/apis/build/v1alpha1"
 	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/discovery"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	typedeventsv1 "k8s.io/client-go/kubernetes/typed/events/v1"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -41,6 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	k8sgatewayapiv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	corev1beta1 "github.com/openfunction/apis/core/v1beta1"
 	corev1beta2 "github.com/openfunction/apis/core/v1beta2"
 	openfunctionevent "github.com/openfunction/apis/events/v1alpha1"
 	networkingv1alpha1 "github.com/openfunction/apis/networking/v1alpha1"
@@ -128,6 +129,18 @@ func main() {
 	}()
 	eventBroadcaster.StartRecordingToSink(stopCh)
 	eventRecorder := eventBroadcaster.NewRecorder(mgr.GetScheme(), "openfunction")
+
+	// Check if HPA v2 is supported in the cluster
+	if dc, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig()); err == nil {
+		hpagv := "autoscaling/v2"
+		if _, err := dc.ServerResourcesForGroupVersion(hpagv); err != nil {
+			setupLog.Error(err, fmt.Sprintf("HPA v2 (%s) is not supported in the cluster", hpagv))
+			os.Exit(1)
+		}
+	} else {
+		setupLog.Error(err, "unable to create discovery client")
+		os.Exit(1)
+	}
 
 	if err = core.NewFunctionReconciler(mgr, interval, eventRecorder).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create function controller")

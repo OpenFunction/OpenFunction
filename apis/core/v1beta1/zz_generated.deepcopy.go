@@ -23,7 +23,7 @@ package v1beta1
 
 import (
 	"github.com/dapr/dapr/pkg/apis/components/v1alpha1"
-	apiv1alpha1 "github.com/kedacore/keda/v2/api/v1alpha1"
+	kedav1alpha1 "github.com/kedacore/keda/v2/apis/keda/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -687,7 +687,7 @@ func (in *KedaScaledObject) DeepCopyInto(out *KedaScaledObject) {
 	}
 	if in.Advanced != nil {
 		in, out := &in.Advanced, &out.Advanced
-		*out = new(apiv1alpha1.AdvancedConfig)
+		*out = new(kedav1alpha1.AdvancedConfig)
 		(*in).DeepCopyInto(*out)
 	}
 }

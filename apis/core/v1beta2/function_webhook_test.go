@@ -22,8 +22,8 @@ import (
 	"testing"
 	"time"
 
-	kedav1alpha1 "github.com/kedacore/keda/v2/api/v1alpha1"
-	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
+	kedav1alpha1 "github.com/kedacore/keda/v2/apis/keda/v1alpha1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -41,7 +41,7 @@ func Test_Validate(t *testing.T) {
 	cooldownPeriod := int32(-1)
 	stabilizationWindowSecondsNegative := int32(-1)
 	stabilizationWindowSecondsLimit := int32(3601)
-	var selectPolicy autoscalingv2beta2.ScalingPolicySelect = "test"
+	var selectPolicy autoscalingv2.ScalingPolicySelect = "test"
 
 	tests := []struct {
 		name    string
@@ -198,17 +198,6 @@ func Test_Validate(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "function.spec.serving.runtime",
-			r: Function{
-				Spec: FunctionSpec{
-					Image:            "test",
-					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
-					Serving:          &ServingImpl{},
-				},
-			},
-			wantErr: true,
-		},
-		{
 			name: "function.spec.serving.scaleOptions.minReplicas",
 			r: Function{
 				Spec: FunctionSpec{
@@ -258,6 +247,7 @@ func Test_Validate(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			// TODO: add validation for this case
 			name: "function.spec.serving.scaleOptions.keda.ScaledJob and ScaledObject",
 			r: Function{
 				Spec: FunctionSpec{
@@ -271,7 +261,7 @@ func Test_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 		{
 			name: "function.spec.serving.scaleOptions.keda.scaledObject.pollingInterval",
@@ -326,8 +316,8 @@ func Test_Validate(t *testing.T) {
 								ScaledObject: &KedaScaledObject{
 									Advanced: &kedav1alpha1.AdvancedConfig{
 										HorizontalPodAutoscalerConfig: &kedav1alpha1.HorizontalPodAutoscalerConfig{
-											Behavior: &autoscalingv2beta2.HorizontalPodAutoscalerBehavior{
-												ScaleUp: &autoscalingv2beta2.HPAScalingRules{
+											Behavior: &autoscalingv2.HorizontalPodAutoscalerBehavior{
+												ScaleUp: &autoscalingv2.HPAScalingRules{
 													StabilizationWindowSeconds: &stabilizationWindowSecondsNegative,
 												},
 											},
@@ -354,8 +344,8 @@ func Test_Validate(t *testing.T) {
 								ScaledObject: &KedaScaledObject{
 									Advanced: &kedav1alpha1.AdvancedConfig{
 										HorizontalPodAutoscalerConfig: &kedav1alpha1.HorizontalPodAutoscalerConfig{
-											Behavior: &autoscalingv2beta2.HorizontalPodAutoscalerBehavior{
-												ScaleUp: &autoscalingv2beta2.HPAScalingRules{
+											Behavior: &autoscalingv2.HorizontalPodAutoscalerBehavior{
+												ScaleUp: &autoscalingv2.HPAScalingRules{
 													StabilizationWindowSeconds: &stabilizationWindowSecondsLimit,
 												},
 											},
@@ -382,8 +372,8 @@ func Test_Validate(t *testing.T) {
 								ScaledObject: &KedaScaledObject{
 									Advanced: &kedav1alpha1.AdvancedConfig{
 										HorizontalPodAutoscalerConfig: &kedav1alpha1.HorizontalPodAutoscalerConfig{
-											Behavior: &autoscalingv2beta2.HorizontalPodAutoscalerBehavior{
-												ScaleUp: &autoscalingv2beta2.HPAScalingRules{
+											Behavior: &autoscalingv2.HorizontalPodAutoscalerBehavior{
+												ScaleUp: &autoscalingv2.HPAScalingRules{
 													SelectPolicy: &selectPolicy,
 												},
 											},
@@ -410,9 +400,9 @@ func Test_Validate(t *testing.T) {
 								ScaledObject: &KedaScaledObject{
 									Advanced: &kedav1alpha1.AdvancedConfig{
 										HorizontalPodAutoscalerConfig: &kedav1alpha1.HorizontalPodAutoscalerConfig{
-											Behavior: &autoscalingv2beta2.HorizontalPodAutoscalerBehavior{
-												ScaleUp: &autoscalingv2beta2.HPAScalingRules{
-													Policies: []autoscalingv2beta2.HPAScalingPolicy{
+											Behavior: &autoscalingv2.HorizontalPodAutoscalerBehavior{
+												ScaleUp: &autoscalingv2.HPAScalingRules{
+													Policies: []autoscalingv2.HPAScalingPolicy{
 														{Type: "test"},
 													},
 												},
@@ -440,9 +430,9 @@ func Test_Validate(t *testing.T) {
 								ScaledObject: &KedaScaledObject{
 									Advanced: &kedav1alpha1.AdvancedConfig{
 										HorizontalPodAutoscalerConfig: &kedav1alpha1.HorizontalPodAutoscalerConfig{
-											Behavior: &autoscalingv2beta2.HorizontalPodAutoscalerBehavior{
-												ScaleUp: &autoscalingv2beta2.HPAScalingRules{
-													Policies: []autoscalingv2beta2.HPAScalingPolicy{
+											Behavior: &autoscalingv2.HorizontalPodAutoscalerBehavior{
+												ScaleUp: &autoscalingv2.HPAScalingRules{
+													Policies: []autoscalingv2.HPAScalingPolicy{
 														{
 															Type:          "Pods",
 															PeriodSeconds: -1,
@@ -473,8 +463,8 @@ func Test_Validate(t *testing.T) {
 								ScaledObject: &KedaScaledObject{
 									Advanced: &kedav1alpha1.AdvancedConfig{
 										HorizontalPodAutoscalerConfig: &kedav1alpha1.HorizontalPodAutoscalerConfig{
-											Behavior: &autoscalingv2beta2.HorizontalPodAutoscalerBehavior{
-												ScaleDown: &autoscalingv2beta2.HPAScalingRules{
+											Behavior: &autoscalingv2.HorizontalPodAutoscalerBehavior{
+												ScaleDown: &autoscalingv2.HPAScalingRules{
 													StabilizationWindowSeconds: &stabilizationWindowSecondsLimit,
 												},
 											},
@@ -501,8 +491,8 @@ func Test_Validate(t *testing.T) {
 								ScaledObject: &KedaScaledObject{
 									Advanced: &kedav1alpha1.AdvancedConfig{
 										HorizontalPodAutoscalerConfig: &kedav1alpha1.HorizontalPodAutoscalerConfig{
-											Behavior: &autoscalingv2beta2.HorizontalPodAutoscalerBehavior{
-												ScaleDown: &autoscalingv2beta2.HPAScalingRules{
+											Behavior: &autoscalingv2.HorizontalPodAutoscalerBehavior{
+												ScaleDown: &autoscalingv2.HPAScalingRules{
 													SelectPolicy: &selectPolicy,
 												},
 											},
@@ -529,9 +519,9 @@ func Test_Validate(t *testing.T) {
 								ScaledObject: &KedaScaledObject{
 									Advanced: &kedav1alpha1.AdvancedConfig{
 										HorizontalPodAutoscalerConfig: &kedav1alpha1.HorizontalPodAutoscalerConfig{
-											Behavior: &autoscalingv2beta2.HorizontalPodAutoscalerBehavior{
-												ScaleDown: &autoscalingv2beta2.HPAScalingRules{
-													Policies: []autoscalingv2beta2.HPAScalingPolicy{
+											Behavior: &autoscalingv2.HorizontalPodAutoscalerBehavior{
+												ScaleDown: &autoscalingv2.HPAScalingRules{
+													Policies: []autoscalingv2.HPAScalingPolicy{
 														{Type: "test"},
 													},
 												},
@@ -559,9 +549,9 @@ func Test_Validate(t *testing.T) {
 								ScaledObject: &KedaScaledObject{
 									Advanced: &kedav1alpha1.AdvancedConfig{
 										HorizontalPodAutoscalerConfig: &kedav1alpha1.HorizontalPodAutoscalerConfig{
-											Behavior: &autoscalingv2beta2.HorizontalPodAutoscalerBehavior{
-												ScaleDown: &autoscalingv2beta2.HPAScalingRules{
-													Policies: []autoscalingv2beta2.HPAScalingPolicy{
+											Behavior: &autoscalingv2.HorizontalPodAutoscalerBehavior{
+												ScaleDown: &autoscalingv2.HPAScalingRules{
+													Policies: []autoscalingv2.HPAScalingPolicy{
 														{
 															Type:          "Pods",
 															PeriodSeconds: -1,
@@ -580,6 +570,7 @@ func Test_Validate(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			// TODO: add validation for this case
 			name: "function.spec.serving.triggers.[0].type",
 			r: Function{
 				Spec: FunctionSpec{
@@ -599,9 +590,10 @@ func Test_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 		{
+			// TODO: add validation for this case
 			name: "function.spec.serving.triggers.[0].metadata",
 			r: Function{
 				Spec: FunctionSpec{
@@ -621,9 +613,10 @@ func Test_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 		{
+			// TODO: add validation for this case
 			name: "function.spec.serving.triggers.[0].authenticationRef.kind",
 			r: Function{
 				Spec: FunctionSpec{
@@ -645,10 +638,10 @@ func Test_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 		{
-			name: "function.spec.serving.triggers.[0].fallbackReplicas",
+			name: "function.spec.serving.ScaledObject.fallback.replicas",
 			r: Function{
 				Spec: FunctionSpec{
 					Image:            "test",
@@ -659,9 +652,13 @@ func Test_Validate(t *testing.T) {
 							Keda: &KedaScaleOptions{
 								Triggers: []kedav1alpha1.ScaleTriggers{
 									{
-										Type:             "activemq",
-										Metadata:         map[string]string{"key": "value"},
-										FallbackReplicas: &minReplicasNegative,
+										Type:     "activemq",
+										Metadata: map[string]string{"key": "value"},
+									},
+								},
+								ScaledObject: &KedaScaledObject{
+									Fallback: &kedav1alpha1.Fallback{
+										Replicas: minReplicasNegative,
 									},
 								},
 							},

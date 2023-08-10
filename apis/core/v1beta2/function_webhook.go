@@ -22,16 +22,16 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/openfunction/pkg/constants"
-
 	shipwrightv1alpha1 "github.com/shipwright-io/build/pkg/apis/build/v1alpha1"
-	"k8s.io/api/autoscaling/v2beta2"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	"github.com/openfunction/pkg/constants"
 )
 
 //var (
@@ -65,15 +65,15 @@ var (
 		v1.RestartPolicyNever:     true,
 	}
 	kedaScaledJobRestartPolicesSlice = convertMapKeysToStringSlice(kedaScaledJobRestartPolices)
-	scalingPolicySelects             = map[v2beta2.ScalingPolicySelect]bool{
-		v2beta2.MaxPolicySelect:      true,
-		v2beta2.MinPolicySelect:      true,
-		v2beta2.DisabledPolicySelect: true,
+	scalingPolicySelects             = map[autoscalingv2.ScalingPolicySelect]bool{
+		autoscalingv2.MaxChangePolicySelect: true,
+		autoscalingv2.MinChangePolicySelect: true,
+		autoscalingv2.DisabledPolicySelect:  true,
 	}
 	scalingPolicySelectsSlice = convertMapKeysToStringSlice(scalingPolicySelects)
-	HPAScalingPolicyTypes     = map[v2beta2.HPAScalingPolicyType]bool{
-		v2beta2.PodsScalingPolicy:    true,
-		v2beta2.PercentScalingPolicy: true,
+	HPAScalingPolicyTypes     = map[autoscalingv2.HPAScalingPolicyType]bool{
+		autoscalingv2.PercentScalingPolicy: true,
+		autoscalingv2.PodsScalingPolicy:    true,
 	}
 	HPAScalingPolicyTypesSlice          = convertMapKeysToStringSlice(HPAScalingPolicyTypes)
 	kedaScaledJobScalingStrategies      = map[string]bool{"default": true, "custom": true, "accurate": true}
@@ -143,7 +143,7 @@ func (r *Function) Default() {
 	r.HandleWorkloadRuntime()
 }
 
-func (r Function) HandleWorkloadRuntime() {
+func (r *Function) HandleWorkloadRuntime() {
 	if r.Annotations == nil {
 		r.Annotations = make(map[string]string)
 	}
@@ -331,6 +331,11 @@ func (r *Function) ValidateServing() error {
 						return err
 					}
 				}
+				if scaledObject.Fallback != nil {
+					if err := r.ValidateKedaScaledObjectFallback(); err != nil {
+						return err
+					}
+				}
 			}
 			if scaleOptions.Keda.ScaledJob != nil {
 				scaleJob := scaleOptions.Keda.ScaledJob
@@ -448,6 +453,25 @@ func (r *Function) ValidateKedaScaledObjectAdvanced() error {
 	return nil
 }
 
+func (r *Function) ValidateKedaScaledObjectFallback() error {
+	fallback := r.Spec.Serving.ScaleOptions.Keda.ScaledObject.Fallback
+	if fallback != nil {
+		if fallback.FailureThreshold < 1 {
+			return field.Invalid(field.NewPath("spec", "serving", "scaleOptions",
+				"keda", "scaleObject", "fallback", "failureThreshold"),
+				fallback.FailureThreshold,
+				"must be greater than or equal to 1")
+		}
+		if fallback.Replicas < 0 {
+			return field.Invalid(field.NewPath("spec", "serving", "scaleOptions",
+				"keda", "scaleObject", "fallback", "replicas"),
+				fallback.Replicas,
+				"must be greater than or equal to 0")
+		}
+	}
+	return nil
+}
+
 func (r *Function) ValidateKedaScaledJobScalingStrategy() error {
 	strategy := r.Spec.Serving.ScaleOptions.Keda.ScaledJob.ScalingStrategy
 	if strategy.Strategy != "" {
@@ -499,10 +523,10 @@ func convertMapKeysToStringSlice(m interface{}) []string {
 				keys = append(keys, string(key.Interface().(shipwrightv1alpha1.BuildStrategyKind)))
 			case v1.RestartPolicy:
 				keys = append(keys, string(key.Interface().(v1.RestartPolicy)))
-			case v2beta2.ScalingPolicySelect:
-				keys = append(keys, string(key.Interface().(v2beta2.ScalingPolicySelect)))
-			case v2beta2.HPAScalingPolicyType:
-				keys = append(keys, string(key.Interface().(v2beta2.HPAScalingPolicyType)))
+			case autoscalingv2.ScalingPolicySelect:
+				keys = append(keys, string(key.Interface().(autoscalingv2.ScalingPolicySelect)))
+			case autoscalingv2.HPAScalingPolicyType:
+				keys = append(keys, string(key.Interface().(autoscalingv2.HPAScalingPolicyType)))
 			}
 		}
 		return keys
