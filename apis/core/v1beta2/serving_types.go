@@ -71,7 +71,7 @@ type DaprInput struct {
 }
 
 type Input struct {
-	Dapr *DaprInput `json:"dap,omitemptyr"`
+	Dapr *DaprInput `json:"dapr,omitemptyr"`
 }
 
 type DaprOutput struct {
@@ -153,7 +153,7 @@ type TracingConfig struct {
 	Enabled  bool              `json:"enabled" yaml:"enabled"`
 	Provider *TracingProvider  `json:"provider" yaml:"provider"`
 	Tags     map[string]string `json:"tags,omitempty" yaml:"tags,omitempty"`
-	Baggage  map[string]string `json:"baggage" yaml:"baggage"`
+	Baggage  map[string]string `json:"baggage,omitempty" yaml:"baggage,omitempty"`
 }
 
 type TracingProvider struct {

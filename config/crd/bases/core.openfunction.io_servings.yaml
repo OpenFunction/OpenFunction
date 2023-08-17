@@ -15332,7 +15332,6 @@ spec:
                       type: string
                     type: object
                 required:
-                - baggage
                 - enabled
                 - provider
                 type: object
@@ -16448,7 +16447,7 @@ spec:
                   inputs:
                     items:
                       properties:
-                        dap:
+                        dapr:
                           properties:
                             name:
                               description: The name of the dapr component, the component
@@ -16465,7 +16464,7 @@ spec:
                           - name
                           type: object
                       required:
-                      - dap
+                      - dapr
                       type: object
                     type: array
                 type: object

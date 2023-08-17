@@ -178,6 +178,32 @@ rules:
 - apiGroups:
   - events.openfunction.io
   resources:
+  - clustereventbuses
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - events.openfunction.io
+  resources:
+  - clustereventbuses/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - events.openfunction.io
+  resources:
+  - clustereventbuses/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - events.openfunction.io
+  resources:
   - eventbus
   verbs:
   - create
@@ -197,6 +223,32 @@ rules:
   - events.openfunction.io
   resources:
   - eventbus/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - events.openfunction.io
+  resources:
+  - eventbuses
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - events.openfunction.io
+  resources:
+  - eventbuses/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - events.openfunction.io
+  resources:
+  - eventbuses/status
   verbs:
   - get
   - patch

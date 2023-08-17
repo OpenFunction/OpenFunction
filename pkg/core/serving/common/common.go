@@ -885,3 +885,36 @@ func mergerMap(m1, m2 map[string]string) map[string]string {
 
 	return res
 }
+
+func GetSkywalkingEnv(logger logr.Logger, s *openfunction.Serving, cm map[string]string) []corev1.EnvVar {
+	oapServer := ""
+	tracing := mergerTracingConfig(logger, s, cm)
+	if tracing != nil &&
+		tracing.Enabled &&
+		tracing.Provider != nil &&
+		tracing.Provider.Name == "skywalking" {
+		oapServer = tracing.Provider.OapServer
+	}
+
+	var env []corev1.EnvVar
+	if oapServer != "" {
+		env = append(env, corev1.EnvVar{
+			Name:  "SW_AGENT_COLLECTOR_BACKEND_SERVICES",
+			Value: oapServer,
+		})
+		env = append(env, corev1.EnvVar{
+			Name:  "SW_AGENT_NAME",
+			Value: GetFunctionName(s),
+		})
+		env = append(env, corev1.EnvVar{
+			Name:  "SW_AGENT_NAMESPACE",
+			Value: s.Namespace,
+		})
+		env = append(env, corev1.EnvVar{
+			Name:  "SW_AGENT_KEEP_TRACING",
+			Value: "true",
+		})
+	}
+
+	return env
+}
