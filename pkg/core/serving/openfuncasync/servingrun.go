@@ -218,7 +218,7 @@ func (r *servingRun) Clean(s *openfunction.Serving) error {
 func (r *servingRun) Result(s *openfunction.Serving) (string, string, string, error) {
 
 	// Currently, it only supports updating the status of serving through the status of deployment.
-	if s.Spec.WorkloadType == "StatefulSet" {
+	if s.Spec.WorkloadType != openfunction.WorkloadTypeDeployment {
 		return openfunction.Running, openfunction.Running, openfunction.Running, nil
 	}
 
@@ -348,6 +348,7 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving, cm map[string]str
 		Name:  common.DaprProtocolEnvVar,
 		Value: annotations[common.DaprAppProtocol],
 	})
+	container.Env = append(container.Env, common.GetSkywalkingEnv(r.log, s, cm)...)
 
 	if env, err := common.CreateFunctionContextENV(r.ctx, r.log, r.Client, s, cm); err != nil {
 		return nil, err

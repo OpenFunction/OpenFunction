@@ -6,9 +6,9 @@ resources:
   - bases/core.openfunction.io_servings.yaml
   - bases/core.openfunction.io_builders.yaml
   - bases/events.openfunction.io_eventsources.yaml
-  - bases/events.openfunction.io_eventbus.yaml
+  - bases/events.openfunction.io_eventbuses.yaml
   - bases/events.openfunction.io_triggers.yaml
-  - bases/events.openfunction.io_clustereventbus.yaml
+  - bases/events.openfunction.io_clustereventbuses.yaml
   - bases/networking.openfunction.io_gateways.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 

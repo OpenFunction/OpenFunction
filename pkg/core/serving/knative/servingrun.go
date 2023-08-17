@@ -299,6 +299,7 @@ func (r *servingRun) createService(s *openfunction.Serving, cm map[string]string
 		Name:  common.DaprProtocolEnvVar,
 		Value: annotations[common.DaprAppProtocol],
 	})
+	container.Env = append(container.Env, common.GetSkywalkingEnv(r.log, s, cm)...)
 
 	if env, err := common.CreateFunctionContextENV(r.ctx, r.log, r.Client, s, cm); err != nil {
 		return nil, err
