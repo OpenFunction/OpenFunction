@@ -71,7 +71,7 @@ type DaprInput struct {
 }
 
 type Input struct {
-	Dapr *DaprInput `json:"dapr,omitemptyr"`
+	Dapr *DaprInput `json:"dapr,omitempty"`
 }
 
 type DaprOutput struct {
