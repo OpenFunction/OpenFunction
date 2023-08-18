@@ -306,10 +306,28 @@ func (r *Function) ValidateServing() error {
 		}
 
 		if scaleOptions.Keda != nil {
-			if scaleOptions.Keda.ScaledJob != nil && scaleOptions.Keda.ScaledObject != nil {
+			if (scaleOptions.Keda.ScaledJob != nil && scaleOptions.Keda.ScaledObject != nil && scaleOptions.Keda.HTTPScaledObject != nil) ||
+				(scaleOptions.Keda.ScaledObject != nil && scaleOptions.Keda.HTTPScaledObject != nil) ||
+				(scaleOptions.Keda.ScaledJob != nil && scaleOptions.Keda.HTTPScaledObject != nil) ||
+				(scaleOptions.Keda.ScaledJob != nil && scaleOptions.Keda.ScaledObject != nil) {
 				return field.Required(
 					field.NewPath("spec", "serving", "scaleOptions", "keda", "scaledObject"),
-					"scaledJob and scaledObject have at most one enabled")
+					"scaledJob, scaledObject and httpScaledObject have at most one enabled")
+			}
+			if scaleOptions.Keda.HTTPScaledObject != nil {
+				httpScaledObject := scaleOptions.Keda.HTTPScaledObject
+				if httpScaledObject.TargetPendingRequests != nil && *httpScaledObject.TargetPendingRequests < 0 {
+					return field.Invalid(
+						field.NewPath("spec", "serving", "scaleOptions", "keda", "httpScaledObject", "targetPendingRequests"),
+						httpScaledObject.TargetPendingRequests,
+						"cannot be less than 0")
+				}
+				if httpScaledObject.CooldownPeriod != nil && *httpScaledObject.CooldownPeriod < 0 {
+					return field.Invalid(
+						field.NewPath("spec", "serving", "scaleOptions", "keda", "scaledObject", "cooldownPeriod"),
+						httpScaledObject.CooldownPeriod,
+						"cannot be less than 0")
+				}
 			}
 			if scaleOptions.Keda.ScaledObject != nil {
 				scaledObject := scaleOptions.Keda.ScaledObject
@@ -370,6 +388,15 @@ func (r *Function) ValidateServing() error {
 					return err
 				}
 			}
+		}
+	}
+
+	if r.Spec.Serving.Triggers.Http.Engine != nil {
+		if *r.Spec.Serving.Triggers.Http.Engine != HttpRuntimeKeda && *r.Spec.Serving.Triggers.Http.Engine != HttpRuntimeKnative {
+			return field.Invalid(
+				field.NewPath("spec", "serving", "triggers", "http", "engine"),
+				r.Spec.Serving.Triggers.Http.Engine,
+				"unknown engine type, neither knative nor keda")
 		}
 	}
 

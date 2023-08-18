@@ -37,6 +37,7 @@ func Test_Validate(t *testing.T) {
 	maxReplicasNegative := int32(-1)
 	minReplicas := int32(5)
 	maxReplicas := int32(0)
+	targetPendingRequests := int32(-1)
 	pollingInterval := int32(-1)
 	cooldownPeriod := int32(-1)
 	stabilizationWindowSecondsNegative := int32(-1)
@@ -248,7 +249,7 @@ func Test_Validate(t *testing.T) {
 		},
 		{
 			// TODO: add validation for this case
-			name: "function.spec.serving.scaleOptions.keda.ScaledJob and ScaledObject",
+			name: "function.spec.serving.scaleOptions.keda.ScaledJob and ScaledObject and HTTPScaledObject",
 			r: Function{
 				Spec: FunctionSpec{
 					Image:            "test",
@@ -262,6 +263,26 @@ func Test_Validate(t *testing.T) {
 				},
 			},
 			wantErr: false,
+		},
+		{
+			name: "function.spec.serving.scaleOptions.keda.httpScaledObject.targetPendingRequests",
+			r: Function{
+				Spec: FunctionSpec{
+					Image:            "test",
+					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
+					Serving: &ServingImpl{
+						Triggers: &Triggers{Http: &HttpTrigger{}},
+						ScaleOptions: &ScaleOptions{
+							Keda: &KedaScaleOptions{
+								HTTPScaledObject: &HTTPScaledObject{
+									TargetPendingRequests: &targetPendingRequests,
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
 		},
 		{
 			name: "function.spec.serving.scaleOptions.keda.scaledObject.pollingInterval",

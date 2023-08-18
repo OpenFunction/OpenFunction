@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
+	"github.com/openfunction/pkg/core/serving/kedahttp"
 	"github.com/openfunction/pkg/core/serving/knative"
 	"github.com/openfunction/pkg/core/serving/openfuncasync"
 )
@@ -32,6 +33,7 @@ func Registry(mgr ctrl.Manager) []client.Object {
 	}
 
 	var objs []client.Object
+	objs = append(objs, kedahttp.Registry(rm)...)
 	objs = append(objs, knative.Registry(rm)...)
 	objs = append(objs, openfuncasync.Registry(rm)...)
 

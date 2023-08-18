@@ -34,6 +34,7 @@ import (
 	openfunction "github.com/openfunction/apis/core/v1beta2"
 	"github.com/openfunction/pkg/constants"
 	"github.com/openfunction/pkg/core"
+	"github.com/openfunction/pkg/core/serving/kedahttp"
 	"github.com/openfunction/pkg/core/serving/knative"
 	"github.com/openfunction/pkg/core/serving/openfuncasync"
 	"github.com/openfunction/pkg/util"
@@ -213,7 +214,13 @@ func (r *ServingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 func (r *ServingReconciler) getServingRun(s *openfunction.Serving) core.ServingRun {
 	if s.Spec.Triggers.Http != nil {
-		return knative.NewServingRun(r.ctx, r.Client, r.Scheme, r.Log)
+		if s.Spec.Triggers.Http.Engine == nil || *s.Spec.Triggers.Http.Engine == openfunction.HttpRuntimeKnative {
+			return knative.NewServingRun(r.ctx, r.Client, r.Scheme, r.Log)
+		} else if *s.Spec.Triggers.Http.Engine == openfunction.HttpRuntimeKeda {
+			return kedahttp.NewServingRun(r.ctx, r.Client, r.Scheme, r.Log)
+		} else {
+			return nil
+		}
 	} else {
 		return openfuncasync.NewServingRun(r.ctx, r.Client, r.Scheme, r.Log)
 	}
