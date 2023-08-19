@@ -16478,8 +16478,6 @@ spec:
                           required:
                           - name
                           type: object
-                      required:
-                      - dapr
                       type: object
                     type: array
                 type: object
