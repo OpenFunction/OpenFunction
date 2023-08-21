@@ -282,8 +282,7 @@ func (r *Function) ValidateBuild() error {
 }
 
 func (r *Function) ValidateServing() error {
-	if r.Spec.Serving.ScaleOptions != nil {
-		scaleOptions := r.Spec.Serving.ScaleOptions
+	if scaleOptions := r.Spec.Serving.ScaleOptions; scaleOptions != nil {
 		minReplicas := int32(0)
 		maxReplicas := int32(10)
 		if scaleOptions.MaxReplicas != nil {
@@ -305,17 +304,21 @@ func (r *Function) ValidateServing() error {
 				minReplicas, "cannot be greater than maxReplicas")
 		}
 
-		if scaleOptions.Keda != nil {
-			if (scaleOptions.Keda.ScaledJob != nil && scaleOptions.Keda.ScaledObject != nil && scaleOptions.Keda.HTTPScaledObject != nil) ||
-				(scaleOptions.Keda.ScaledObject != nil && scaleOptions.Keda.HTTPScaledObject != nil) ||
-				(scaleOptions.Keda.ScaledJob != nil && scaleOptions.Keda.HTTPScaledObject != nil) ||
-				(scaleOptions.Keda.ScaledJob != nil && scaleOptions.Keda.ScaledObject != nil) {
+		if keda := scaleOptions.Keda; keda != nil {
+			job, object, httpso := keda.ScaledJob, keda.ScaledObject, keda.HTTPScaledObject
+			// case that only ScaledJob is declared
+			flagJob := job != nil && object == nil && httpso == nil
+			// case that only ScaledObject is declared
+			flagScaledObject := job == nil && object != nil && httpso == nil
+			// case that only HTTPScaledObject is declared
+			flagHTTPScaledObject := job == nil && object == nil && httpso != nil
+			// if none of these cases happened, return error
+			if !flagJob && !flagScaledObject && !flagHTTPScaledObject {
 				return field.Required(
-					field.NewPath("spec", "serving", "scaleOptions", "keda", "scaledObject"),
+					field.NewPath("spec", "serving", "scaleOptions", "keda"),
 					"scaledJob, scaledObject and httpScaledObject have at most one enabled")
 			}
-			if scaleOptions.Keda.HTTPScaledObject != nil {
-				httpScaledObject := scaleOptions.Keda.HTTPScaledObject
+			if httpScaledObject := keda.HTTPScaledObject; httpScaledObject != nil {
 				if httpScaledObject.TargetPendingRequests != nil && *httpScaledObject.TargetPendingRequests < 0 {
 					return field.Invalid(
 						field.NewPath("spec", "serving", "scaleOptions", "keda", "httpScaledObject", "targetPendingRequests"),
@@ -329,8 +332,7 @@ func (r *Function) ValidateServing() error {
 						"cannot be less than 0")
 				}
 			}
-			if scaleOptions.Keda.ScaledObject != nil {
-				scaledObject := scaleOptions.Keda.ScaledObject
+			if scaledObject := keda.ScaledObject; scaledObject != nil {
 				if scaledObject.PollingInterval != nil && *scaledObject.PollingInterval < 0 {
 					return field.Invalid(
 						field.NewPath("spec", "serving", "scaleOptions", "keda", "scaledObject", "pollingInterval"),
@@ -355,8 +357,7 @@ func (r *Function) ValidateServing() error {
 					}
 				}
 			}
-			if scaleOptions.Keda.ScaledJob != nil {
-				scaleJob := scaleOptions.Keda.ScaledJob
+			if scaleJob := keda.ScaledJob; scaleJob != nil {
 				if scaleJob.RestartPolicy != nil {
 					if _, ok := kedaScaledJobRestartPolices[*scaleJob.RestartPolicy]; !ok {
 						return field.NotSupported(
