@@ -216,12 +216,10 @@ func (r *ServingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 func (r *ServingReconciler) getServingRun(s *openfunction.Serving) core.ServingRun {
 	if s.Spec.Triggers.Http != nil {
-		if s.Spec.Triggers.Http.Engine == nil || *s.Spec.Triggers.Http.Engine == openfunction.HttpEngineKnative {
-			return knative.NewServingRun(r.ctx, r.Client, r.Scheme, r.Log)
-		} else if *s.Spec.Triggers.Http.Engine == openfunction.HttpEngineKeda {
+		if *s.Spec.Triggers.Http.Engine == openfunction.HttpEngineKeda {
 			return kedahttp.NewServingRun(r.ctx, r.Client, r.Scheme, r.Log)
 		} else {
-			return nil
+			return knative.NewServingRun(r.ctx, r.Client, r.Scheme, r.Log)
 		}
 	} else {
 		return openfuncasync.NewServingRun(r.ctx, r.Client, r.Scheme, r.Log)
