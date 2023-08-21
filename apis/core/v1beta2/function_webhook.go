@@ -392,7 +392,7 @@ func (r *Function) ValidateServing() error {
 	}
 
 	if r.Spec.Serving.Triggers.Http.Engine != nil {
-		if *r.Spec.Serving.Triggers.Http.Engine != HttpRuntimeKeda && *r.Spec.Serving.Triggers.Http.Engine != HttpRuntimeKnative {
+		if *r.Spec.Serving.Triggers.Http.Engine != HttpEngineKeda && *r.Spec.Serving.Triggers.Http.Engine != HttpEngineKnative {
 			return field.Invalid(
 				field.NewPath("spec", "serving", "triggers", "http", "engine"),
 				r.Spec.Serving.Triggers.Http.Engine,

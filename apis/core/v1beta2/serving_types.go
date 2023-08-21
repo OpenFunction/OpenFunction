@@ -35,8 +35,8 @@ const (
 	WorkloadTypeJob                = "Job"
 	WorkloadTypeStatefulSet        = "StatefulSet"
 	WorkloadTypeDeployment         = "Deployment"
-	HttpRuntimeKnative      Engine = "knative"
-	HttpRuntimeKeda         Engine = "keda"
+	HttpEngineKnative       Engine = "knative"
+	HttpEngineKeda          Engine = "keda"
 )
 
 type Triggers struct {
