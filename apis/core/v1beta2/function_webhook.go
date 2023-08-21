@@ -313,7 +313,7 @@ func (r *Function) ValidateServing() error {
 			// case that only HTTPScaledObject is declared
 			flagHTTPScaledObject := job == nil && object == nil && httpso != nil
 			// if none of these cases happened, return error
-			if !flagJob && !flagScaledObject && !flagHTTPScaledObject {
+			if !(flagJob || flagScaledObject || flagHTTPScaledObject) {
 				return field.Required(
 					field.NewPath("spec", "serving", "scaleOptions", "keda"),
 					"scaledJob, scaledObject and httpScaledObject have at most one enabled")
