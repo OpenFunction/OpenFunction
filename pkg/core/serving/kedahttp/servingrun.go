@@ -122,6 +122,11 @@ func (r *servingRun) Run(s *openfunction.Serving, cm map[string]string) error {
 		return err
 	}
 
+	if err := controllerutil.SetControllerReference(s, service, r.scheme); err != nil {
+		log.Error(err, "Failed to SetControllerReference for service")
+		return err
+	}
+
 	if err := r.Create(r.ctx, service); err != nil {
 		log.Error(err, "Failed to create service", "service", service.Name)
 		return err
@@ -182,6 +187,12 @@ func (r *servingRun) Clean(s *openfunction.Serving) error {
 		}
 	}
 
+	for _, item := range httpScaledObjectList.Items {
+		if err := deleteObj(&item); err != nil {
+			return err
+		}
+	}
+
 	for _, item := range serviceList.Items {
 		if err := deleteObj(&item); err != nil {
 			return err
@@ -189,12 +200,6 @@ func (r *servingRun) Clean(s *openfunction.Serving) error {
 	}
 
 	for _, item := range deploymentList.Items {
-		if err := deleteObj(&item); err != nil {
-			return err
-		}
-	}
-
-	for _, item := range httpScaledObjectList.Items {
 		if err := deleteObj(&item); err != nil {
 			return err
 		}
