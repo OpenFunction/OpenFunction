@@ -45,6 +45,7 @@ import (
 const (
 	workloadName = "http.keda.sh/deployment"
 	scalerName   = "http.keda.sh/httpscaledobject"
+	ingressName  = "k8s.io/ingress-nginx"
 )
 
 type servingRun struct {
@@ -157,7 +158,6 @@ func (r *servingRun) Clean(s *openfunction.Serving) error {
 				return err
 			}
 		}
-
 		return nil
 	}
 
@@ -168,7 +168,6 @@ func (r *servingRun) Clean(s *openfunction.Serving) error {
 			}
 			log.V(1).Info("Delete", "name", obj.GetName())
 		}
-
 		return nil
 	}
 
@@ -390,6 +389,7 @@ func (r *servingRun) generateWorkload(s *openfunction.Serving, cm map[string]str
 		}
 	}
 
+	// In current version of keda http-addon(v0.5.0), Deployment is the only available workload
 	deploy := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-deployment-%s-", s.Name, version),
@@ -422,7 +422,7 @@ func (r *servingRun) generateService(s *openfunction.Serving) (*corev1.Service, 
 	labels = util.AppendLabels(s.Spec.Labels, labels)
 
 	svcPort := corev1.ServicePort{
-		Port: 80,
+		Port: 80, // Default to 80(HTTP), no need to change
 		TargetPort: intstr.IntOrString{
 			IntVal: *s.Spec.Triggers.Http.Port,
 		},
@@ -457,8 +457,6 @@ func (r *servingRun) createScaler(s *openfunction.Serving, workload runtime.Obje
 	}
 	version = strings.ReplaceAll(version, ".", "")
 
-	keda := s.Spec.ScaleOptions.Keda
-
 	var hosts []string
 	for _, hostname := range s.Spec.Triggers.Http.Route.Hostnames {
 		hosts = append(hosts, string(hostname))
@@ -475,11 +473,13 @@ func (r *servingRun) createScaler(s *openfunction.Serving, workload runtime.Obje
 		}
 	}
 
-	var targetPendingRequests int32 = 100
+	keda := s.Spec.ScaleOptions.Keda
+
+	var targetPendingRequests int32 = 100 // Default to 100
 	if keda.HTTPScaledObject.TargetPendingRequests != nil {
 		targetPendingRequests = *keda.HTTPScaledObject.TargetPendingRequests
 	}
-	var cooldownPeriod int32 = 300
+	var cooldownPeriod int32 = 300 // Default to 300
 	if keda.HTTPScaledObject.CooldownPeriod != nil {
 		cooldownPeriod = *keda.HTTPScaledObject.CooldownPeriod
 	}
@@ -526,6 +526,7 @@ func (r *servingRun) createScaler(s *openfunction.Serving, workload runtime.Obje
 
 	log.V(1).Info("Keda scaler Created", "Scaler", httpScaledObject.GetName())
 
+	// In current version of keda http-addon(v0.5.0), nginx is the only available ingressClass
 	var ingressClassName = "nginx"
 	var pathType = "Prefix"
 	var rules []v1.IngressRule
@@ -543,7 +544,7 @@ func (r *servingRun) createScaler(s *openfunction.Serving, workload runtime.Obje
 								Service: &v1.IngressServiceBackend{
 									Name: "keda-add-ons-http-interceptor-proxy",
 									Port: v1.ServiceBackendPort{
-										Number: 8080,
+										Number: 8080, // Default port of keda-add-ons-http-interceptor-proxy
 									},
 								},
 							},
@@ -574,6 +575,8 @@ func (r *servingRun) createScaler(s *openfunction.Serving, workload runtime.Obje
 		log.Error(err, "Failed to create nginx ingress")
 		return err
 	}
+
+	s.Status.ResourceRef[ingressName] = ingress.GetName()
 
 	log.V(1).Info("Nginx ingress Created", "Ingress", ingress.GetName())
 
