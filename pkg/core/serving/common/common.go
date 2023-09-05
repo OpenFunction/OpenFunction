@@ -532,9 +532,7 @@ func parsePluginsCfg(logger logr.Logger, s *openfunction.Serving, cm map[string]
 		} else {
 			if plgCfg.Order != nil {
 				var prePlgs []string
-				for _, plg := range plgCfg.Order {
-					prePlgs = append(prePlgs, plg)
-				}
+				prePlgs = append(prePlgs, plgCfg.Order...)
 				prePlugins = prePlgs
 				postPlugins = reverse(prePlgs)
 			}
