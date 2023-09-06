@@ -284,6 +284,26 @@ func Test_Validate(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "function.spec.serving.scaleOptions.keda.httpScaledObject.cooldownPeriod",
+			r: Function{
+				Spec: FunctionSpec{
+					Image:            "test",
+					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
+					Serving: &ServingImpl{
+						Triggers: &Triggers{Http: &HttpTrigger{}},
+						ScaleOptions: &ScaleOptions{
+							Keda: &KedaScaleOptions{
+								HTTPScaledObject: &HTTPScaledObject{
+									CooldownPeriod: &cooldownPeriod,
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
 			name: "function.spec.serving.scaleOptions.keda.scaledObject.pollingInterval",
 			r: Function{
 				Spec: FunctionSpec{
