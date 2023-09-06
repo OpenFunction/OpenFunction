@@ -19,7 +19,7 @@ package v1beta2
 import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8sgatewayapiv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	k8sgatewayapiv1beata1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -80,10 +80,10 @@ const ExternalAddressType AddressType = "External"
 type GatewayRef struct {
 	// Name is the name of the referent.
 	// It refers to the name of a Gateway resource.
-	Name k8sgatewayapiv1alpha2.ObjectName `json:"name"`
+	Name k8sgatewayapiv1beata1.ObjectName `json:"name"`
 	// Namespace is the namespace of the referent. When unspecified,
 	// this refers to the local namespace of the Route.
-	Namespace *k8sgatewayapiv1alpha2.Namespace `json:"namespace"`
+	Namespace *k8sgatewayapiv1beata1.Namespace `json:"namespace"`
 }
 
 // CommonRouteSpec defines the common attributes that all Routes MUST include
@@ -103,12 +103,12 @@ type RouteImpl struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
-	Hostnames []k8sgatewayapiv1alpha2.Hostname `json:"hostnames,omitempty"`
+	Hostnames []k8sgatewayapiv1beata1.Hostname `json:"hostnames,omitempty"`
 	// Rules are a list of HTTP matchers, filters and actions.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
-	Rules []k8sgatewayapiv1alpha2.HTTPRouteRule `json:"rules,omitempty"`
+	Rules []k8sgatewayapiv1beata1.HTTPRouteRule `json:"rules,omitempty"`
 }
 
 // FunctionSpec defines the desired state of Function
@@ -134,8 +134,18 @@ type FunctionSpec struct {
 	Build *BuildImpl `json:"build,omitempty"`
 	// Information needed to run a function. The serving step will be skipped if `Serving` is nil.
 	Serving *ServingImpl `json:"serving,omitempty"`
+	// Canary release steps for a function
+	CanarySteps []CanaryStep `json:"CanarySteps,omitempty"`
 }
-
+type CanaryStep struct {
+	Weight *int32 `json:"weight,omitempty"`
+	Pause  Pause  `json:"pause,omitempty"`
+}
+type Pause struct {
+	// Duration the amount of time to wait before moving to the next step.
+	// +optional
+	Duration *int32 `json:"duration,omitempty"`
+}
 type Condition struct {
 	State                     string           `json:"state,omitempty"`
 	Reason                    string           `json:"reason,omitempty"`
@@ -163,12 +173,12 @@ type RouteStatus struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
-	Hosts []k8sgatewayapiv1alpha2.Hostname `json:"hosts,omitempty"`
+	Hosts []k8sgatewayapiv1beata1.Hostname `json:"hosts,omitempty"`
 	// Paths list all actual paths of HTTPRoute.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
-	Paths []k8sgatewayapiv1alpha2.HTTPPathMatch `json:"paths,omitempty"`
+	Paths []k8sgatewayapiv1beata1.HTTPPathMatch `json:"paths,omitempty"`
 	// Conditions describes the status of the route with respect to the Gateway.
 	// Note that the route's availability is also subject to the Gateway's own
 	// status conditions and listener status.
@@ -223,9 +233,11 @@ type GitSourceResult struct {
 
 // FunctionStatus defines the observed state of Function
 type FunctionStatus struct {
-	Route   *RouteStatus `json:"route,omitempty"`
-	Build   *Condition   `json:"build,omitempty"`
-	Serving *Condition   `json:"serving,omitempty"`
+	Route         *RouteStatus  `json:"route,omitempty"`
+	Build         *Condition    `json:"build,omitempty"`
+	Serving       *Condition    `json:"serving,omitempty"`
+	StableServing *Condition    `json:"stableServing,omitempty"`
+	CanaryStatus  *CanaryStatus `json:"canaryStatus,omitempty"`
 	// Addresses holds the addresses that used to access the Function.
 	// +optional
 	Addresses []FunctionAddress `json:"addresses,omitempty"`
@@ -236,6 +248,36 @@ type FunctionStatus struct {
 	// +optional
 	Sources []SourceResult `json:"sources,omitempty"`
 }
+
+// CanaryStatus status fields that only pertain to the canary release
+type CanaryStatus struct {
+	CurrentStepIndex int32           `json:"currentStepIndex"`
+	CurrentStepState CanaryStepState `json:"currentStepState"`
+	Message          string          `json:"message,omitempty"`
+	LastUpdateTime   *metav1.Time    `json:"lastUpdateTime,omitempty"`
+	Phase            CanaryPhase     `json:"phase"`
+}
+type CanaryStepState string
+
+const (
+	CanaryStepStateUpgrade   CanaryStepState = "StepUpgrade"
+	CanaryStepStatePaused    CanaryStepState = "StepPaused"
+	CanaryStepStateReady     CanaryStepState = "StepReady"
+	CanaryStepStateCompleted CanaryStepState = "Completed"
+)
+
+// CanaryPhase are a set of phases that this Canary release
+type CanaryPhase string
+
+const (
+
+	// CanaryPhaseHealthy indicates  a function canary release is healthy
+	CanaryPhaseHealthy CanaryPhase = "Healthy"
+	// CanaryPhaseProgressing indicates  a function canary release is not yet healthy but still making progress towards a healthy state
+	CanaryPhaseProgressing CanaryPhase = "Progressing"
+	// CanaryPhaseTerminating indicates  a function canary release is terminated
+	CanaryPhaseTerminating CanaryPhase = "Terminating"
+)
 
 //+genclient
 //+kubebuilder:object:root=true

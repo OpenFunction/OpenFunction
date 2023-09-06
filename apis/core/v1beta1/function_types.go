@@ -20,7 +20,7 @@ import (
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8sgatewayapiv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	k8sgatewayapiv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -99,10 +99,10 @@ type ShipwrightEngine struct {
 type GatewayRef struct {
 	// Name is the name of the referent.
 	// It refers to the name of a Gateway resource.
-	Name k8sgatewayapiv1alpha2.ObjectName `json:"name"`
+	Name k8sgatewayapiv1beta1.ObjectName `json:"name"`
 	// Namespace is the namespace of the referent. When unspecified,
 	// this refers to the local namespace of the Route.
-	Namespace *k8sgatewayapiv1alpha2.Namespace `json:"namespace"`
+	Namespace *k8sgatewayapiv1beta1.Namespace `json:"namespace"`
 }
 
 // CommonRouteSpec defines the common attributes that all Routes MUST include
@@ -122,12 +122,12 @@ type RouteImpl struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
-	Hostnames []k8sgatewayapiv1alpha2.Hostname `json:"hostnames,omitempty"`
+	Hostnames []k8sgatewayapiv1beta1.Hostname `json:"hostnames,omitempty"`
 	// Rules are a list of HTTP matchers, filters and actions.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
-	Rules []k8sgatewayapiv1alpha2.HTTPRouteRule `json:"rules,omitempty"`
+	Rules []k8sgatewayapiv1beta1.HTTPRouteRule `json:"rules,omitempty"`
 }
 
 type BuildImpl struct {
@@ -273,12 +273,12 @@ type RouteStatus struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
-	Hosts []k8sgatewayapiv1alpha2.Hostname `json:"hosts,omitempty"`
+	Hosts []k8sgatewayapiv1beta1.Hostname `json:"hosts,omitempty"`
 	// Paths list all actual paths of HTTPRoute.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
-	Paths []k8sgatewayapiv1alpha2.HTTPPathMatch `json:"paths,omitempty"`
+	Paths []k8sgatewayapiv1beta1.HTTPPathMatch `json:"paths,omitempty"`
 	// Conditions describes the status of the route with respect to the Gateway.
 	// Note that the route's availability is also subject to the Gateway's own
 	// status conditions and listener status.

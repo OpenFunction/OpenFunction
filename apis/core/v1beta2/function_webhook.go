@@ -225,6 +225,12 @@ func (r *Function) Validate() error {
 		return field.Required(field.NewPath("spec", "serving"),
 			"must be specified when `spec.build` is not enabled")
 	}
+
+	if r.Spec.CanarySteps != nil && len(r.Spec.CanarySteps) > 0 {
+		if err := r.ValidateCanarySteps(field.NewPath("spec", "canarySteps")); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -280,7 +286,32 @@ func (r *Function) ValidateBuild() error {
 
 	return nil
 }
+func (r *Function) ValidateCanarySteps(fldPath *field.Path) error {
+	steps := r.Spec.CanarySteps
+	for i, step := range steps {
+		weight := step.Weight
+		if weight == nil {
+			return field.Invalid(fldPath.Index(i).Child("weight"), steps, `Weight cannot be empty`)
+		}
+		if *weight < 1 || *weight > 100 {
+			return field.Invalid(fldPath.Index(i).Child("weight"), steps, `Weight cannot be less than 1 or greater than 100`)
+		}
+		if step.Pause.Duration != nil {
+			if *step.Pause.Duration < 1 {
+				return field.Invalid(fldPath.Index(i).Child("pause").Child("duration"), step.Pause.Duration, "Duration cannot be less than 1 second")
+			}
+		}
+	}
 
+	for i := 1; i < len(steps); i++ {
+		prev := &steps[i-1]
+		curr := &steps[i]
+		if curr.Weight != nil && prev.Weight != nil && *curr.Weight < *prev.Weight {
+			return field.Invalid(fldPath.Child("weight"), steps, `Steps.Weight must be a non decreasing sequence`)
+		}
+	}
+	return nil
+}
 func (r *Function) ValidateServing() error {
 	if r.Spec.Serving.ScaleOptions != nil {
 		scaleOptions := r.Spec.Serving.ScaleOptions

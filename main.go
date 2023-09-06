@@ -39,7 +39,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	k8sgatewayapiv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	k8sgatewayapiv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	corev1beta1 "github.com/openfunction/apis/core/v1beta1"
 	corev1beta2 "github.com/openfunction/apis/core/v1beta2"
@@ -64,7 +64,7 @@ func init() {
 	_ = componentsv1alpha1.AddToScheme(scheme)
 	_ = kedav1alpha1.AddToScheme(scheme)
 	_ = openfunctionevent.AddToScheme(scheme)
-	_ = k8sgatewayapiv1alpha2.AddToScheme(scheme)
+	_ = k8sgatewayapiv1beta1.AddToScheme(scheme)
 	_ = networkingv1alpha1.AddToScheme(scheme)
 	_ = shipwrightv1alpha1.AddToScheme(scheme)
 	utilruntime.Must(corev1beta1.AddToScheme(scheme))

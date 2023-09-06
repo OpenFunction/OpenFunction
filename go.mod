@@ -19,7 +19,7 @@ require (
 	k8s.io/client-go v0.27.2
 	knative.dev/serving v0.32.0
 	sigs.k8s.io/controller-runtime v0.14.5
-	sigs.k8s.io/gateway-api v0.4.0
+	sigs.k8s.io/gateway-api v0.5.0
 )
 
 require (

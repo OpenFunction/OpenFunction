@@ -23,9 +23,12 @@ import (
 	"net/url"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
+
+	k8sgatewayapiv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -47,7 +50,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	k8sgatewayapiv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	openfunction "github.com/openfunction/apis/core/v1beta2"
 	networkingv1alpha1 "github.com/openfunction/apis/networking/v1alpha1"
@@ -132,6 +134,9 @@ func (r *FunctionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	if err := r.createServing(&fn); err != nil {
+		return ctrl.Result{}, err
+	}
+	if err := r.updateCanaryRelease(&fn); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -398,11 +403,16 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 
 	if !r.needToCreateServing(fn) {
 		log.V(1).Info("No need to create Serving")
-
-		if err := r.updateFuncWithServingStatus(fn); err != nil {
+		if err := r.updateFuncWithServingStatus(fn, fn.Status.Serving); err != nil {
 			return err
 		}
-
+		if fn.Status.Serving.ResourceHash == fn.Status.StableServing.ResourceHash {
+			fn.Status.StableServing = fn.Status.Serving
+			return nil
+		}
+		if err := r.updateFuncWithServingStatus(fn, fn.Status.StableServing); err != nil {
+			return err
+		}
 		return nil
 	}
 
@@ -438,6 +448,24 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 		log.V(1).Info("Skip serving")
 		return nil
 	}
+	servingSpec := r.createServingSpec(fn)
+	// rollback
+	if fn.Status.StableServing != nil && fn.Status.StableServing.ResourceHash == util.Hash(servingSpec) {
+		fn.Status.Serving = fn.Status.StableServing
+		fn.Status.CanaryStatus.Phase = openfunction.CanaryPhaseHealthy
+		fn.Status.CanaryStatus.CurrentStepState = openfunction.CanaryStepStatePaused
+		fn.Status.CanaryStatus.Message = "Canary progressing has been cancelled"
+
+		if err := r.Status().Update(r.ctx, fn); err != nil {
+			log.Error(err, "Failed to update function canary status")
+			return err
+		}
+		if err := r.cleanServing(fn); err != nil {
+			log.Error(err, "Failed to clean Serving")
+			return err
+		}
+		return nil
+	}
 	serving := &openfunction.Serving{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "serving-",
@@ -447,8 +475,9 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 			},
 			Annotations: fn.Annotations,
 		},
-		Spec: r.createServingSpec(fn),
+		Spec: servingSpec,
 	}
+
 	serving.SetOwnerReferences(nil)
 	if err := ctrl.SetControllerReference(fn, serving, r.Scheme); err != nil {
 		log.Error(err, "Failed to SetOwnerReferences for serving")
@@ -466,12 +495,32 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 		}
 	}
 
-	fn.Status.Serving = &openfunction.Condition{
+	servingStatus := &openfunction.Condition{
 		State:                     openfunction.Created,
 		ResourceRef:               serving.Name,
 		ResourceHash:              util.Hash(serving.Spec),
 		LastSuccessfulResourceRef: fn.Status.Serving.LastSuccessfulResourceRef,
 	}
+
+	fn.Status.Serving = servingStatus
+
+	// when serving created,canary release should reinitialize
+	if hasCanaryReleasePlan(fn) && fn.Status.StableServing != nil {
+		fn.Status.CanaryStatus = &openfunction.CanaryStatus{
+			CurrentStepIndex: 0,
+			CurrentStepState: openfunction.CanaryStepStatePaused,
+			Message:          "Canary release in progress",
+			LastUpdateTime:   &metav1.Time{Time: time.Now()},
+			Phase:            openfunction.CanaryPhaseProgressing,
+		}
+	}
+
+	// first time create serving or no need canary release
+	if fn.Status.StableServing == nil || !hasCanaryReleasePlan(fn) {
+		// create stable serving status
+		fn.Status.StableServing = servingStatus.DeepCopy()
+	}
+
 	if err := r.Status().Update(r.ctx, fn); err != nil {
 		log.Error(err, "Failed to update function serving status")
 		return err
@@ -482,21 +531,20 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 }
 
 // Update the status of the function with the result of the serving.
-func (r *FunctionReconciler) updateFuncWithServingStatus(fn *openfunction.Function) error {
+func (r *FunctionReconciler) updateFuncWithServingStatus(fn *openfunction.Function, servingCondition *openfunction.Condition) error {
 	log := r.Log.WithName("UpdateFuncWithServingStatus").
 		WithValues("Function", fmt.Sprintf("%s/%s", fn.Namespace, fn.Name))
 
 	// Serving had not created, no need to update function status.
-	if fn.Status.Serving == nil || fn.Status.Serving.State == "" {
+	if servingCondition == nil || servingCondition.State == "" {
 		return nil
 	}
-
 	var serving openfunction.Serving
-	serving.Name = fn.Status.Serving.ResourceRef
+	serving.Name = servingCondition.ResourceRef
 	serving.Namespace = fn.Namespace
 
 	if serving.Name == "" {
-		log.V(1).Info("Function has no serving")
+		log.V(1).Info("Function's  serving name is empty")
 		return nil
 	}
 
@@ -511,17 +559,17 @@ func (r *FunctionReconciler) updateFuncWithServingStatus(fn *openfunction.Functi
 	}
 
 	// If serving status changed, update function serving status.
-	if fn.Status.Serving.State != serving.Status.State ||
-		fn.Status.Serving.Reason != serving.Status.Reason ||
-		fn.Status.Serving.Message != serving.Status.Message {
-		fn.Status.Serving.State = serving.Status.State
-		fn.Status.Serving.Reason = serving.Status.Reason
-		fn.Status.Serving.Message = serving.Status.Message
+	if servingCondition.State != serving.Status.State ||
+		servingCondition.Reason != serving.Status.Reason ||
+		servingCondition.Message != serving.Status.Message {
+		servingCondition.State = serving.Status.State
+		servingCondition.Reason = serving.Status.Reason
+		servingCondition.Message = serving.Status.Message
 
 		// If new serving is running, clean old serving.
 		if serving.Status.State == openfunction.Running {
-			fn.Status.Serving.LastSuccessfulResourceRef = fn.Status.Serving.ResourceRef
-			fn.Status.Serving.Service = serving.Status.Service
+			servingCondition.LastSuccessfulResourceRef = servingCondition.ResourceRef
+			servingCondition.Service = serving.Status.Service
 			if err := r.cleanServing(fn); err != nil {
 				log.Error(err, "Failed to clean Serving")
 				return err
@@ -534,7 +582,7 @@ func (r *FunctionReconciler) updateFuncWithServingStatus(fn *openfunction.Functi
 			return err
 		}
 
-		r.recordEvent(fn, &serving, servingAction, fn.Status.Serving.State, fn.Status.Serving.Message)
+		r.recordEvent(fn, &serving, servingAction, servingCondition.State, servingCondition.Message)
 	}
 
 	return nil
@@ -547,9 +595,15 @@ func (r *FunctionReconciler) cleanServing(fn *openfunction.Function) error {
 
 	name := ""
 	oldName := ""
+	stableName := ""
+	stableOldName := ""
 	if fn.Status.Serving != nil {
 		name = fn.Status.Serving.ResourceRef
 		oldName = fn.Status.Serving.LastSuccessfulResourceRef
+	}
+	if fn.Status.StableServing != nil {
+		stableName = fn.Status.StableServing.ResourceRef
+		stableOldName = fn.Status.StableServing.LastSuccessfulResourceRef
 	}
 
 	servings := &openfunction.ServingList{}
@@ -558,7 +612,7 @@ func (r *FunctionReconciler) cleanServing(fn *openfunction.Function) error {
 	}
 
 	for _, item := range servings.Items {
-		if item.Name != name && item.Name != oldName {
+		if item.Name != name && item.Name != oldName && stableName != item.Name && stableOldName != item.Name {
 			if err := r.Delete(context.Background(), &item); util.IgnoreNotFound(err) != nil {
 				return err
 			}
@@ -743,11 +797,30 @@ func (r *FunctionReconciler) createOrUpdateHTTPRoute(fn *openfunction.Function) 
 			"namespace", fn.Namespace, "name", fn.Status.Serving.Service)
 		return err
 	}
+	stableService := &kservingv1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fn.Status.StableServing.Service,
+			Namespace: fn.Namespace,
+		},
+	}
 
-	httpRoute := &k8sgatewayapiv1alpha2.HTTPRoute{
+	if err := r.Get(r.ctx, client.ObjectKeyFromObject(stableService), stableService); err != nil {
+		log.Error(err, "Failed to get stable knative service",
+			"namespace", fn.Namespace, "name", fn.Status.StableServing.Service)
+		return err
+	}
+
+	httpRoute := &k8sgatewayapiv1beta1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{Namespace: fn.Namespace, Name: fn.Name},
 	}
-	op, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, httpRoute, r.mutateHTTPRoute(fn, knativeService, gateway, httpRoute))
+	var weight int32
+	if hasCanaryReleasePlan(fn) && fn.Status.CanaryStatus != nil {
+		index := fn.Status.CanaryStatus.CurrentStepIndex
+		weight = *fn.Spec.CanarySteps[index].Weight
+	} else {
+		weight = 100
+	}
+	op, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, httpRoute, r.mutateHTTPRoute(fn, knativeService, stableService, weight, gateway, httpRoute))
 	if err != nil {
 		log.Error(err, "Failed to CreateOrUpdate HTTPRoute")
 		return err
@@ -771,37 +844,40 @@ func (r *FunctionReconciler) createOrUpdateHTTPRoute(fn *openfunction.Function) 
 	return nil
 }
 
-func (r *FunctionReconciler) mutateHTTPRoute(
-	fn *openfunction.Function,
+func (r *FunctionReconciler) mutateHTTPRoute(fn *openfunction.Function,
 	knativeService *kservingv1.Service,
+	stableService *kservingv1.Service,
+	weight int32,
 	gateway *networkingv1alpha1.Gateway,
-	httpRoute *k8sgatewayapiv1alpha2.HTTPRoute) controllerutil.MutateFn {
+	httpRoute *k8sgatewayapiv1beta1.HTTPRoute) controllerutil.MutateFn {
 	return func() error {
-		var clusterHostname = k8sgatewayapiv1alpha2.Hostname(
+		var clusterHostname = k8sgatewayapiv1beta1.Hostname(
 			fmt.Sprintf("%s.%s.svc.%s", fn.Name, fn.Namespace, gateway.Spec.ClusterDomain))
-		var hostnames []k8sgatewayapiv1alpha2.Hostname
-		var rules []k8sgatewayapiv1alpha2.HTTPRouteRule
+		var hostnames []k8sgatewayapiv1beta1.Hostname
+		var rules []k8sgatewayapiv1beta1.HTTPRouteRule
 		var port = constants.DefaultFunctionServicePort
-		var namespace = k8sgatewayapiv1alpha2.Namespace(fn.Namespace)
-		var filter = k8sgatewayapiv1alpha2.HTTPRouteFilter{
-			Type: k8sgatewayapiv1alpha2.HTTPRouteFilterRequestHeaderModifier,
-			RequestHeaderModifier: &k8sgatewayapiv1alpha2.HTTPRequestHeaderFilter{
-				Add: []k8sgatewayapiv1alpha2.HTTPHeader{{
+		var namespace = k8sgatewayapiv1beta1.Namespace(fn.Namespace)
+		var filter = k8sgatewayapiv1beta1.HTTPRouteFilter{
+			Type: k8sgatewayapiv1beta1.HTTPRouteFilterRequestHeaderModifier,
+			RequestHeaderModifier: &k8sgatewayapiv1beta1.HTTPRequestHeaderFilter{
+				Add: []k8sgatewayapiv1beta1.HTTPHeader{{
 					Name:  "Host",
 					Value: fmt.Sprintf("%s.%s.svc.%s", knativeService.Status.LatestReadyRevisionName, fn.Namespace, gateway.Spec.ClusterDomain),
 				}},
 			},
 		}
-		var parentRefName k8sgatewayapiv1alpha2.ObjectName
-		var parentRefNamespace k8sgatewayapiv1alpha2.Namespace
+		var stableWeight int32
+		stableWeight = 100 - weight
+		var parentRefName k8sgatewayapiv1beta1.ObjectName
+		var parentRefNamespace k8sgatewayapiv1beta1.Namespace
 		if gateway.Spec.GatewayRef != nil {
-			parentRefName = k8sgatewayapiv1alpha2.ObjectName(gateway.Spec.GatewayRef.Name)
-			parentRefNamespace = k8sgatewayapiv1alpha2.Namespace(gateway.Spec.GatewayRef.Namespace)
+			parentRefName = k8sgatewayapiv1beta1.ObjectName(gateway.Spec.GatewayRef.Name)
+			parentRefNamespace = k8sgatewayapiv1beta1.Namespace(gateway.Spec.GatewayRef.Namespace)
 
 		}
 		if gateway.Spec.GatewayDef != nil {
-			parentRefName = k8sgatewayapiv1alpha2.ObjectName(gateway.Spec.GatewayDef.Name)
-			parentRefNamespace = k8sgatewayapiv1alpha2.Namespace(gateway.Spec.GatewayDef.Namespace)
+			parentRefName = k8sgatewayapiv1beta1.ObjectName(gateway.Spec.GatewayDef.Name)
+			parentRefNamespace = k8sgatewayapiv1beta1.Namespace(gateway.Spec.GatewayDef.Namespace)
 		}
 
 		if fn.Spec.Serving.Triggers.Http.Route.Hostnames == nil {
@@ -816,7 +892,7 @@ func (r *FunctionReconciler) mutateHTTPRoute(
 			if err := hostTemplate.Execute(&hostnameBuffer, hostInfoObj); err != nil {
 				return err
 			}
-			hostname := k8sgatewayapiv1alpha2.Hostname(hostnameBuffer.String())
+			hostname := k8sgatewayapiv1beta1.Hostname(hostnameBuffer.String())
 			hostnames = append(hostnames, hostname)
 		} else {
 			hostnames = fn.Spec.Serving.Triggers.Http.Route.Hostnames
@@ -825,9 +901,9 @@ func (r *FunctionReconciler) mutateHTTPRoute(
 			hostnames = append(hostnames, clusterHostname)
 		}
 
-		var backendGroup k8sgatewayapiv1alpha2.Group = ""
-		var backendKind k8sgatewayapiv1alpha2.Kind = "Service"
-		var backendWeight int32 = 1
+		var backendGroup k8sgatewayapiv1beta1.Group = ""
+		var backendKind k8sgatewayapiv1beta1.Kind = "Service"
+
 		if fn.Spec.Serving.Triggers.Http.Route.Rules == nil {
 			var path string
 			if fn.Spec.Serving.Triggers.Http.Route.Hostnames == nil {
@@ -847,42 +923,72 @@ func (r *FunctionReconciler) mutateHTTPRoute(
 					path = fmt.Sprintf("/%s", path)
 				}
 			}
-			matchType := k8sgatewayapiv1alpha2.PathMatchPathPrefix
-			rule := k8sgatewayapiv1alpha2.HTTPRouteRule{
-				Matches: []k8sgatewayapiv1alpha2.HTTPRouteMatch{{
-					Path: &k8sgatewayapiv1alpha2.HTTPPathMatch{Type: &matchType, Value: &path},
+			matchType := k8sgatewayapiv1beta1.PathMatchPathPrefix
+			rule := k8sgatewayapiv1beta1.HTTPRouteRule{
+				Matches: []k8sgatewayapiv1beta1.HTTPRouteMatch{{
+					Path: &k8sgatewayapiv1beta1.HTTPPathMatch{Type: &matchType, Value: &path},
 				}},
-				BackendRefs: []k8sgatewayapiv1alpha2.HTTPBackendRef{
+				BackendRefs: []k8sgatewayapiv1beta1.HTTPBackendRef{
 					{
-						BackendRef: k8sgatewayapiv1alpha2.BackendRef{
-							BackendObjectReference: k8sgatewayapiv1alpha2.BackendObjectReference{
+						BackendRef: k8sgatewayapiv1beta1.BackendRef{
+							BackendObjectReference: k8sgatewayapiv1beta1.BackendObjectReference{
 								Group:     &backendGroup,
 								Kind:      &backendKind,
-								Name:      k8sgatewayapiv1alpha2.ObjectName(knativeService.Status.LatestReadyRevisionName),
+								Name:      k8sgatewayapiv1beta1.ObjectName(knativeService.Status.LatestReadyRevisionName),
 								Namespace: &namespace,
 								Port:      &port,
 							},
-							Weight: &backendWeight,
+							Weight: &weight,
 						},
+						Filters: []k8sgatewayapiv1beta1.HTTPRouteFilter{filter},
+					},
+					{
+						BackendRef: k8sgatewayapiv1beta1.BackendRef{
+							BackendObjectReference: k8sgatewayapiv1beta1.BackendObjectReference{
+								Group:     &backendGroup,
+								Kind:      &backendKind,
+								Name:      k8sgatewayapiv1beta1.ObjectName(stableService.Status.LatestReadyRevisionName),
+								Namespace: &namespace,
+								Port:      &port,
+							},
+							Weight: &stableWeight,
+						},
+						Filters: []k8sgatewayapiv1beta1.HTTPRouteFilter{filter},
 					},
 				},
-				Filters: []k8sgatewayapiv1alpha2.HTTPRouteFilter{filter},
 			}
 			rules = append(rules, rule)
 		} else {
 			for _, rule := range fn.Spec.Serving.Triggers.Http.Route.Rules {
-				rule.BackendRefs = []k8sgatewayapiv1alpha2.HTTPBackendRef{{
-					BackendRef: k8sgatewayapiv1alpha2.BackendRef{
-						BackendObjectReference: k8sgatewayapiv1alpha2.BackendObjectReference{
+				rule.BackendRefs = []k8sgatewayapiv1beta1.HTTPBackendRef{{
+					BackendRef: k8sgatewayapiv1beta1.BackendRef{
+						BackendObjectReference: k8sgatewayapiv1beta1.BackendObjectReference{
 							Group:     &backendGroup,
 							Kind:      &backendKind,
-							Name:      k8sgatewayapiv1alpha2.ObjectName(knativeService.Status.LatestReadyRevisionName),
+							Name:      k8sgatewayapiv1beta1.ObjectName(knativeService.Status.LatestReadyRevisionName),
 							Namespace: &namespace,
 							Port:      &port,
 						},
-						Weight: &backendWeight,
-					}}}
-				rule.Filters = append(rule.Filters, filter)
+						Weight: &weight,
+					},
+					Filters: []k8sgatewayapiv1beta1.HTTPRouteFilter{filter},
+				},
+
+					{
+						BackendRef: k8sgatewayapiv1beta1.BackendRef{
+							BackendObjectReference: k8sgatewayapiv1beta1.BackendObjectReference{
+								Group:     &backendGroup,
+								Kind:      &backendKind,
+								Name:      k8sgatewayapiv1beta1.ObjectName(stableService.Status.LatestReadyRevisionName),
+								Namespace: &namespace,
+								Port:      &port,
+							},
+							Weight: &stableWeight,
+						},
+						Filters: []k8sgatewayapiv1beta1.HTTPRouteFilter{filter},
+					},
+				}
+
 				rules = append(rules, rule)
 			}
 		}
@@ -892,9 +998,9 @@ func (r *FunctionReconciler) mutateHTTPRoute(
 		} else {
 			httpRoute.Labels[gateway.Spec.HttpRouteLabelKey] = httpRouteLabelValue
 		}
-		var parentGroup k8sgatewayapiv1alpha2.Group = "gateway.networking.k8s.io"
-		var parentKind k8sgatewayapiv1alpha2.Kind = "Gateway"
-		httpRoute.Spec.ParentRefs = []k8sgatewayapiv1alpha2.ParentRef{
+		var parentGroup k8sgatewayapiv1beta1.Group = "gateway.networking.k8s.io"
+		var parentKind k8sgatewayapiv1beta1.Kind = "Gateway"
+		httpRoute.Spec.ParentRefs = []k8sgatewayapiv1beta1.ParentReference{
 			{
 				Group:     &parentGroup,
 				Kind:      &parentKind,
@@ -974,10 +1080,10 @@ func (r *FunctionReconciler) CreateOrUpdateServiceForAsyncFunc(fn *openfunction.
 func (r *FunctionReconciler) updateFuncWithHTTPRouteStatus(
 	fn *openfunction.Function,
 	gateway *networkingv1alpha1.Gateway,
-	httpRoute *k8sgatewayapiv1alpha2.HTTPRoute) error {
+	httpRoute *k8sgatewayapiv1beta1.HTTPRoute) error {
 	log := r.Log.WithName("updateFuncWithHTTPRouteStatus")
 	var addresses []openfunction.FunctionAddress
-	var paths []k8sgatewayapiv1alpha2.HTTPPathMatch
+	var paths []k8sgatewayapiv1beta1.HTTPPathMatch
 	var oldRouteStatus = fn.Status.Route.DeepCopy()
 	if fn.Status.Route == nil {
 		fn.Status.Route = &openfunction.RouteStatus{}
@@ -1029,7 +1135,7 @@ func (r *FunctionReconciler) updateFuncWithHTTPRouteStatus(
 	return nil
 }
 
-func containsHTTPHostname(hostnames []k8sgatewayapiv1alpha2.Hostname, hostname k8sgatewayapiv1alpha2.Hostname) bool {
+func containsHTTPHostname(hostnames []k8sgatewayapiv1beta1.Hostname, hostname k8sgatewayapiv1beta1.Hostname) bool {
 	for _, item := range hostnames {
 		if item == hostname {
 			return true
@@ -1165,7 +1271,7 @@ func (r *FunctionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&openfunction.Builder{}).
 		Owns(&openfunction.Serving{}).
 		Owns(&corev1.Service{}).
-		Owns(&k8sgatewayapiv1alpha2.HTTPRoute{}, ctrlbuilder.WithPredicates(predicate.Funcs{UpdateFunc: r.filterHttpRouteUpdateEvent})).
+		Owns(&k8sgatewayapiv1beta1.HTTPRoute{}, ctrlbuilder.WithPredicates(predicate.Funcs{UpdateFunc: r.filterHttpRouteUpdateEvent})).
 		Watches(
 			&source.Kind{Type: &networkingv1alpha1.Gateway{}},
 			handler.EnqueueRequestsFromMapFunc(r.findObjectsForGateway),
@@ -1179,8 +1285,8 @@ func (r *FunctionReconciler) filterHttpRouteUpdateEvent(e event.UpdateEvent) boo
 		return false
 	}
 
-	oldRoute := e.ObjectOld.(*k8sgatewayapiv1alpha2.HTTPRoute).DeepCopy()
-	newRoute := e.ObjectNew.(*k8sgatewayapiv1alpha2.HTTPRoute).DeepCopy()
+	oldRoute := e.ObjectOld.(*k8sgatewayapiv1beta1.HTTPRoute).DeepCopy()
+	newRoute := e.ObjectNew.(*k8sgatewayapiv1beta1.HTTPRoute).DeepCopy()
 
 	if !reflect.DeepEqual(oldRoute.Spec, newRoute.Spec) {
 		return true
@@ -1216,4 +1322,96 @@ func (r *FunctionReconciler) findObjectsForGateway(gateway client.Object) []reco
 		}
 	}
 	return requests
+}
+
+func (r *FunctionReconciler) updateCanaryRelease(fn *openfunction.Function) error {
+	log := r.Log.WithName("UpdateCanaryRelease")
+
+	if !hasCanaryReleasePlan(fn) {
+		fn.Status.StableServing = fn.Status.Serving.DeepCopy()
+		if fn.Status.CanaryStatus == nil {
+			return nil
+		}
+		// no plan no status
+		fn.Status.CanaryStatus = nil
+		if err := r.Status().Update(r.ctx, fn); err != nil {
+			log.Error(err, "Failed to update function canary status")
+			return err
+		}
+		// sure clean old serving
+		if err := r.cleanServing(fn); err != nil {
+			log.Error(err, "Failed to clean Serving")
+			return err
+		}
+		return nil
+	}
+
+	if fn.Status.CanaryStatus == nil {
+		status := openfunction.CanaryStatus{
+			Message:        "Canary release is healthy",
+			LastUpdateTime: &metav1.Time{Time: time.Now()},
+			Phase:          openfunction.CanaryPhaseHealthy,
+		}
+		fn.Status.CanaryStatus = &status
+		if err := r.Status().Update(r.ctx, fn); err != nil {
+			log.Error(err, "Failed to update function canary status")
+			return err
+		}
+		return nil
+	}
+
+	status := fn.Status.CanaryStatus
+
+	if status.Phase != openfunction.CanaryPhaseProgressing {
+		// not in canary release progress
+		return nil
+	}
+
+	steps := fn.Spec.CanarySteps
+	currentStep := steps[status.CurrentStepIndex]
+	if currentStep.Pause.Duration != nil {
+		duration := time.Second * time.Duration(*currentStep.Pause.Duration)
+		expectedTime := status.LastUpdateTime.Add(duration)
+		if expectedTime.Before(time.Now()) {
+			status.CurrentStepState = openfunction.CanaryStepStateReady
+		}
+		if err := r.Status().Update(r.ctx, fn); err != nil {
+			log.Error(err, "Failed to update function canary status")
+			return err
+		}
+	}
+
+	if status.CurrentStepState == openfunction.CanaryStepStateReady {
+		if len(steps) == int(status.CurrentStepIndex)+1 {
+			//complete step
+			fn.Status.StableServing = fn.Status.Serving.DeepCopy()
+			status.CurrentStepState = openfunction.CanaryStepStateCompleted
+			status.Phase = openfunction.CanaryPhaseHealthy
+			status.LastUpdateTime = &metav1.Time{Time: time.Now()}
+			status.Message = "Canary release progressing has been completed"
+			return nil
+		} else {
+			status.CurrentStepIndex++
+			status.CurrentStepState = openfunction.CanaryStepStatePaused
+			status.LastUpdateTime = &metav1.Time{Time: time.Now()}
+			status.Message = "Canary release steps to " + strconv.Itoa(int(status.CurrentStepIndex))
+		}
+		if err := r.Status().Update(r.ctx, fn); err != nil {
+			log.Error(err, "Failed to update function canary status")
+			return err
+		}
+		if err := r.cleanServing(fn); err != nil {
+			log.Error(err, "Failed to clean Serving")
+			return err
+		}
+	}
+
+	return nil
+}
+func hasCanaryReleasePlan(fn *openfunction.Function) bool {
+	if fn.Spec.CanarySteps == nil || len(fn.Spec.CanarySteps) == 0 {
+		return false
+	}
+
+	return true
 }

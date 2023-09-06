@@ -43,7 +43,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
-	k8sgatewayapiv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	k8sgatewayapiv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	networkingv1alpha1 "github.com/openfunction/apis/networking/v1alpha1"
 	ofngateway "github.com/openfunction/pkg/networking/gateway"
@@ -61,7 +61,7 @@ type GatewayReconciler struct {
 	Log        logr.Logger
 	Scheme     *runtime.Scheme
 	ctx        context.Context
-	k8sGateway *k8sgatewayapiv1alpha2.Gateway
+	k8sGateway *k8sgatewayapiv1beta1.Gateway
 }
 
 //+kubebuilder:rbac:groups=networking.openfunction.io,resources=gateways,verbs=get;list;watch;create;update;patch;delete
@@ -136,20 +136,20 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 func (r *GatewayReconciler) createOrUpdateGateway(gateway *networkingv1alpha1.Gateway) error {
 	defer r.updateGatewayStatus(gateway.Status.DeepCopy(), gateway)
 	log := r.Log.WithName("createOrUpdateGateway")
-	k8sGateway := &k8sgatewayapiv1alpha2.Gateway{}
+	k8sGateway := &k8sgatewayapiv1beta1.Gateway{}
 
 	if gateway.Spec.GatewayRef != nil {
 		key := client.ObjectKey{Namespace: gateway.Spec.GatewayRef.Namespace, Name: gateway.Spec.GatewayRef.Name}
 		if err := r.Get(r.ctx, key, k8sGateway); err != nil {
 			log.Error(err, "Failed to get k8s Gateway",
 				"namespace", gateway.Spec.GatewayRef.Namespace, "name", gateway.Spec.GatewayRef.Name)
-			reason := k8sgatewayapiv1alpha2.GatewayReasonNotReconciled
+			reason := k8sgatewayapiv1beta1.GatewayReasonNotReconciled
 			if util.IsNotFound(err) {
 				reason = networkingv1alpha1.GatewayReasonNotFound
 			}
 			gateway.Status.Conditions = []networkingv1alpha1.Condition{
 				{
-					Type:    string(k8sgatewayapiv1alpha2.GatewayConditionReady),
+					Type:    string(k8sgatewayapiv1beta1.GatewayConditionReady),
 					Status:  metav1.ConditionFalse,
 					Reason:  string(reason),
 					Message: err.Error(),
@@ -184,9 +184,9 @@ func (r *GatewayReconciler) createOrUpdateGateway(gateway *networkingv1alpha1.Ga
 				"namespace", gateway.Spec.GatewayDef.Namespace, "name", gateway.Spec.GatewayDef.Name)
 			gateway.Status.Conditions = []networkingv1alpha1.Condition{
 				{
-					Type:    string(k8sgatewayapiv1alpha2.GatewayConditionReady),
+					Type:    string(k8sgatewayapiv1beta1.GatewayConditionReady),
 					Status:  metav1.ConditionFalse,
-					Reason:  string(k8sgatewayapiv1alpha2.GatewayReasonNotReconciled),
+					Reason:  string(k8sgatewayapiv1beta1.GatewayReasonNotReconciled),
 					Message: err.Error(),
 				},
 			}
@@ -204,13 +204,13 @@ func (r *GatewayReconciler) createOrUpdateGateway(gateway *networkingv1alpha1.Ga
 func (r *GatewayReconciler) createK8sGateway(gateway *networkingv1alpha1.Gateway) error {
 	log := r.Log.WithName("createK8sGateway")
 	listenersAnnotation, _ := json.Marshal(gateway.Spec.GatewaySpec.Listeners)
-	k8sGateway := &k8sgatewayapiv1alpha2.Gateway{
+	k8sGateway := &k8sgatewayapiv1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        gateway.Spec.GatewayDef.Name,
 			Namespace:   gateway.Spec.GatewayDef.Namespace,
 			Annotations: map[string]string{networkingv1alpha1.GatewayListenersAnnotation: string(listenersAnnotation)},
 		},
-		Spec: k8sgatewayapiv1alpha2.GatewaySpec{
+		Spec: k8sgatewayapiv1beta1.GatewaySpec{
 			GatewayClassName: gateway.Spec.GatewayDef.GatewayClassName,
 			Listeners:        gateway.Spec.GatewaySpec.Listeners,
 		},
@@ -221,7 +221,7 @@ func (r *GatewayReconciler) createK8sGateway(gateway *networkingv1alpha1.Gateway
 			"namespace", gateway.Spec.GatewayDef.Namespace, "name", gateway.Spec.GatewayDef.Name)
 		gateway.Status.Conditions = []networkingv1alpha1.Condition{
 			{
-				Type:    string(k8sgatewayapiv1alpha2.GatewayConditionReady),
+				Type:    string(k8sgatewayapiv1beta1.GatewayConditionReady),
 				Status:  metav1.ConditionFalse,
 				Reason:  string(networkingv1alpha1.GatewayReasonCreationFailure),
 				Message: err.Error(),
@@ -231,7 +231,7 @@ func (r *GatewayReconciler) createK8sGateway(gateway *networkingv1alpha1.Gateway
 	}
 
 	gateway.Status.Conditions = append(gateway.Status.Conditions, networkingv1alpha1.Condition{
-		Type:    string(k8sgatewayapiv1alpha2.GatewayConditionScheduled),
+		Type:    string(k8sgatewayapiv1beta1.GatewayConditionScheduled),
 		Status:  metav1.ConditionTrue,
 		Reason:  string(networkingv1alpha1.GatewayReasonResourcesAvailable),
 		Message: "Deployed k8s gateway to the cluster",
@@ -244,7 +244,7 @@ func (r *GatewayReconciler) createK8sGateway(gateway *networkingv1alpha1.Gateway
 func (r *GatewayReconciler) reconcileK8sGateway(gateway *networkingv1alpha1.Gateway) error {
 	log := r.Log.WithName("reconcileK8sGateway")
 	var oldGateway networkingv1alpha1.Gateway
-	oldGatewayListenersMapping := make(map[k8sgatewayapiv1alpha2.SectionName]k8sgatewayapiv1alpha2.Listener)
+	oldGatewayListenersMapping := make(map[k8sgatewayapiv1beta1.SectionName]k8sgatewayapiv1beta1.Listener)
 
 	gatewayConfigAnnotation := []byte(gateway.Annotations[networkingv1alpha1.GatewayConfigAnnotation])
 	if err := json.Unmarshal(gatewayConfigAnnotation, &oldGateway); err != nil {
@@ -275,9 +275,9 @@ func (r *GatewayReconciler) reconcileK8sGateway(gateway *networkingv1alpha1.Gate
 			"namespace", r.k8sGateway.Namespace, "name", r.k8sGateway.Name)
 		gateway.Status.Conditions = []networkingv1alpha1.Condition{
 			{
-				Type:    string(k8sgatewayapiv1alpha2.GatewayConditionReady),
+				Type:    string(k8sgatewayapiv1beta1.GatewayConditionReady),
 				Status:  metav1.ConditionFalse,
-				Reason:  string(k8sgatewayapiv1alpha2.GatewayReasonNotReconciled),
+				Reason:  string(k8sgatewayapiv1beta1.GatewayReasonNotReconciled),
 				Message: err.Error(),
 			},
 		}
@@ -309,7 +309,7 @@ func (r *GatewayReconciler) cleanExternalResources(gateway *networkingv1alpha1.G
 func (r *GatewayReconciler) cleanK8sGatewayResources(gateway *networkingv1alpha1.Gateway) error {
 	log := r.Log.WithName("cleanK8sGatewayResources")
 	if gateway.Spec.GatewayRef != nil {
-		k8sGateway := &k8sgatewayapiv1alpha2.Gateway{}
+		k8sGateway := &k8sgatewayapiv1beta1.Gateway{}
 		key := client.ObjectKey{Namespace: gateway.Spec.GatewayRef.Namespace, Name: gateway.Spec.GatewayRef.Name}
 		if err := r.Get(r.ctx, key, k8sGateway); err != nil {
 			if !util.IsNotFound(err) {
@@ -335,7 +335,7 @@ func (r *GatewayReconciler) cleanK8sGatewayResources(gateway *networkingv1alpha1
 	}
 
 	if gateway.Spec.GatewayDef != nil {
-		k8sGateway := &k8sgatewayapiv1alpha2.Gateway{
+		k8sGateway := &k8sgatewayapiv1beta1.Gateway{
 			ObjectMeta: metav1.ObjectMeta{Namespace: gateway.Spec.GatewayDef.Namespace, Name: gateway.Spec.GatewayDef.Name},
 		}
 		if err := r.Delete(r.ctx, k8sGateway); err != nil {
@@ -429,7 +429,7 @@ func (r *GatewayReconciler) createOrUpdateService(gateway *networkingv1alpha1.Ga
 	// For the k8s gateway controller implements the addresses field, such as istio.
 	if len(r.k8sGateway.Status.Addresses) > 0 {
 		address := r.k8sGateway.Status.Addresses[0]
-		if *address.Type == k8sgatewayapiv1alpha2.HostnameAddressType {
+		if *address.Type == k8sgatewayapiv1beta1.HostnameAddressType {
 			externalName = strings.Split(address.Value, ":")[0]
 		}
 	}
@@ -529,7 +529,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&networkingv1alpha1.Gateway{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Owns(&corev1.Service{}).
 		Watches(
-			&source.Kind{Type: &k8sgatewayapiv1alpha2.Gateway{}},
+			&source.Kind{Type: &k8sgatewayapiv1beta1.Gateway{}},
 			handler.EnqueueRequestsFromMapFunc(r.findObjectsForK8sGateway),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}, predicate.Funcs{UpdateFunc: r.filterK8sGatewayUpdateEvent}),
 		).
@@ -541,8 +541,8 @@ func (r *GatewayReconciler) filterK8sGatewayUpdateEvent(e event.UpdateEvent) boo
 		return false
 	}
 
-	oldGateway := e.ObjectOld.(*k8sgatewayapiv1alpha2.Gateway).DeepCopy()
-	newGateway := e.ObjectNew.(*k8sgatewayapiv1alpha2.Gateway).DeepCopy()
+	oldGateway := e.ObjectOld.(*k8sgatewayapiv1beta1.Gateway).DeepCopy()
+	newGateway := e.ObjectNew.(*k8sgatewayapiv1beta1.Gateway).DeepCopy()
 
 	if !reflect.DeepEqual(oldGateway.Spec, newGateway.Spec) {
 		return true

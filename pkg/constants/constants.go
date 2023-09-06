@@ -17,7 +17,7 @@ limitations under the License.
 package constants
 
 import (
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 const (
@@ -33,12 +33,12 @@ const (
 	DefaultKnativeServingNamespace      = "knative-serving"
 	DefaultKnativeServingFeaturesCMName = "config-features"
 
-	DefaultGatewayName             v1alpha2.ObjectName   = "openfunction"
-	DefaultGatewayNamespace        v1alpha2.Namespace    = "openfunction"
-	DefaultGatewayListenerPort     v1alpha2.PortNumber   = 80
-	DefaultGatewayListenerProtocol v1alpha2.ProtocolType = "HTTP"
-	DefaultFunctionServicePort     v1alpha2.PortNumber   = 80
-	DefaultFuncPort                v1alpha2.PortNumber   = 8080
+	DefaultGatewayName             v1beta1.ObjectName   = "openfunction"
+	DefaultGatewayNamespace        v1beta1.Namespace    = "openfunction"
+	DefaultGatewayListenerPort     v1beta1.PortNumber   = 80
+	DefaultGatewayListenerProtocol v1beta1.ProtocolType = "HTTP"
+	DefaultFunctionServicePort     v1beta1.PortNumber   = 80
+	DefaultFuncPort                v1beta1.PortNumber   = 8080
 
 	WasmEdgeWorkloadRuntimeName = "wasmedge"
 	WasmEdgeRuntimeClassName    = "openfunction-crun"
