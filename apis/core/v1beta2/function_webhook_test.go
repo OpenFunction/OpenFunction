@@ -248,7 +248,6 @@ func Test_Validate(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			// TODO: add validation for this case
 			name: "function.spec.serving.scaleOptions.keda.ScaledJob and ScaledObject and HTTPScaledObject",
 			r: Function{
 				Spec: FunctionSpec{
@@ -262,7 +261,7 @@ func Test_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantErr: false,
+			wantErr: true,
 		},
 		{
 			name: "function.spec.serving.scaleOptions.keda.httpScaledObject.targetPendingRequests",
@@ -601,6 +600,7 @@ func Test_Validate(t *testing.T) {
 						Triggers: &Triggers{Http: &HttpTrigger{}},
 						ScaleOptions: &ScaleOptions{
 							Keda: &KedaScaleOptions{
+								ScaledObject: &KedaScaledObject{},
 								Triggers: []kedav1alpha1.ScaleTriggers{
 									{
 										Type: "",
@@ -624,6 +624,7 @@ func Test_Validate(t *testing.T) {
 						Triggers: &Triggers{Http: &HttpTrigger{}},
 						ScaleOptions: &ScaleOptions{
 							Keda: &KedaScaleOptions{
+								ScaledObject: &KedaScaledObject{},
 								Triggers: []kedav1alpha1.ScaleTriggers{
 									{
 										Type: "activemq",
@@ -647,6 +648,7 @@ func Test_Validate(t *testing.T) {
 						Triggers: &Triggers{Http: &HttpTrigger{}},
 						ScaleOptions: &ScaleOptions{
 							Keda: &KedaScaleOptions{
+								ScaledObject: &KedaScaledObject{},
 								Triggers: []kedav1alpha1.ScaleTriggers{
 									{
 										Type:              "activemq",

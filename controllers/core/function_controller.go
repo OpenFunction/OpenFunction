@@ -822,7 +822,7 @@ func (r *FunctionReconciler) mutateHTTPRoute(
 			value = fmt.Sprintf("%s.%s.svc.%s", knativeService.Status.LatestReadyRevisionName, fn.Namespace, gateway.Spec.ClusterDomain)
 		} else if service != nil {
 			var host k8sgatewayapiv1alpha2.Hostname
-			// only take the first hostname for now
+			// TODO: optimize this part of code
 			host = fn.Spec.Serving.Triggers.Http.Route.Hostnames[0]
 			value = string(host)
 		}
