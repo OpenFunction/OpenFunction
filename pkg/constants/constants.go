@@ -33,12 +33,15 @@ const (
 	DefaultKnativeServingNamespace      = "knative-serving"
 	DefaultKnativeServingFeaturesCMName = "config-features"
 
+	DefaultKedaInterceptorProxyName = "keda-add-ons-http-interceptor-proxy"
+
 	DefaultGatewayName             v1alpha2.ObjectName   = "openfunction"
 	DefaultGatewayNamespace        v1alpha2.Namespace    = "openfunction"
 	DefaultGatewayListenerPort     v1alpha2.PortNumber   = 80
 	DefaultGatewayListenerProtocol v1alpha2.ProtocolType = "HTTP"
 	DefaultFunctionServicePort     v1alpha2.PortNumber   = 80
 	DefaultFuncPort                v1alpha2.PortNumber   = 8080
+	DefaultInterceptorPort         v1alpha2.PortNumber   = 8080
 
 	WasmEdgeWorkloadRuntimeName = "wasmedge"
 	WasmEdgeRuntimeClassName    = "openfunction-crun"

@@ -23,7 +23,6 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -45,7 +44,6 @@ import (
 const (
 	workloadName = "http.keda.sh/deployment"
 	scalerName   = "http.keda.sh/httpscaledobject"
-	ingressName  = "k8s.io/ingress-nginx"
 )
 
 type servingRun struct {
@@ -123,8 +121,9 @@ func (r *servingRun) Run(s *openfunction.Serving, cm map[string]string) error {
 		return err
 	}
 
+	service.SetOwnerReferences(nil)
 	if err := controllerutil.SetControllerReference(s, service, r.scheme); err != nil {
-		log.Error(err, "Failed to SetControllerReference for service")
+		log.Error(err, "Failed to SetControllerReference for service", "service", service.Name)
 		return err
 	}
 
@@ -132,6 +131,10 @@ func (r *servingRun) Run(s *openfunction.Serving, cm map[string]string) error {
 		log.Error(err, "Failed to create service", "service", service.Name)
 		return err
 	}
+
+	log.V(1).Info("Service created", "Service", service.Name)
+
+	s.Status.Service = service.Name
 
 	if err := r.createScaler(s, workload, service); err != nil {
 		log.Error(err, "Failed to create Keda scaler")
@@ -525,60 +528,6 @@ func (r *servingRun) createScaler(s *openfunction.Serving, workload runtime.Obje
 	s.Status.ResourceRef[scalerName] = httpScaledObject.GetName()
 
 	log.V(1).Info("Keda scaler Created", "Scaler", httpScaledObject.GetName())
-
-	// In current version of keda http-addon(v0.5.0), nginx is the only available ingressClass
-	var ingressClassName = "nginx"
-	var pathType = "Prefix"
-	var rules []v1.IngressRule
-
-	for i, host := range hosts {
-		rule := v1.IngressRule{
-			Host: host,
-			IngressRuleValue: v1.IngressRuleValue{
-				HTTP: &v1.HTTPIngressRuleValue{
-					Paths: []v1.HTTPIngressPath{
-						{
-							Path:     pathPrefix[i],
-							PathType: (*v1.PathType)(&pathType),
-							Backend: v1.IngressBackend{
-								Service: &v1.IngressServiceBackend{
-									Name: "keda-add-ons-http-interceptor-proxy",
-									Port: v1.ServiceBackendPort{
-										Number: 8080, // Default port of keda-add-ons-http-interceptor-proxy
-									},
-								},
-							},
-						},
-					},
-				},
-			}}
-		rules = append(rules, rule)
-	}
-
-	ingress := &v1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-ingress-%s-", s.Name, version),
-			Namespace:    s.Namespace,
-		},
-		Spec: v1.IngressSpec{
-			IngressClassName: &ingressClassName,
-			Rules:            rules,
-		},
-	}
-
-	if err := controllerutil.SetControllerReference(s, ingress, r.scheme); err != nil {
-		log.Error(err, "Failed to SetControllerReference")
-		return err
-	}
-
-	if err := r.Create(r.ctx, ingress); err != nil {
-		log.Error(err, "Failed to create nginx ingress")
-		return err
-	}
-
-	s.Status.ResourceRef[ingressName] = ingress.GetName()
-
-	log.V(1).Info("Nginx ingress Created", "Ingress", ingress.GetName())
 
 	return nil
 }
