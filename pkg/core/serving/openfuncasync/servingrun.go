@@ -202,6 +202,12 @@ func (r *servingRun) Clean(s *openfunction.Serving) error {
 		}
 	}
 
+	for _, item := range serviceList.Items {
+		if err := deleteObj(&item); err != nil {
+			return err
+		}
+	}
+
 	for _, item := range componentList.Items {
 		if err := deleteObj(&item); err != nil {
 			return err
