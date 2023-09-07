@@ -397,7 +397,7 @@ func (r *Function) ValidateServing() error {
 			return field.Invalid(
 				field.NewPath("spec", "serving", "triggers", "http", "engine"),
 				r.Spec.Serving.Triggers.Http.Engine,
-				"unknown engine type, neither knative nor keda")
+				"Unknown engine type, supported engines include knative and keda")
 		}
 	}
 
