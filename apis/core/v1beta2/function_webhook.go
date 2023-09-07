@@ -316,7 +316,7 @@ func (r *Function) ValidateServing() error {
 			if !(flagJob || flagScaledObject || flagHTTPScaledObject) {
 				return field.Required(
 					field.NewPath("spec", "serving", "scaleOptions", "keda"),
-					"scaledJob, scaledObject and httpScaledObject have at most one enabled")
+					"Exactly one of scaledJob, scaledObject and httpScaledObject should be enabled")
 			}
 			if httpScaledObject := keda.HTTPScaledObject; httpScaledObject != nil {
 				if httpScaledObject.TargetPendingRequests != nil && *httpScaledObject.TargetPendingRequests < 0 {
