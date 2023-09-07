@@ -7886,6 +7886,17 @@ spec:
                 properties:
                   keda:
                     properties:
+                      httpScaledObject:
+                        properties:
+                          cooldownPeriod:
+                            description: Cooldown period value
+                            format: int32
+                            type: integer
+                          targetPendingRequests:
+                            description: Target metric value
+                            format: int32
+                            type: integer
+                        type: object
                       scaledJob:
                         properties:
                           failedJobsHistoryLimit:
@@ -15361,6 +15372,10 @@ spec:
                     type: array
                   http:
                     properties:
+                      engine:
+                        description: Http function runtime engine, can be set to knative
+                          or keda, default to knative if not set
+                        type: string
                       port:
                         description: The port on which the function will be invoked
                         format: int32
@@ -16463,8 +16478,6 @@ spec:
                           required:
                           - name
                           type: object
-                      required:
-                      - dapr
                       type: object
                     type: array
                 type: object

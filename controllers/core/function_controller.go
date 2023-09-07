@@ -732,36 +732,66 @@ func (r *FunctionReconciler) createOrUpdateHTTPRoute(fn *openfunction.Function) 
 		return err
 	}
 
-	knativeService := &kservingv1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fn.Status.Serving.Service,
-			Namespace: fn.Namespace,
-		},
-	}
-	if err := r.Get(r.ctx, client.ObjectKeyFromObject(knativeService), knativeService); err != nil {
-		log.Error(err, "Failed to get knative service",
-			"namespace", fn.Namespace, "name", fn.Status.Serving.Service)
-		return err
-	}
+	if *fn.Spec.Serving.Triggers.Http.Engine == "" ||
+		*fn.Spec.Serving.Triggers.Http.Engine == openfunction.HttpEngineKnative {
+		knativeService := &kservingv1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fn.Status.Serving.Service,
+				Namespace: fn.Namespace,
+			},
+		}
+		if err := r.Get(r.ctx, client.ObjectKeyFromObject(knativeService), knativeService); err != nil {
+			log.Error(err, "Failed to get knative service",
+				"namespace", fn.Namespace, "name", fn.Status.Serving.Service)
+			return err
+		}
 
-	httpRoute := &k8sgatewayapiv1alpha2.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{Namespace: fn.Namespace, Name: fn.Name},
-	}
-	op, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, httpRoute, r.mutateHTTPRoute(fn, knativeService, gateway, httpRoute))
-	if err != nil {
-		log.Error(err, "Failed to CreateOrUpdate HTTPRoute")
-		return err
-	}
-	log.V(1).Info(fmt.Sprintf("HTTPRoute %s", op))
+		httpRoute := &k8sgatewayapiv1alpha2.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{Namespace: fn.Namespace, Name: fn.Name},
+		}
+		op, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, httpRoute, r.mutateHTTPRoute(fn, knativeService, nil, gateway, httpRoute))
+		if err != nil {
+			log.Error(err, "Failed to CreateOrUpdate HTTPRoute")
+			return err
+		}
+		log.V(1).Info(fmt.Sprintf("HTTPRoute %s", op))
 
-	if err := r.updateFuncWithHTTPRouteStatus(fn, gateway, httpRoute); err != nil {
-		return err
+		if err := r.updateFuncWithHTTPRouteStatus(fn, gateway, httpRoute); err != nil {
+			return err
+		}
+	} else if *fn.Spec.Serving.Triggers.Http.Engine == openfunction.HttpEngineKeda {
+		service := &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fn.Status.Serving.Service,
+				Namespace: fn.Namespace,
+			},
+		}
+		if err := r.Get(r.ctx, client.ObjectKeyFromObject(service), service); err != nil {
+			log.Error(err, "Failed to get keda service",
+				"namespace", fn.Namespace, "name", fn.Status.Serving.Service)
+			return err
+		}
+
+		httpRoute := &k8sgatewayapiv1alpha2.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{Namespace: fn.Namespace, Name: fn.Name},
+		}
+
+		op, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, httpRoute, r.mutateHTTPRoute(fn, nil, service, gateway, httpRoute))
+		if err != nil {
+			log.Error(err, "Failed to CreateOrUpdate HTTPRoute")
+			return err
+		}
+		log.V(1).Info(fmt.Sprintf("HTTPRoute %s", op))
+
+		if err := r.updateFuncWithHTTPRouteStatus(fn, gateway, httpRoute); err != nil {
+			return err
+		}
 	}
 
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{Namespace: fn.Namespace, Name: fn.Name},
 	}
-	op, err = controllerutil.CreateOrUpdate(r.ctx, r.Client, service, r.mutateService(fn, gateway, service))
+	op, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, service, r.mutateService(fn, gateway, service))
 	if err != nil {
 		log.Error(err, "Failed to CreateOrUpdate service")
 		return err
@@ -774,6 +804,7 @@ func (r *FunctionReconciler) createOrUpdateHTTPRoute(fn *openfunction.Function) 
 func (r *FunctionReconciler) mutateHTTPRoute(
 	fn *openfunction.Function,
 	knativeService *kservingv1.Service,
+	service *corev1.Service,
 	gateway *networkingv1alpha1.Gateway,
 	httpRoute *k8sgatewayapiv1alpha2.HTTPRoute) controllerutil.MutateFn {
 	return func() error {
@@ -782,13 +813,25 @@ func (r *FunctionReconciler) mutateHTTPRoute(
 		var hostnames []k8sgatewayapiv1alpha2.Hostname
 		var rules []k8sgatewayapiv1alpha2.HTTPRouteRule
 		var port = constants.DefaultFunctionServicePort
+		if service != nil {
+			port = constants.DefaultInterceptorPort
+		}
 		var namespace = k8sgatewayapiv1alpha2.Namespace(fn.Namespace)
+		var value string
+		if knativeService != nil {
+			value = fmt.Sprintf("%s.%s.svc.%s", knativeService.Status.LatestReadyRevisionName, fn.Namespace, gateway.Spec.ClusterDomain)
+		} else if service != nil {
+			var host k8sgatewayapiv1alpha2.Hostname
+			// TODO: optimize this part of code
+			host = fn.Spec.Serving.Triggers.Http.Route.Hostnames[0]
+			value = string(host)
+		}
 		var filter = k8sgatewayapiv1alpha2.HTTPRouteFilter{
 			Type: k8sgatewayapiv1alpha2.HTTPRouteFilterRequestHeaderModifier,
 			RequestHeaderModifier: &k8sgatewayapiv1alpha2.HTTPRequestHeaderFilter{
 				Add: []k8sgatewayapiv1alpha2.HTTPHeader{{
 					Name:  "Host",
-					Value: fmt.Sprintf("%s.%s.svc.%s", knativeService.Status.LatestReadyRevisionName, fn.Namespace, gateway.Spec.ClusterDomain),
+					Value: value,
 				}},
 			},
 		}
@@ -797,7 +840,6 @@ func (r *FunctionReconciler) mutateHTTPRoute(
 		if gateway.Spec.GatewayRef != nil {
 			parentRefName = k8sgatewayapiv1alpha2.ObjectName(gateway.Spec.GatewayRef.Name)
 			parentRefNamespace = k8sgatewayapiv1alpha2.Namespace(gateway.Spec.GatewayRef.Namespace)
-
 		}
 		if gateway.Spec.GatewayDef != nil {
 			parentRefName = k8sgatewayapiv1alpha2.ObjectName(gateway.Spec.GatewayDef.Name)
@@ -828,6 +870,12 @@ func (r *FunctionReconciler) mutateHTTPRoute(
 		var backendGroup k8sgatewayapiv1alpha2.Group = ""
 		var backendKind k8sgatewayapiv1alpha2.Kind = "Service"
 		var backendWeight int32 = 1
+		var backendRefName k8sgatewayapiv1alpha2.ObjectName
+		if knativeService != nil {
+			backendRefName = k8sgatewayapiv1alpha2.ObjectName(knativeService.Status.LatestReadyRevisionName)
+		} else if service != nil {
+			backendRefName = constants.DefaultKedaInterceptorProxyName
+		}
 		if fn.Spec.Serving.Triggers.Http.Route.Rules == nil {
 			var path string
 			if fn.Spec.Serving.Triggers.Http.Route.Hostnames == nil {
@@ -858,7 +906,7 @@ func (r *FunctionReconciler) mutateHTTPRoute(
 							BackendObjectReference: k8sgatewayapiv1alpha2.BackendObjectReference{
 								Group:     &backendGroup,
 								Kind:      &backendKind,
-								Name:      k8sgatewayapiv1alpha2.ObjectName(knativeService.Status.LatestReadyRevisionName),
+								Name:      backendRefName,
 								Namespace: &namespace,
 								Port:      &port,
 							},
@@ -876,7 +924,7 @@ func (r *FunctionReconciler) mutateHTTPRoute(
 						BackendObjectReference: k8sgatewayapiv1alpha2.BackendObjectReference{
 							Group:     &backendGroup,
 							Kind:      &backendKind,
-							Name:      k8sgatewayapiv1alpha2.ObjectName(knativeService.Status.LatestReadyRevisionName),
+							Name:      backendRefName,
 							Namespace: &namespace,
 							Port:      &port,
 						},

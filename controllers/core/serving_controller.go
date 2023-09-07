@@ -34,6 +34,7 @@ import (
 	openfunction "github.com/openfunction/apis/core/v1beta2"
 	"github.com/openfunction/pkg/constants"
 	"github.com/openfunction/pkg/core"
+	"github.com/openfunction/pkg/core/serving/kedahttp"
 	"github.com/openfunction/pkg/core/serving/knative"
 	"github.com/openfunction/pkg/core/serving/openfuncasync"
 	"github.com/openfunction/pkg/util"
@@ -72,6 +73,7 @@ func NewServingReconciler(mgr manager.Manager, eventRecorder events.EventRecorde
 //+kubebuilder:rbac:groups=serving.knative.dev,resources=services,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=dapr.io,resources=components;subscriptions,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=keda.sh,resources=scaledjobs;scaledobjects,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=http.keda.sh,resources=httpscaledobjects,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=apps,resources=deployments;statefulsets,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=configmaps,verbs=list;get;watch;update;patch
@@ -213,7 +215,11 @@ func (r *ServingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 func (r *ServingReconciler) getServingRun(s *openfunction.Serving) core.ServingRun {
 	if s.Spec.Triggers.Http != nil {
-		return knative.NewServingRun(r.ctx, r.Client, r.Scheme, r.Log)
+		if *s.Spec.Triggers.Http.Engine == openfunction.HttpEngineKeda {
+			return kedahttp.NewServingRun(r.ctx, r.Client, r.Scheme, r.Log)
+		} else {
+			return knative.NewServingRun(r.ctx, r.Client, r.Scheme, r.Log)
+		}
 	} else {
 		return openfuncasync.NewServingRun(r.ctx, r.Client, r.Scheme, r.Log)
 	}
