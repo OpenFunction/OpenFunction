@@ -325,9 +325,7 @@ func (src *Function) convertServingTo(dst *v1beta2.Function) error {
 			dst.Spec.Serving.Hooks = &v1beta2.Hooks{Policy: v1beta2.HookPolicyOverride}
 			if plugins.Order != nil {
 				var prePlgs []string
-				for _, plg := range plugins.Order {
-					prePlgs = append(prePlgs, plg)
-				}
+				prePlgs = append(prePlgs, plugins.Order...)
 				dst.Spec.Serving.Hooks.Pre = prePlgs
 				dst.Spec.Serving.Hooks.Post = reverse(prePlgs)
 			}

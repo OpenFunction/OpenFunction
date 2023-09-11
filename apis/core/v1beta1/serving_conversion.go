@@ -184,9 +184,7 @@ func (src *Serving) ConvertTo(dstRaw conversion.Hub) error {
 			dst.Spec.Hooks = &v1beta2.Hooks{Policy: v1beta2.HookPolicyOverride}
 			if plugins.Order != nil {
 				var prePlgs []string
-				for _, plg := range plugins.Order {
-					prePlgs = append(prePlgs, plg)
-				}
+				prePlgs = append(prePlgs, plugins.Order...)
 				dst.Spec.Hooks.Pre = prePlgs
 				dst.Spec.Hooks.Post = reverse(prePlgs)
 			}

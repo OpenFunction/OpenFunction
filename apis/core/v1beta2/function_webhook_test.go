@@ -39,6 +39,7 @@ func Test_Validate(t *testing.T) {
 	maxReplicasNegative := int32(-1)
 	minReplicas := int32(5)
 	maxReplicas := int32(0)
+	targetPendingRequests := int32(-1)
 	pollingInterval := int32(-1)
 	cooldownPeriod := int32(-1)
 	stabilizationWindowSecondsNegative := int32(-1)
@@ -249,8 +250,7 @@ func Test_Validate(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			// TODO: add validation for this case
-			name: "function.spec.serving.scaleOptions.keda.ScaledJob and ScaledObject",
+			name: "function.spec.serving.scaleOptions.keda.ScaledJob and ScaledObject and HTTPScaledObject",
 			r: Function{
 				Spec: FunctionSpec{
 					Image:            "test",
@@ -263,7 +263,47 @@ func Test_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantErr: false,
+			wantErr: true,
+		},
+		{
+			name: "function.spec.serving.scaleOptions.keda.httpScaledObject.targetPendingRequests",
+			r: Function{
+				Spec: FunctionSpec{
+					Image:            "test",
+					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
+					Serving: &ServingImpl{
+						Triggers: &Triggers{Http: &HttpTrigger{}},
+						ScaleOptions: &ScaleOptions{
+							Keda: &KedaScaleOptions{
+								HTTPScaledObject: &HTTPScaledObject{
+									TargetPendingRequests: &targetPendingRequests,
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "function.spec.serving.scaleOptions.keda.httpScaledObject.cooldownPeriod",
+			r: Function{
+				Spec: FunctionSpec{
+					Image:            "test",
+					ImageCredentials: &v1.LocalObjectReference{Name: "secret"},
+					Serving: &ServingImpl{
+						Triggers: &Triggers{Http: &HttpTrigger{}},
+						ScaleOptions: &ScaleOptions{
+							Keda: &KedaScaleOptions{
+								HTTPScaledObject: &HTTPScaledObject{
+									CooldownPeriod: &cooldownPeriod,
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
 		},
 		{
 			name: "function.spec.serving.scaleOptions.keda.scaledObject.pollingInterval",
@@ -582,6 +622,7 @@ func Test_Validate(t *testing.T) {
 						Triggers: &Triggers{Http: &HttpTrigger{}},
 						ScaleOptions: &ScaleOptions{
 							Keda: &KedaScaleOptions{
+								ScaledObject: &KedaScaledObject{},
 								Triggers: []kedav1alpha1.ScaleTriggers{
 									{
 										Type: "",
@@ -605,6 +646,7 @@ func Test_Validate(t *testing.T) {
 						Triggers: &Triggers{Http: &HttpTrigger{}},
 						ScaleOptions: &ScaleOptions{
 							Keda: &KedaScaleOptions{
+								ScaledObject: &KedaScaledObject{},
 								Triggers: []kedav1alpha1.ScaleTriggers{
 									{
 										Type: "activemq",
@@ -628,6 +670,7 @@ func Test_Validate(t *testing.T) {
 						Triggers: &Triggers{Http: &HttpTrigger{}},
 						ScaleOptions: &ScaleOptions{
 							Keda: &KedaScaleOptions{
+								ScaledObject: &KedaScaledObject{},
 								Triggers: []kedav1alpha1.ScaleTriggers{
 									{
 										Type:              "activemq",

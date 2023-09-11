@@ -313,8 +313,7 @@ func (r *Function) ValidateCanarySteps(fldPath *field.Path) error {
 	return nil
 }
 func (r *Function) ValidateServing() error {
-	if r.Spec.Serving.ScaleOptions != nil {
-		scaleOptions := r.Spec.Serving.ScaleOptions
+	if scaleOptions := r.Spec.Serving.ScaleOptions; scaleOptions != nil {
 		minReplicas := int32(0)
 		maxReplicas := int32(10)
 		if scaleOptions.MaxReplicas != nil {
@@ -336,14 +335,35 @@ func (r *Function) ValidateServing() error {
 				minReplicas, "cannot be greater than maxReplicas")
 		}
 
-		if scaleOptions.Keda != nil {
-			if scaleOptions.Keda.ScaledJob != nil && scaleOptions.Keda.ScaledObject != nil {
+		if keda := scaleOptions.Keda; keda != nil {
+			job, object, httpso := keda.ScaledJob, keda.ScaledObject, keda.HTTPScaledObject
+			// case that only ScaledJob is declared
+			flagJob := job != nil && object == nil && httpso == nil
+			// case that only ScaledObject is declared
+			flagScaledObject := job == nil && object != nil && httpso == nil
+			// case that only HTTPScaledObject is declared
+			flagHTTPScaledObject := job == nil && object == nil && httpso != nil
+			// if none of these cases happened, return error
+			if !(flagJob || flagScaledObject || flagHTTPScaledObject) {
 				return field.Required(
-					field.NewPath("spec", "serving", "scaleOptions", "keda", "scaledObject"),
-					"scaledJob and scaledObject have at most one enabled")
+					field.NewPath("spec", "serving", "scaleOptions", "keda"),
+					"Exactly one of scaledJob, scaledObject and httpScaledObject should be enabled")
 			}
-			if scaleOptions.Keda.ScaledObject != nil {
-				scaledObject := scaleOptions.Keda.ScaledObject
+			if httpScaledObject := keda.HTTPScaledObject; httpScaledObject != nil {
+				if httpScaledObject.TargetPendingRequests != nil && *httpScaledObject.TargetPendingRequests < 0 {
+					return field.Invalid(
+						field.NewPath("spec", "serving", "scaleOptions", "keda", "httpScaledObject", "targetPendingRequests"),
+						httpScaledObject.TargetPendingRequests,
+						"cannot be less than 0")
+				}
+				if httpScaledObject.CooldownPeriod != nil && *httpScaledObject.CooldownPeriod < 0 {
+					return field.Invalid(
+						field.NewPath("spec", "serving", "scaleOptions", "keda", "scaledObject", "cooldownPeriod"),
+						httpScaledObject.CooldownPeriod,
+						"cannot be less than 0")
+				}
+			}
+			if scaledObject := keda.ScaledObject; scaledObject != nil {
 				if scaledObject.PollingInterval != nil && *scaledObject.PollingInterval < 0 {
 					return field.Invalid(
 						field.NewPath("spec", "serving", "scaleOptions", "keda", "scaledObject", "pollingInterval"),
@@ -368,8 +388,7 @@ func (r *Function) ValidateServing() error {
 					}
 				}
 			}
-			if scaleOptions.Keda.ScaledJob != nil {
-				scaleJob := scaleOptions.Keda.ScaledJob
+			if scaleJob := keda.ScaledJob; scaleJob != nil {
 				if scaleJob.RestartPolicy != nil {
 					if _, ok := kedaScaledJobRestartPolices[*scaleJob.RestartPolicy]; !ok {
 						return field.NotSupported(
@@ -401,6 +420,15 @@ func (r *Function) ValidateServing() error {
 					return err
 				}
 			}
+		}
+	}
+
+	if r.Spec.Serving.Triggers != nil && r.Spec.Serving.Triggers.Http != nil && r.Spec.Serving.Triggers.Http.Engine != nil {
+		if *r.Spec.Serving.Triggers.Http.Engine != HttpEngineKeda && *r.Spec.Serving.Triggers.Http.Engine != HttpEngineKnative {
+			return field.Invalid(
+				field.NewPath("spec", "serving", "triggers", "http", "engine"),
+				r.Spec.Serving.Triggers.Http.Engine,
+				"Unknown engine type, supported engines include knative and keda")
 		}
 	}
 

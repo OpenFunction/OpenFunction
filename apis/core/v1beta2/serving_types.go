@@ -26,13 +26,17 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+type Engine string
+
 const (
 	HookPolicyAppend   = "Append"
 	HookPolicyOverride = "Override"
 
-	WorkloadTypeJob         = "Job"
-	WorkloadTypeStatefulSet = "StatefulSet"
-	WorkloadTypeDeployment  = "Deployment"
+	WorkloadTypeJob                = "Job"
+	WorkloadTypeStatefulSet        = "StatefulSet"
+	WorkloadTypeDeployment         = "Deployment"
+	HttpEngineKnative       Engine = "knative"
+	HttpEngineKeda          Engine = "keda"
 )
 
 type Triggers struct {
@@ -49,6 +53,9 @@ type HttpTrigger struct {
 	//
 	// +optional
 	Route *RouteImpl `json:"route,omitempty"`
+	// Http function runtime engine, can be set to knative or keda, default to knative if not set
+	// +optional
+	Engine *Engine `json:"engine,omitempty"`
 }
 
 type DaprTrigger struct {
@@ -71,7 +78,7 @@ type DaprInput struct {
 }
 
 type Input struct {
-	Dapr *DaprInput `json:"dapr,omitemptyr"`
+	Dapr *DaprInput `json:"dapr,omitempty"`
 }
 
 type DaprOutput struct {
@@ -92,6 +99,15 @@ type Output struct {
 
 type State struct {
 	Spec *componentsv1alpha1.ComponentSpec `json:"spec,omitempty"`
+}
+
+type HTTPScaledObject struct {
+	// Target metric value
+	// +optional
+	TargetPendingRequests *int32 `json:"targetPendingRequests,omitempty"`
+	// Cooldown period value
+	// +optional
+	CooldownPeriod *int32 `json:"cooldownPeriod,omitempty"`
 }
 
 type KedaScaledObject struct {
@@ -122,6 +138,8 @@ type KedaScaledJob struct {
 }
 
 type KedaScaleOptions struct {
+	// +optional
+	HTTPScaledObject *HTTPScaledObject `json:"httpScaledObject,omitempty"`
 	// +optional
 	ScaledObject *KedaScaledObject `json:"scaledObject,omitempty"`
 	// +optional

@@ -119,29 +119,18 @@ metadata:
   namespace: keda # must be in the same namespace with keda http-addon
 spec:
   version: "v2.0.0"
-#  image: "openfunction/sample-go-func:v1"
   image: "stefanprodan/podinfo"
-  imageCredentials:
-    name: push-secret
-#  build:
-#    builder: openfunction/builder-go:latest
-#    env:
-#      FUNC_NAME: "HelloWorld"
-#      FUNC_CLEAR_SOURCE: "true"
-#      # # Use FUNC_GOPROXY to set the goproxy if failed to fetch go modules
-#      # FUNC_GOPROXY: "https://goproxy.cn"
-#    srcRepo:
-#      url: "https://github.com/OpenFunction/samples.git"
-#      sourceSubPath: "functions/kedahttp/hello-world-go"
-#      revision: "main"
   serving:
     triggers:
       http:
         engine: "keda" # optional, default to knative if not set
         port: 9898
         route:
+          gatewayRef:
+            name: openfunction
+            namespace: openfunction
           hostnames:
-            - "helloworld-go.com"
+            - "podinfo.com"
           rules:
             - matches:
                 - path:

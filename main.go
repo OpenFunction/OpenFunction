@@ -25,6 +25,7 @@ import (
 	"time"
 
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
+	httpv1alpha1 "github.com/kedacore/http-add-on/operator/apis/http/v1alpha1"
 	kedav1alpha1 "github.com/kedacore/keda/v2/apis/keda/v1alpha1"
 	shipwrightv1alpha1 "github.com/shipwright-io/build/pkg/apis/build/v1alpha1"
 	"go.uber.org/zap/zapcore"
@@ -63,6 +64,7 @@ func init() {
 	_ = knserving.AddToScheme(scheme)
 	_ = componentsv1alpha1.AddToScheme(scheme)
 	_ = kedav1alpha1.AddToScheme(scheme)
+	_ = httpv1alpha1.AddToScheme(scheme)
 	_ = openfunctionevent.AddToScheme(scheme)
 	_ = k8sgatewayapiv1beta1.AddToScheme(scheme)
 	_ = networkingv1alpha1.AddToScheme(scheme)
