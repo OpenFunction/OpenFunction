@@ -810,8 +810,6 @@ func (r *FunctionReconciler) mutateHTTPRoute(
 	return func() error {
 		var clusterHostname = k8sgatewayapiv1alpha2.Hostname(
 			fmt.Sprintf("%s.%s.svc.%s", fn.Name, fn.Namespace, gateway.Spec.ClusterDomain))
-		var generatedHostname = k8sgatewayapiv1alpha2.Hostname(
-			fmt.Sprintf("%s.%s.svc.%s", service.GetName(), fn.Namespace, gateway.Spec.ClusterDomain))
 		var hostnames []k8sgatewayapiv1alpha2.Hostname
 		var rules []k8sgatewayapiv1alpha2.HTTPRouteRule
 		var port = constants.DefaultFunctionServicePort
@@ -826,16 +824,12 @@ func (r *FunctionReconciler) mutateHTTPRoute(
 				Value: fmt.Sprintf("%s.%s.svc.%s", knativeService.Status.LatestReadyRevisionName, fn.Namespace, gateway.Spec.ClusterDomain),
 			}}
 		} else if service != nil {
-			//for _, hostname := range fn.Spec.Serving.Triggers.Http.Route.Hostnames {
-			//	httpHeaders = append(httpHeaders, k8sgatewayapiv1alpha2.HTTPHeader{
-			//		Name:  "Host",
-			//		Value: string(hostname),
-			//	})
-			//}
-			httpHeaders = []k8sgatewayapiv1alpha2.HTTPHeader{{
-				Name:  "Host",
-				Value: fmt.Sprintf("%s.%s.svc.%s", service.GetName(), fn.Namespace, gateway.Spec.ClusterDomain),
-			}}
+			for _, hostname := range fn.Spec.Serving.Triggers.Http.Route.Hostnames {
+				httpHeaders = append(httpHeaders, k8sgatewayapiv1alpha2.HTTPHeader{
+					Name:  "Host",
+					Value: string(hostname),
+				})
+			}
 		}
 		var filter = k8sgatewayapiv1alpha2.HTTPRouteFilter{
 			Type: k8sgatewayapiv1alpha2.HTTPRouteFilterRequestHeaderModifier,
@@ -873,9 +867,6 @@ func (r *FunctionReconciler) mutateHTTPRoute(
 		}
 		if !containsHTTPHostname(fn.Spec.Serving.Triggers.Http.Route.Hostnames, clusterHostname) {
 			hostnames = append(hostnames, clusterHostname)
-		}
-		if service != nil {
-			hostnames = append(hostnames, generatedHostname)
 		}
 
 		var backendGroup k8sgatewayapiv1alpha2.Group = ""
