@@ -884,21 +884,17 @@ func (r *FunctionReconciler) createOrUpdateHTTPRoute(fn *openfunction.Function) 
 		weight = pointer.Int32(100)
 	}
 
-	if *fn.Spec.Serving.Triggers.Http.Engine == "" ||
-		*fn.Spec.Serving.Triggers.Http.Engine == openfunction.HttpEngineKnative {
+	if *fn.Spec.Serving.Triggers.Http.Engine == openfunction.HttpEngineKnative {
 		stableServiceName, stableHost, serviceName, host, port, err = r.getKService(fn, gateway)
 		if err != nil {
 			return err
 		}
-
 	}
-
 	if *fn.Spec.Serving.Triggers.Http.Engine == openfunction.HttpEngineKeda {
 		stableServiceName, stableHost, serviceName, host, port, err = r.getKedaServiceByServing(fn, gateway)
 		if err != nil {
 			return err
 		}
-
 	}
 
 	httpRoute := &k8sgatewayapiv1beta1.HTTPRoute{

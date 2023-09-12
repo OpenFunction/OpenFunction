@@ -100,7 +100,9 @@ func (r *Function) Default() {
 		version := "latest"
 		r.Spec.Version = &version
 	}
-
+	if r.Spec.Serving == nil {
+		r.Spec.Serving = &ServingImpl{}
+	}
 	if r.Spec.Serving.Triggers == nil {
 		r.Spec.Serving.Triggers = &Triggers{}
 	}
@@ -113,6 +115,10 @@ func (r *Function) Default() {
 		if r.Spec.Serving.Triggers.Http.Port == nil || *r.Spec.Serving.Triggers.Http.Port == 0 {
 			port := int32(constants.DefaultFuncPort)
 			r.Spec.Serving.Triggers.Http.Port = &port
+		}
+		if r.Spec.Serving.Triggers.Http.Engine == nil {
+			var defaultHttpEngine = HttpEngineKnative
+			r.Spec.Serving.Triggers.Http.Engine = &defaultHttpEngine
 		}
 	}
 
@@ -423,7 +429,7 @@ func (r *Function) ValidateServing() error {
 		}
 	}
 
-	if r.Spec.Serving.Triggers != nil && r.Spec.Serving.Triggers.Http != nil && r.Spec.Serving.Triggers.Http.Engine != nil {
+	if r.Spec.Serving.Triggers.Http != nil && r.Spec.Serving.Triggers.Http.Engine != nil {
 		if *r.Spec.Serving.Triggers.Http.Engine != HttpEngineKeda && *r.Spec.Serving.Triggers.Http.Engine != HttpEngineKnative {
 			return field.Invalid(
 				field.NewPath("spec", "serving", "triggers", "http", "engine"),
