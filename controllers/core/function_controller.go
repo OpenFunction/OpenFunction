@@ -810,6 +810,8 @@ func (r *FunctionReconciler) mutateHTTPRoute(
 	return func() error {
 		var clusterHostname = k8sgatewayapiv1alpha2.Hostname(
 			fmt.Sprintf("%s.%s.svc.%s", fn.Name, fn.Namespace, gateway.Spec.ClusterDomain))
+		var generatedHostname = k8sgatewayapiv1alpha2.Hostname(
+			fmt.Sprintf("%s.%s.svc.%s", service.GetName(), fn.Namespace, gateway.Spec.ClusterDomain))
 		var hostnames []k8sgatewayapiv1alpha2.Hostname
 		var rules []k8sgatewayapiv1alpha2.HTTPRouteRule
 		var port = constants.DefaultFunctionServicePort
@@ -817,22 +819,28 @@ func (r *FunctionReconciler) mutateHTTPRoute(
 			port = constants.DefaultInterceptorPort
 		}
 		var namespace = k8sgatewayapiv1alpha2.Namespace(fn.Namespace)
-		var value string
+		var httpHeaders []k8sgatewayapiv1alpha2.HTTPHeader
 		if knativeService != nil {
-			value = fmt.Sprintf("%s.%s.svc.%s", knativeService.Status.LatestReadyRevisionName, fn.Namespace, gateway.Spec.ClusterDomain)
+			httpHeaders = []k8sgatewayapiv1alpha2.HTTPHeader{{
+				Name:  "Host",
+				Value: fmt.Sprintf("%s.%s.svc.%s", knativeService.Status.LatestReadyRevisionName, fn.Namespace, gateway.Spec.ClusterDomain),
+			}}
 		} else if service != nil {
-			var host k8sgatewayapiv1alpha2.Hostname
-			// TODO: optimize this part of code
-			host = fn.Spec.Serving.Triggers.Http.Route.Hostnames[0]
-			value = string(host)
+			//for _, hostname := range fn.Spec.Serving.Triggers.Http.Route.Hostnames {
+			//	httpHeaders = append(httpHeaders, k8sgatewayapiv1alpha2.HTTPHeader{
+			//		Name:  "Host",
+			//		Value: string(hostname),
+			//	})
+			//}
+			httpHeaders = []k8sgatewayapiv1alpha2.HTTPHeader{{
+				Name:  "Host",
+				Value: fmt.Sprintf("%s.%s.svc.%s", service.GetName(), fn.Namespace, gateway.Spec.ClusterDomain),
+			}}
 		}
 		var filter = k8sgatewayapiv1alpha2.HTTPRouteFilter{
 			Type: k8sgatewayapiv1alpha2.HTTPRouteFilterRequestHeaderModifier,
 			RequestHeaderModifier: &k8sgatewayapiv1alpha2.HTTPRequestHeaderFilter{
-				Add: []k8sgatewayapiv1alpha2.HTTPHeader{{
-					Name:  "Host",
-					Value: value,
-				}},
+				Add: httpHeaders,
 			},
 		}
 		var parentRefName k8sgatewayapiv1alpha2.ObjectName
@@ -865,6 +873,9 @@ func (r *FunctionReconciler) mutateHTTPRoute(
 		}
 		if !containsHTTPHostname(fn.Spec.Serving.Triggers.Http.Route.Hostnames, clusterHostname) {
 			hostnames = append(hostnames, clusterHostname)
+		}
+		if service != nil {
+			hostnames = append(hostnames, generatedHostname)
 		}
 
 		var backendGroup k8sgatewayapiv1alpha2.Group = ""
