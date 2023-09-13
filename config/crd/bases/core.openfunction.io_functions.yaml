@@ -9620,23 +9620,6 @@ spec:
           spec:
             description: FunctionSpec defines the desired state of Function
             properties:
-              CanarySteps:
-                description: Canary release steps for a function
-                items:
-                  properties:
-                    pause:
-                      properties:
-                        duration:
-                          description: Duration the amount of time to wait before
-                            moving to the next step.
-                          format: int32
-                          type: integer
-                      type: object
-                    weight:
-                      format: int32
-                      type: integer
-                  type: object
-                type: array
               build:
                 description: Information needed to build a function. The build step
                   will be skipped if Build is nil.
@@ -9852,6 +9835,23 @@ spec:
                 required:
                 - srcRepo
                 type: object
+              canarySteps:
+                description: Canary release steps for a function
+                items:
+                  properties:
+                    pause:
+                      properties:
+                        duration:
+                          description: Duration the amount of time to wait before
+                            moving to the next step.
+                          format: int32
+                          type: integer
+                      type: object
+                    weight:
+                      format: int32
+                      type: integer
+                  type: object
+                type: array
               image:
                 description: Function image name
                 type: string

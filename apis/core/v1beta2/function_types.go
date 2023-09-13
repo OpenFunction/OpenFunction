@@ -135,7 +135,7 @@ type FunctionSpec struct {
 	// Information needed to run a function. The serving step will be skipped if `Serving` is nil.
 	Serving *ServingImpl `json:"serving,omitempty"`
 	// Canary release steps for a function
-	CanarySteps []CanaryStep `json:"CanarySteps,omitempty"`
+	CanarySteps []CanaryStep `json:"canarySteps,omitempty"`
 }
 type CanaryStep struct {
 	Weight *int32 `json:"weight,omitempty"`

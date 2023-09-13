@@ -19,10 +19,11 @@ package core
 import (
 	"context"
 	"fmt"
-	"github.com/openfunction/pkg/core/serving/knative"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/openfunction/pkg/core/serving/knative"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"

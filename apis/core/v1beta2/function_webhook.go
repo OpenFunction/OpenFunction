@@ -107,7 +107,7 @@ func (r *Function) Default() {
 		r.Spec.Serving.Triggers = &Triggers{}
 	}
 
-	if len(r.Spec.Serving.Triggers.Dapr) == 0 {
+	if r.Spec.Serving.Triggers.Dapr == nil || len(r.Spec.Serving.Triggers.Dapr) == 0 {
 		if r.Spec.Serving.Triggers.Http == nil {
 			r.Spec.Serving.Triggers.Http = &HttpTrigger{}
 		}

@@ -716,8 +716,10 @@ func Test_Validate(t *testing.T) {
 			name: "function.spec.canarySteps",
 			r: Function{
 				Spec: FunctionSpec{
-					Image:   "test",
-					Serving: &ServingImpl{},
+					Image: "test",
+					Serving: &ServingImpl{
+						Triggers: &Triggers{Http: &HttpTrigger{Engine: (*Engine)(utilpointer.String(string(HttpEngineKnative)))}},
+					},
 					CanarySteps: []CanaryStep{
 						{
 							Weight: utilpointer.Int32(10),
@@ -739,8 +741,10 @@ func Test_Validate(t *testing.T) {
 			name: "function.spec.canarySteps.weight",
 			r: Function{
 				Spec: FunctionSpec{
-					Image:   "test",
-					Serving: &ServingImpl{},
+					Image: "test",
+					Serving: &ServingImpl{
+						Triggers: &Triggers{Http: &HttpTrigger{Engine: (*Engine)(utilpointer.String(string(HttpEngineKnative)))}},
+					},
 					CanarySteps: []CanaryStep{
 						{
 							Weight: utilpointer.Int32(-1),
@@ -753,8 +757,10 @@ func Test_Validate(t *testing.T) {
 			name: "function.spec.canarySteps.pause",
 			r: Function{
 				Spec: FunctionSpec{
-					Image:   "test",
-					Serving: &ServingImpl{},
+					Image: "test",
+					Serving: &ServingImpl{
+						Triggers: &Triggers{Http: &HttpTrigger{Engine: (*Engine)(utilpointer.String(string(HttpEngineKnative)))}},
+					},
 					CanarySteps: []CanaryStep{
 						{
 							Weight: utilpointer.Int32(10),
