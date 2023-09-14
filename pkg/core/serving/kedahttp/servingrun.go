@@ -58,7 +58,7 @@ type servingRun struct {
 
 func Registry(rm meta.RESTMapper) []client.Object {
 	var objs = []client.Object{&appsv1.Deployment{}}
-	if _, err := rm.ResourcesFor(schema.GroupVersionResource{Group: "http.keda.sh", Version: "v1alpha1", Resource: "httpscaledobjects"}); err != nil {
+	if _, err := rm.ResourcesFor(schema.GroupVersionResource{Group: "http.keda.sh", Version: "v1alpha1", Resource: "httpscaledobjects"}); err == nil {
 		objs = append(objs, &httpv1alpha1.HTTPScaledObject{})
 	}
 
