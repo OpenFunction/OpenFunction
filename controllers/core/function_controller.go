@@ -138,37 +138,41 @@ func (r *FunctionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if err := r.createServing(&fn); err != nil {
 		return ctrl.Result{}, err
 	}
-	if err := r.updateCanaryRelease(&fn); err != nil {
+	var recheckTime *time.Time
+	recheckTime, err := r.updateCanaryRelease(&fn)
+	if err != nil {
 		return ctrl.Result{}, err
 	}
-
 	if err := r.createOrUpdateHTTPRoute(&fn); err != nil {
 		return ctrl.Result{}, err
 	}
-
+	if recheckTime != nil {
+		return ctrl.Result{RequeueAfter: time.Until(*recheckTime)}, nil
+	}
 	return ctrl.Result{}, nil
+
 }
 
-func (r *FunctionReconciler) updateCanaryRelease(fn *openfunction.Function) error {
+func (r *FunctionReconciler) updateCanaryRelease(fn *openfunction.Function) (*time.Time, error) {
 	log := r.Log.WithName("UpdateCanaryRelease")
 
 	if !hasCanaryReleasePlan(fn) {
 		fn.Status.StableServing = fn.Status.Serving.DeepCopy()
 		if fn.Status.CanaryStatus == nil {
-			return nil
+			return nil, nil
 		}
 		// no plan no status
 		fn.Status.CanaryStatus = nil
 		if err := r.Status().Update(r.ctx, fn); err != nil {
 			log.Error(err, "Failed to update function canary status")
-			return err
+			return nil, err
 		}
 		// sure clean old serving
 		if err := r.cleanServing(fn); err != nil {
 			log.Error(err, "Failed to clean Serving")
-			return err
+			return nil, err
 		}
-		return nil
+		return nil, nil
 	}
 
 	if fn.Status.CanaryStatus == nil {
@@ -180,18 +184,18 @@ func (r *FunctionReconciler) updateCanaryRelease(fn *openfunction.Function) erro
 		fn.Status.CanaryStatus = &status
 		if err := r.Status().Update(r.ctx, fn); err != nil {
 			log.Error(err, "Failed to update function canary status")
-			return err
+			return nil, err
 		}
-		return nil
+		return nil, nil
 	}
 
 	status := fn.Status.CanaryStatus
 
 	if status.Phase != openfunction.CanaryPhaseProgressing {
 		// not in canary release progress
-		return nil
+		return nil, nil
 	}
-
+	var recheckTime *time.Time
 	steps := fn.Spec.CanarySteps
 	currentStep := steps[status.CurrentStepIndex]
 	if currentStep.Pause.Duration != nil && status.CurrentStepState == openfunction.CanaryStepStatePaused {
@@ -200,11 +204,14 @@ func (r *FunctionReconciler) updateCanaryRelease(fn *openfunction.Function) erro
 		if expectedTime.Before(time.Now()) {
 			log.Info("Current canary step is ready", "Function", fn.Name, "Step", status.CurrentStepIndex)
 			status.CurrentStepState = openfunction.CanaryStepStateReady
+		} else {
+			recheckTime = &expectedTime
 		}
 		if err := r.Status().Update(r.ctx, fn); err != nil {
 			log.Error(err, "Failed to update function canary status")
-			return err
+			return nil, err
 		}
+
 	}
 	status = fn.Status.CanaryStatus
 	if status.CurrentStepState == openfunction.CanaryStepStateReady {
@@ -223,15 +230,15 @@ func (r *FunctionReconciler) updateCanaryRelease(fn *openfunction.Function) erro
 		}
 		if err := r.Status().Update(r.ctx, fn); err != nil {
 			log.Error(err, "Failed to update function canary status")
-			return err
+			return nil, err
 		}
 		if err := r.cleanServing(fn); err != nil {
 			log.Error(err, "Failed to clean Serving")
-			return err
+			return nil, err
 		}
 	}
 
-	return nil
+	return recheckTime, nil
 }
 func hasCanaryReleasePlan(fn *openfunction.Function) bool {
 	if fn.Spec.CanarySteps == nil || len(fn.Spec.CanarySteps) == 0 {
