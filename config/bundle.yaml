@@ -11557,23 +11557,31 @@ spec:
                 required:
                 - srcRepo
                 type: object
-              canarySteps:
-                description: Canary release steps for a function
-                items:
-                  properties:
-                    pause:
+              canaryStrategy:
+                description: Canary strategy for a function
+                properties:
+                  canarySteps:
+                    description: Canary release steps for a function
+                    items:
                       properties:
-                        duration:
-                          description: Duration the amount of time to wait before
-                            moving to the next step.
+                        pause:
+                          description: Pause defines a pause stage for a canary step,
+                            manual or auto
+                          properties:
+                            duration:
+                              description: Duration the amount of time to wait before
+                                moving to the next step.
+                              format: int32
+                              type: integer
+                          type: object
+                        weight:
+                          description: Weight indicate how many percentage of traffic
+                            the canary function should receive
                           format: int32
                           type: integer
                       type: object
-                    weight:
-                      format: int32
-                      type: integer
-                  type: object
-                type: array
+                    type: array
+                type: object
               image:
                 description: Function image name
                 type: string
@@ -21356,6 +21364,11 @@ spec:
                   - name
                   type: object
                 type: array
+              stableRevision:
+                properties:
+                  imageDigest:
+                    type: string
+                type: object
               stableServing:
                 properties:
                   buildDuration:

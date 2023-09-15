@@ -134,12 +134,23 @@ type FunctionSpec struct {
 	Build *BuildImpl `json:"build,omitempty"`
 	// Information needed to run a function. The serving step will be skipped if `Serving` is nil.
 	Serving *ServingImpl `json:"serving,omitempty"`
+	// Canary strategy for a function
+	// +optional
+	CanaryStrategy *CanaryStrategy `json:"canaryStrategy,omitempty"`
+}
+type CanaryStrategy struct {
 	// Canary release steps for a function
+	// +optional
 	CanarySteps []CanaryStep `json:"canarySteps,omitempty"`
 }
+
 type CanaryStep struct {
+	// Weight indicate how many percentage of traffic the canary function should receive
+	// +optional
 	Weight *int32 `json:"weight,omitempty"`
-	Pause  Pause  `json:"pause,omitempty"`
+	// Pause defines a pause stage for a canary step, manual or auto
+	// +optional
+	Pause Pause `json:"pause,omitempty"`
 }
 type Pause struct {
 	// Duration the amount of time to wait before moving to the next step.
@@ -240,8 +251,9 @@ type FunctionStatus struct {
 	CanaryStatus  *CanaryStatus `json:"canaryStatus,omitempty"`
 	// Addresses holds the addresses that used to access the Function.
 	// +optional
-	Addresses []FunctionAddress `json:"addresses,omitempty"`
-	Revision  *Revision         `json:"revision,omitempty"`
+	Addresses      []FunctionAddress `json:"addresses,omitempty"`
+	Revision       *Revision         `json:"revision,omitempty"`
+	StableRevision *Revision         `json:"stableRevision,omitempty"`
 	// Sources holds the results emitted from the step definition
 	// of different sources
 	//

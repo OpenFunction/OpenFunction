@@ -157,10 +157,11 @@ func (r *FunctionReconciler) updateCanaryRelease(fn *openfunction.Function) (*ti
 	log := r.Log.WithName("UpdateCanaryRelease")
 
 	if !hasCanaryReleasePlan(fn) {
-		fn.Status.StableServing = fn.Status.Serving.DeepCopy()
 		if fn.Status.CanaryStatus == nil {
 			return nil, nil
 		}
+		fn.Status.StableServing = fn.Status.Serving.DeepCopy()
+		fn.Status.StableRevision = fn.Status.Revision
 		// no plan no status
 		fn.Status.CanaryStatus = nil
 		if err := r.Status().Update(r.ctx, fn); err != nil {
@@ -196,7 +197,7 @@ func (r *FunctionReconciler) updateCanaryRelease(fn *openfunction.Function) (*ti
 		return nil, nil
 	}
 	var recheckTime *time.Time
-	steps := fn.Spec.CanarySteps
+	steps := fn.Spec.CanaryStrategy.CanarySteps
 	currentStep := steps[status.CurrentStepIndex]
 	if currentStep.Pause.Duration != nil && status.CurrentStepState == openfunction.CanaryStepStatePaused {
 		duration := time.Second * time.Duration(*currentStep.Pause.Duration)
@@ -218,6 +219,7 @@ func (r *FunctionReconciler) updateCanaryRelease(fn *openfunction.Function) (*ti
 		if len(steps) == int(status.CurrentStepIndex)+1 {
 			//complete step
 			fn.Status.StableServing = fn.Status.Serving.DeepCopy()
+			fn.Status.StableRevision = fn.Status.Revision
 			status.CurrentStepState = openfunction.CanaryStepStateCompleted
 			status.Phase = openfunction.CanaryPhaseHealthy
 			status.LastUpdateTime = &metav1.Time{Time: time.Now()}
@@ -241,7 +243,7 @@ func (r *FunctionReconciler) updateCanaryRelease(fn *openfunction.Function) (*ti
 	return recheckTime, nil
 }
 func hasCanaryReleasePlan(fn *openfunction.Function) bool {
-	if fn.Spec.CanarySteps == nil || len(fn.Spec.CanarySteps) == 0 {
+	if fn.Spec.CanaryStrategy == nil || len(fn.Spec.CanaryStrategy.CanarySteps) == 0 {
 		return false
 	}
 
@@ -509,6 +511,12 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 		}
 		if fn.Status.Serving.ResourceHash == fn.Status.StableServing.ResourceHash {
 			fn.Status.StableServing = fn.Status.Serving
+			fn.Status.StableRevision = fn.Status.Revision
+			err := r.Status().Update(r.ctx, fn)
+			if err != nil {
+				log.Error(err, "Failed to update function serving status")
+				return err
+			}
 			return nil
 		}
 		if err := r.updateFuncWithServingStatus(fn, fn.Status.StableServing); err != nil {
@@ -557,6 +565,7 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 		fn.Status.CanaryStatus.Phase = openfunction.CanaryPhaseHealthy
 		fn.Status.CanaryStatus.CurrentStepState = openfunction.CanaryStepStatePaused
 		fn.Status.CanaryStatus.Message = "Canary progressing has been cancelled"
+		fn.Status.Revision = fn.Status.StableRevision
 		if err := r.Status().Update(r.ctx, fn); err != nil {
 			log.Error(err, "Failed to update function canary status")
 			return err
@@ -625,6 +634,7 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 	if fn.Status.StableServing == nil || !hasCanaryReleasePlan(fn) {
 		// create stable serving status
 		fn.Status.StableServing = servingStatus.DeepCopy()
+		fn.Status.StableRevision = fn.Status.Revision
 	}
 
 	if err := r.Status().Update(r.ctx, fn); err != nil {
@@ -896,7 +906,7 @@ func (r *FunctionReconciler) createOrUpdateHTTPRoute(fn *openfunction.Function) 
 	var port k8sgatewayapiv1beta1.PortNumber
 	if hasCanaryReleasePlan(fn) && fn.Status.CanaryStatus != nil &&
 		fn.Status.CanaryStatus.Phase == openfunction.CanaryPhaseProgressing {
-		step := fn.Spec.CanarySteps[fn.Status.CanaryStatus.CurrentStepIndex]
+		step := fn.Spec.CanaryStrategy.CanarySteps[fn.Status.CanaryStatus.CurrentStepIndex]
 		weight = step.Weight
 	} else {
 		weight = pointer.Int32(100)
