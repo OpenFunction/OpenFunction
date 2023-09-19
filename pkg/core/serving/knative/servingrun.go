@@ -354,6 +354,26 @@ func (r *servingRun) createService(s *openfunction.Serving, cm map[string]string
 			containerConcurrency = &c
 		}
 	}
+	ksvcAnnotations := make(map[string]string)
+	for key, value := range s.Spec.Annotations {
+		if !strings.HasPrefix(key, "autoscaling.knative.dev") {
+			ksvcAnnotations[key] = value
+		}
+		if strings.HasPrefix(key, "features.knative.dev") {
+			delete(annotations, key)
+		}
+		if strings.HasPrefix(key, "queue.sidecar.serving.knative.dev") {
+			delete(annotations, key)
+		}
+		if strings.HasPrefix(key, "networking.knative.dev") {
+			delete(annotations, key)
+		}
+		if strings.HasPrefix(key, "serving.knative.dev") {
+			delete(annotations, key)
+		}
+
+	}
+
 	service := kservingv1.Service{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "serving.knative.dev/v1",
@@ -365,7 +385,7 @@ func (r *servingRun) createService(s *openfunction.Serving, cm map[string]string
 			Labels: map[string]string{
 				common.ServingLabel: s.Name,
 			},
-			Annotations: s.Spec.Annotations,
+			Annotations: ksvcAnnotations,
 		},
 		Spec: kservingv1.ServiceSpec{
 			ConfigurationSpec: kservingv1.ConfigurationSpec{
