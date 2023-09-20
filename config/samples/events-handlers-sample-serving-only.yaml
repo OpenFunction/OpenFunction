@@ -1,84 +1,115 @@
-apiVersion: core.openfunction.io/v1beta1
+apiVersion: core.openfunction.io/v1beta2
 kind: Function
 metadata:
   name: bindings
 spec:
-  version: "v1.0.0"
   image: openfunctiondev/v1beta1-bindings:latest
-  #  imageCredentials:
-  #    name: push-secret
-  #  build:
-  #    builder: openfunction/builder-go:latest
-  #    env:
-  #      FUNC_NAME: "HandleCronInput"
-  #      FUNC_CLEAR_SOURCE: "true"
-  #    srcRepo:
-  #      url: "https://github.com/OpenFunction/samples.git"
-  #      sourceSubPath: "functions/async/bindings/cron-input-kafka-output"
   serving:
-    template:
-      containers:
-        - name: function
-          imagePullPolicy: Always
-    runtime: "async"
-    inputs:
-      - name: cron
-        component: cron
-    outputs:
-      - name: sample
-        component: kafka-server
-        operation: "create"
     bindings:
       cron:
-        type: bindings.cron
-        version: v1
+        ignoreErrors: false
+        initTimeout: ""
         metadata:
           - name: schedule
-            value: "@every 2s"
-      kafka-server:
-        type: bindings.kafka
+            secretKeyRef:
+              key: ""
+              name: ""
+            value: '@every 2s'
+        type: bindings.cron
         version: v1
+      kafka-server:
+        ignoreErrors: false
+        initTimeout: ""
         metadata:
           - name: brokers
-            value: "kafka-server-kafka-brokers:9092"
+            secretKeyRef:
+              key: ""
+              name: ""
+            value: kafka-server-kafka-brokers:9092
           - name: topics
-            value: "events-sample"
+            secretKeyRef:
+              key: ""
+              name: ""
+            value: events-sample
           - name: consumerGroup
-            value: "bindings-with-output"
+            secretKeyRef:
+              key: ""
+              name: ""
+            value: bindings-with-output
           - name: publishTopic
-            value: "events-sample"
+            secretKeyRef:
+              key: ""
+              name: ""
+            value: events-sample
           - name: authRequired
+            secretKeyRef:
+              key: ""
+              name: ""
             value: "false"
+        type: bindings.kafka
+        version: v1
+    outputs:
+      - dapr:
+          name: kafka-server
+          operation: create
+          outputName: sample
+          type: bindings.kafka
+    template:
+      containers:
+        - imagePullPolicy: Always
+          name: function
+          resources: {}
+    triggers:
+      dapr:
+        - inputName: cron
+          name: cron
+          type: bindings.cron
+  version: v1.0.0
+  workloadRuntime: OCIContainer
 ---
-apiVersion: core.openfunction.io/v1beta1
+apiVersion: core.openfunction.io/v1beta2
 kind: Function
 metadata:
   name: sink-a
 spec:
-  version: "v1.0.0"
-  image: "openfunction/sink-sample:latest"
-  port: 8080
+  image: openfunction/sink-sample:latest
   serving:
-    runtime: "knative"
     template:
       containers:
-        - name: function
-          imagePullPolicy: Always
+        - imagePullPolicy: Always
+          name: function
+          resources: {}
+    triggers:
+      http:
+        port: 8080
+        route:
+          gatewayRef:
+            name: openfunction
+            namespace: openfunction
+  version: v1.0.0
+  workloadRuntime: OCIContainer
 ---
-apiVersion: core.openfunction.io/v1beta1
+apiVersion: core.openfunction.io/v1beta2
 kind: Function
 metadata:
   name: sink-b
 spec:
-  version: "v1.0.0"
-  image: "openfunction/sink-sample:latest"
-  port: 8080
+  image: openfunction/sink-sample:latest
   serving:
-    runtime: "knative"
     template:
       containers:
-        - name: function
-          imagePullPolicy: Always
+        - imagePullPolicy: Always
+          name: function
+          resources: {}
+    triggers:
+      http:
+        port: 8080
+        route:
+          gatewayRef:
+            name: openfunction
+            namespace: openfunction
+  version: v1.0.0
+  workloadRuntime: OCIContainer
 ---
 apiVersion: events.openfunction.io/v1alpha1
 kind: EventBus

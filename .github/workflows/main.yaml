@@ -32,8 +32,6 @@ on:
       - 'config/samples/function-with-plugins-serving-only.yaml'
       - 'controllers/**'
       - 'hack/generate-cert.sh'
-      - 'hack/delete.sh'
-      - 'hack/deploy.sh'
       - 'pkg/**'
       - 'Dockerfile'
       - 'main.go'
@@ -121,22 +119,14 @@ jobs:
 
       - name: Install dependent components
         run: |
-          chmod a+x ./hack/deploy.sh
-          ./hack/deploy.sh --all
-          # Remove the resources request to avoid Insufficient CPU error
-          kubectl patch deployments.apps -n tekton-pipelines tekton-pipelines-webhook -p '{"spec":{"template":{"spec":{"containers":[{"name":"webhook","resources":null}]}}}}'
-          kubectl patch deployments.apps -n knative-serving activator -p '{"spec":{"template":{"spec":{"containers":[{"name":"activator","resources":null}]}}}}'
-          kubectl patch deployments.apps -n knative-serving controller -p '{"spec":{"template":{"spec":{"containers":[{"name":"controller","resources":null}]}}}}'
-          kubectl patch deployments.apps -n knative-serving autoscaler -p '{"spec":{"template":{"spec":{"containers":[{"name":"autoscaler","resources":null}]}}}}'
-          kubectl patch deployments.apps -n knative-serving domainmapping-webhook -p '{"spec":{"template":{"spec":{"containers":[{"name":"domainmapping-webhook","resources":null}]}}}}'
-          kubectl patch deployments.apps -n knative-serving webhook -p '{"spec":{"template":{"spec":{"containers":[{"name":"webhook","resources":null}]}}}}'
-          kubectl patch deployments.apps -n keda keda-operator -p '{"spec":{"template":{"spec":{"containers":[{"name":"keda-operator","resources":null}]}}}}'
-          kubectl patch deployments.apps -n keda keda-metrics-apiserver -p '{"spec":{"template":{"spec":{"containers":[{"name":"keda-metrics-apiserver","resources":null}]}}}}'
-          kubectl patch deployments.apps -n projectcontour contour-gateway-provisioner -p '{"spec":{"template":{"spec":{"containers":[{"name":"contour-gateway-provisioner","resources":null}]}}}}'
           # Install kafka
           helm repo add strimzi https://strimzi.io/charts/
           helm install kafka-operator -n default strimzi/strimzi-kafka-operator
           kubectl apply -f config/samples/function-kafka-quick.yaml
+          # Install nats and stan
+          helm repo add nats https://nats-io.github.io/k8s/helm/charts/
+          helm install nats nats/nats
+          helm install stan nats/stan --set stan.nats.url=nats://nats:4222
 
       - name: Build and Push image
         run: |
@@ -145,12 +135,14 @@ jobs:
 
       - name: Install OpenFunction
         run: |
-          kubectl apply --server-side=true -f config/bundle.yaml
-          kubectl apply -f config/strategy/build-strategy.yaml
-          kubectl patch deployments.apps -n openfunction openfunction-controller-manager -p "{\"spec\":{\"template\":{\"spec\":{\"containers\":[{\"name\":\"openfunction\",\"image\":\"kind-registry:5000/openfunction/openfunction:latest\",\"resources\":null}]}}}}"
-          kubectl rollout status -n openfunction deployment openfunction-controller-manager --timeout=1m
-          sleep 10
-          kubectl apply -f config/gateway/default-gateway.yaml
+          # Install CRDs
+          make install
+          kubectl apply -f https://openfunction.sh1a.qingstor.com/crds/gateway-api-v0.8.0.yaml
+          # Install OpenFunction Chart
+          helm repo add openfunction https://openfunction.github.io/charts/
+          helm repo update
+          helm install openfunction openfunction/openfunction -n openfunction --create-namespace --devel -f "${GITHUB_WORKSPACE}"/.github/workflows/values
+          sleep 60
 
 #      - name: Setup tmate session
 #        uses: mxschmitt/action-tmate@v1
@@ -199,9 +191,6 @@ jobs:
       - name: Function with events e2e test
         timeout-minutes: 10
         run: |
-          helm repo add nats https://nats-io.github.io/k8s/helm/charts/
-          helm install nats nats/nats
-          helm install stan nats/stan --set stan.nats.url=nats://nats:4222
           # deploy the eventbus backend nats streaming
           while /bin/true; do
             nats_status=`kubectl get pod nats-0 -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'`

@@ -732,7 +732,7 @@ func (r *FunctionReconciler) createOrUpdateHTTPRoute(fn *openfunction.Function) 
 		return err
 	}
 
-	if *fn.Spec.Serving.Triggers.Http.Engine == "" ||
+	if fn.Spec.Serving.Triggers.Http.Engine == nil || *fn.Spec.Serving.Triggers.Http.Engine == "" ||
 		*fn.Spec.Serving.Triggers.Http.Engine == openfunction.HttpEngineKnative {
 		knativeService := &kservingv1.Service{
 			ObjectMeta: metav1.ObjectMeta{
@@ -1200,7 +1200,7 @@ func (r *FunctionReconciler) recordEvent(fn *openfunction.Function, related runt
 func (r *FunctionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &openfunction.Function{}, GatewayField, func(rawObj client.Object) []string {
 		fn := rawObj.(*openfunction.Function)
-		if fn.Spec.Serving.Triggers != nil &&
+		if fn.Spec.Serving != nil && fn.Spec.Serving.Triggers != nil &&
 			fn.Spec.Serving.Triggers.Http != nil &&
 			fn.Spec.Serving.Triggers.Http.Route != nil {
 			return []string{fmt.Sprintf("%s,%s", *fn.Spec.Serving.Triggers.Http.Route.GatewayRef.Namespace, fn.Spec.Serving.Triggers.Http.Route.GatewayRef.Name)}

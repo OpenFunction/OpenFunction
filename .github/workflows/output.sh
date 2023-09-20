@@ -15,15 +15,17 @@
 # limitations under the License.
 
 echo "---Status of all related pods---"
-kubectl get po -n cert-manager
+kubectl get po -n projectcontour
 kubectl get po -n dapr-system
-kubectl get po -n ingress-nginx
 kubectl get po -n keda
 kubectl get po -n knative-serving
 kubectl get po -n kourier-system
 kubectl get po -n openfunction
 kubectl get po -n shipwright-build
 kubectl get po -n tekton-pipelines
+
+echo "---Gateways---"
+kubectl get gateways.networking.openfunction.io -n openfunction openfunction -oyaml
 
 echo "---Functions---"
 kubectl get fn -oyaml
