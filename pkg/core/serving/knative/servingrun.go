@@ -365,7 +365,6 @@ func (r *servingRun) createService(s *openfunction.Serving, cm map[string]string
 			Labels: map[string]string{
 				common.ServingLabel: s.Name,
 			},
-			Annotations: s.Spec.Annotations,
 		},
 		Spec: kservingv1.ServiceSpec{
 			ConfigurationSpec: kservingv1.ConfigurationSpec{
