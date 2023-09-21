@@ -1,0 +1,35 @@
+apiVersion: core.openfunction.io/v1beta2
+kind: Function
+metadata:
+  name: kedahttp-sample
+  namespace: keda # must be in the same namespace with keda-add-ons-http-interceptor-proxy
+spec:
+  version: "v2.0.0"
+  image: "stefanprodan/podinfo"
+  serving:
+    triggers:
+      http:
+        engine: "keda" # optional, default to knative if not set
+        port: 9898
+        route:
+          gatewayRef:
+            name: openfunction
+            namespace: openfunction
+          hostnames:
+            - "podinfo.com"
+          rules:
+            - matches:
+                - path:
+                    type: PathPrefix
+                    value: /
+    scaleOptions:
+      minReplicas: 0
+      maxReplicas: 10
+      keda:
+        httpScaledObject:
+          targetPendingRequests: 100 # Default 100
+          cooldownPeriod: 60 # Default 300
+    template:
+      containers:
+        - name: function # DO NOT change this
+          imagePullPolicy: IfNotPresent
