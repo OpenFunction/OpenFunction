@@ -34,6 +34,7 @@ const (
 	DefaultKnativeServingFeaturesCMName = "config-features"
 
 	DefaultKedaInterceptorProxyName = "keda-add-ons-http-interceptor-proxy"
+	DefaultKedaServingNamespace     = "keda"
 
 	DefaultGatewayName             v1beta1.ObjectName   = "openfunction"
 	DefaultGatewayNamespace        v1beta1.Namespace    = "openfunction"

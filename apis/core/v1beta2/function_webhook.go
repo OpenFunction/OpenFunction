@@ -231,12 +231,14 @@ func (r *Function) Validate() error {
 		return field.Required(field.NewPath("spec", "serving"),
 			"must be specified when `spec.build` is not enabled")
 	}
-
-	if r.Spec.CanaryStrategy != nil && len(r.Spec.CanaryStrategy.CanarySteps) > 0 {
-		if err := r.ValidCanaryStrategy(field.NewPath("spec", "canaryStrategy")); err != nil {
-			return err
+	if r.Spec.RolloutStrategy != nil {
+		if r.Spec.RolloutStrategy.Canary != nil && len(r.Spec.RolloutStrategy.Canary.Steps) > 0 {
+			if err := r.ValidCanaryStrategy(field.NewPath("spec", "rolloutStrategy", "canary")); err != nil {
+				return err
+			}
 		}
 	}
+
 	return nil
 }
 
@@ -293,14 +295,14 @@ func (r *Function) ValidateBuild() error {
 	return nil
 }
 func (r *Function) ValidCanaryStrategy(fldPath *field.Path) error {
-	steps := r.Spec.CanaryStrategy.CanarySteps
+	steps := r.Spec.RolloutStrategy.Canary.Steps
 	for i, step := range steps {
 		weight := step.Weight
 		if weight == nil {
-			return field.Invalid(fldPath.Index(i).Child("canarySteps").Child("weight"), steps, `Weight cannot be empty`)
+			return field.Invalid(fldPath.Index(i).Child("steps").Child("weight"), steps, `Weight cannot be empty`)
 		}
 		if *weight < 1 || *weight > 100 {
-			return field.Invalid(fldPath.Index(i).Child("canarySteps").Child("weight"), steps, `Weight cannot be less than 1 or greater than 100`)
+			return field.Invalid(fldPath.Index(i).Child("steps").Child("weight"), steps, `Weight cannot be less than 1 or greater than 100`)
 		}
 		if step.Pause.Duration != nil {
 			if *step.Pause.Duration < 1 {

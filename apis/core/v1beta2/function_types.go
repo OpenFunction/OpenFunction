@@ -136,12 +136,18 @@ type FunctionSpec struct {
 	Serving *ServingImpl `json:"serving,omitempty"`
 	// Canary strategy for a function
 	// +optional
-	CanaryStrategy *CanaryStrategy `json:"canaryStrategy,omitempty"`
+	RolloutStrategy *RolloutStrategy `json:"rolloutStrategy,omitempty"`
+}
+
+// RolloutStrategy defines strategy to apply during next rollout
+type RolloutStrategy struct {
+	// +optional
+	Canary *CanaryStrategy `json:"canary,omitempty"`
 }
 type CanaryStrategy struct {
 	// Canary release steps for a function
 	// +optional
-	CanarySteps []CanaryStep `json:"canarySteps,omitempty"`
+	Steps []CanaryStep `json:"steps,omitempty"`
 }
 
 type CanaryStep struct {
@@ -244,25 +250,32 @@ type GitSourceResult struct {
 
 // FunctionStatus defines the observed state of Function
 type FunctionStatus struct {
-	Route         *RouteStatus  `json:"route,omitempty"`
-	Build         *Condition    `json:"build,omitempty"`
-	Serving       *Condition    `json:"serving,omitempty"`
-	StableServing *Condition    `json:"stableServing,omitempty"`
-	CanaryStatus  *CanaryStatus `json:"canaryStatus,omitempty"`
+	Route   *RouteStatus `json:"route,omitempty"`
+	Build   *Condition   `json:"build,omitempty"`
+	Serving *Condition   `json:"serving,omitempty"`
 	// Addresses holds the addresses that used to access the Function.
 	// +optional
-	Addresses      []FunctionAddress `json:"addresses,omitempty"`
-	Revision       *Revision         `json:"revision,omitempty"`
-	StableRevision *Revision         `json:"stableRevision,omitempty"`
+	Addresses []FunctionAddress `json:"addresses,omitempty"`
+	Revision  *Revision         `json:"revision,omitempty"`
 	// Sources holds the results emitted from the step definition
 	// of different sources
 	//
 	// +optional
-	Sources []SourceResult `json:"sources,omitempty"`
+	Sources       []SourceResult `json:"sources,omitempty"`
+	RolloutStatus *RolloutStatus `json:"rollout,omitempty"`
+}
+type RolloutStatus struct {
+	Canary *CanaryStatus `json:"canary,omitempty"`
 }
 
 // CanaryStatus status fields that only pertain to the canary release
 type CanaryStatus struct {
+	Revision         *Revision         `json:"revision,omitempty"`
+	CanaryStepStatus *CanaryStepStatus `json:"status,omitempty"`
+	Serving          *Condition        `json:"serving,omitempty"`
+}
+
+type CanaryStepStatus struct {
 	CurrentStepIndex int32           `json:"currentStepIndex"`
 	CurrentStepState CanaryStepState `json:"currentStepState"`
 	Message          string          `json:"message,omitempty"`

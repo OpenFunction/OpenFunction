@@ -180,16 +180,9 @@ func (r *servingRun) Clean(s *openfunction.Serving) error {
 	deploymentList := &appsv1.DeploymentList{}
 	httpScaledObjectList := &httpv1alpha1.HTTPScaledObjectList{}
 	serviceList := &corev1.ServiceList{}
-	componentList := &componentsv1alpha1.ComponentList{}
 
-	if err := list([]client.ObjectList{deploymentList, httpScaledObjectList, serviceList, componentList}); err != nil {
+	if err := list([]client.ObjectList{deploymentList, httpScaledObjectList, serviceList}); err != nil {
 		return err
-	}
-
-	for _, item := range componentList.Items {
-		if err := deleteObj(&item); err != nil {
-			return err
-		}
 	}
 
 	for _, item := range httpScaledObjectList.Items {

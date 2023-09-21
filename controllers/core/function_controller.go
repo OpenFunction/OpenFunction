@@ -70,11 +70,11 @@ const (
 // FunctionReconciler reconciles a Function object
 type FunctionReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	ctx      context.Context
-	interval time.Duration
-
+	Log           logr.Logger
+	Scheme        *runtime.Scheme
+	ctx           context.Context
+	interval      time.Duration
+	defaultConfig map[string]string
 	eventRecorder events.EventRecorder
 }
 
@@ -121,6 +121,7 @@ func (r *FunctionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			Namespace: req.Namespace,
 		},
 	}
+	r.defaultConfig = util.GetDefaultConfig(r.ctx, r.Client, r.Log)
 
 	if err := r.Get(ctx, req.NamespacedName, &fn); err != nil {
 
@@ -130,6 +131,8 @@ func (r *FunctionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 		return ctrl.Result{}, util.IgnoreNotFound(err)
 	}
+
+	r.initRolloutStatus(&fn)
 
 	if err := r.createBuilder(&fn); err != nil {
 		return ctrl.Result{}, err
@@ -157,13 +160,13 @@ func (r *FunctionReconciler) updateCanaryRelease(fn *openfunction.Function) (*ti
 	log := r.Log.WithName("UpdateCanaryRelease")
 
 	if !hasCanaryReleasePlan(fn) {
-		if fn.Status.CanaryStatus == nil {
+		if fn.Status.RolloutStatus == nil || fn.Status.RolloutStatus.Canary == nil {
 			return nil, nil
 		}
-		fn.Status.StableServing = fn.Status.Serving.DeepCopy()
-		fn.Status.StableRevision = fn.Status.Revision
+		fn.Status.RolloutStatus.Canary.Serving = fn.Status.Serving.DeepCopy()
+		fn.Status.RolloutStatus.Canary.Revision = fn.Status.Revision.DeepCopy()
 		// no plan no status
-		fn.Status.CanaryStatus = nil
+		fn.Status.RolloutStatus.Canary.CanaryStepStatus = nil
 		if err := r.Status().Update(r.ctx, fn); err != nil {
 			log.Error(err, "Failed to update function canary status")
 			return nil, err
@@ -176,13 +179,13 @@ func (r *FunctionReconciler) updateCanaryRelease(fn *openfunction.Function) (*ti
 		return nil, nil
 	}
 
-	if fn.Status.CanaryStatus == nil {
-		status := openfunction.CanaryStatus{
+	if fn.Status.RolloutStatus.Canary.CanaryStepStatus == nil {
+		status := openfunction.CanaryStepStatus{
 			Message:        "Canary release is healthy",
 			LastUpdateTime: &metav1.Time{Time: time.Now()},
 			Phase:          openfunction.CanaryPhaseHealthy,
 		}
-		fn.Status.CanaryStatus = &status
+		fn.Status.RolloutStatus.Canary.CanaryStepStatus = &status
 		if err := r.Status().Update(r.ctx, fn); err != nil {
 			log.Error(err, "Failed to update function canary status")
 			return nil, err
@@ -190,14 +193,14 @@ func (r *FunctionReconciler) updateCanaryRelease(fn *openfunction.Function) (*ti
 		return nil, nil
 	}
 
-	status := fn.Status.CanaryStatus
+	status := fn.Status.RolloutStatus.Canary.CanaryStepStatus
 
 	if status.Phase != openfunction.CanaryPhaseProgressing {
 		// not in canary release progress
 		return nil, nil
 	}
 	var recheckTime *time.Time
-	steps := fn.Spec.CanaryStrategy.CanarySteps
+	steps := fn.Spec.RolloutStrategy.Canary.Steps
 	currentStep := steps[status.CurrentStepIndex]
 	if currentStep.Pause.Duration != nil && status.CurrentStepState == openfunction.CanaryStepStatePaused {
 		duration := time.Second * time.Duration(*currentStep.Pause.Duration)
@@ -214,12 +217,12 @@ func (r *FunctionReconciler) updateCanaryRelease(fn *openfunction.Function) (*ti
 		}
 
 	}
-	status = fn.Status.CanaryStatus
+	status = fn.Status.RolloutStatus.Canary.CanaryStepStatus
 	if status.CurrentStepState == openfunction.CanaryStepStateReady {
 		if len(steps) == int(status.CurrentStepIndex)+1 {
 			//complete step
-			fn.Status.StableServing = fn.Status.Serving.DeepCopy()
-			fn.Status.StableRevision = fn.Status.Revision
+			fn.Status.RolloutStatus.Canary.Serving = fn.Status.Serving.DeepCopy()
+			fn.Status.RolloutStatus.Canary.Revision = fn.Status.Revision
 			status.CurrentStepState = openfunction.CanaryStepStateCompleted
 			status.Phase = openfunction.CanaryPhaseHealthy
 			status.LastUpdateTime = &metav1.Time{Time: time.Now()}
@@ -243,7 +246,7 @@ func (r *FunctionReconciler) updateCanaryRelease(fn *openfunction.Function) (*ti
 	return recheckTime, nil
 }
 func hasCanaryReleasePlan(fn *openfunction.Function) bool {
-	if fn.Spec.CanaryStrategy == nil || len(fn.Spec.CanaryStrategy.CanarySteps) == 0 {
+	if len(fn.Spec.RolloutStrategy.Canary.Steps) == 0 {
 		return false
 	}
 
@@ -509,9 +512,10 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 		if err := r.updateFuncWithServingStatus(fn, fn.Status.Serving); err != nil {
 			return err
 		}
-		if fn.Status.Serving.ResourceHash == fn.Status.StableServing.ResourceHash {
-			fn.Status.StableServing = fn.Status.Serving
-			fn.Status.StableRevision = fn.Status.Revision
+
+		if fn.Status.Serving.ResourceHash == fn.Status.RolloutStatus.Canary.Serving.ResourceHash {
+			fn.Status.RolloutStatus.Canary.Serving = fn.Status.Serving.DeepCopy()
+			fn.Status.RolloutStatus.Canary.Revision = fn.Status.Revision.DeepCopy()
 			err := r.Status().Update(r.ctx, fn)
 			if err != nil {
 				log.Error(err, "Failed to update function serving status")
@@ -519,7 +523,7 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 			}
 			return nil
 		}
-		if err := r.updateFuncWithServingStatus(fn, fn.Status.StableServing); err != nil {
+		if err := r.updateFuncWithServingStatus(fn, fn.Status.RolloutStatus.Canary.Serving); err != nil {
 			return err
 		}
 
@@ -560,22 +564,18 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 	}
 	servingSpec := r.createServingSpec(fn)
 	// rollback
-	if fn.Status.StableServing != nil && fn.Status.StableServing.ResourceHash == util.Hash(servingSpec) {
-		fn.Status.Serving = fn.Status.StableServing
-		fn.Status.CanaryStatus.Phase = openfunction.CanaryPhaseHealthy
-		fn.Status.CanaryStatus.CurrentStepState = openfunction.CanaryStepStatePaused
-		fn.Status.CanaryStatus.Message = "Canary progressing has been cancelled"
-		fn.Status.Revision = fn.Status.StableRevision
+	canary := fn.Status.RolloutStatus.Canary
+	if canary.Serving != nil && canary.Serving.ResourceHash == util.Hash(servingSpec) {
+		fn.Status.Serving = canary.Serving
+		canary.CanaryStepStatus.Phase = openfunction.CanaryPhaseHealthy
+		canary.CanaryStepStatus.CurrentStepState = openfunction.CanaryStepStatePaused
+		canary.CanaryStepStatus.Message = "Canary progressing has been cancelled"
+		fn.Status.Revision = canary.Revision
+		fn.Status.RolloutStatus.Canary = canary
 		if err := r.Status().Update(r.ctx, fn); err != nil {
 			log.Error(err, "Failed to update function canary status")
 			return err
 		}
-		//todo update the image,if having changed
-		//fn.Spec.Image = fn.Status.StableServing.Image
-		//if err := r.Update(r.ctx, fn); err != nil {
-		//	log.Error(err, "Failed to update function image")
-		//	return err
-		//}
 		if err := r.cleanServing(fn); err != nil {
 			log.Error(err, "Failed to clean Serving")
 			return err
@@ -618,10 +618,11 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 	}
 
 	fn.Status.Serving = servingStatus
+	canary = fn.Status.RolloutStatus.Canary
 
 	// when serving created,canary release should reinitialize
-	if hasCanaryReleasePlan(fn) && fn.Status.StableServing != nil {
-		fn.Status.CanaryStatus = &openfunction.CanaryStatus{
+	if hasCanaryReleasePlan(fn) && canary.Serving != nil {
+		canary.CanaryStepStatus = &openfunction.CanaryStepStatus{
 			CurrentStepIndex: 0,
 			CurrentStepState: openfunction.CanaryStepStatePaused,
 			Message:          "Canary release in progress",
@@ -631,12 +632,12 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 	}
 
 	// first time create serving or no need canary release
-	if fn.Status.StableServing == nil || !hasCanaryReleasePlan(fn) {
+	if canary.Serving == nil || !hasCanaryReleasePlan(fn) {
 		// create stable serving status
-		fn.Status.StableServing = servingStatus.DeepCopy()
-		fn.Status.StableRevision = fn.Status.Revision
+		canary.Serving = servingStatus.DeepCopy()
+		canary.Revision = fn.Status.Revision.DeepCopy()
 	}
-
+	fn.Status.RolloutStatus.Canary = canary
 	if err := r.Status().Update(r.ctx, fn); err != nil {
 		log.Error(err, "Failed to update function serving status")
 		return err
@@ -717,8 +718,8 @@ func (r *FunctionReconciler) cleanServing(fn *openfunction.Function) error {
 		name = fn.Status.Serving.ResourceRef
 		oldName = fn.Status.Serving.LastSuccessfulResourceRef
 	}
-	if fn.Status.StableServing != nil {
-		stableName = fn.Status.StableServing.ResourceRef
+	if fn.Status.RolloutStatus.Canary.Serving != nil {
+		stableName = fn.Status.RolloutStatus.Canary.Serving.ResourceRef
 		oldStableName = fn.Status.Serving.LastSuccessfulResourceRef
 	}
 	servings := &openfunction.ServingList{}
@@ -901,12 +902,14 @@ func (r *FunctionReconciler) createOrUpdateHTTPRoute(fn *openfunction.Function) 
 		return err
 	}
 
-	var host, stableHost, serviceName, stableServiceName string
+	var host, stableHost, serviceName, stableServiceName, ns string
 	var weight *int32
 	var port k8sgatewayapiv1beta1.PortNumber
-	if hasCanaryReleasePlan(fn) && fn.Status.CanaryStatus != nil &&
-		fn.Status.CanaryStatus.Phase == openfunction.CanaryPhaseProgressing {
-		step := fn.Spec.CanaryStrategy.CanarySteps[fn.Status.CanaryStatus.CurrentStepIndex]
+	if hasCanaryReleasePlan(fn) &&
+		fn.Status.RolloutStatus != nil &&
+		fn.Status.RolloutStatus.Canary != nil &&
+		fn.Status.RolloutStatus.Canary.CanaryStepStatus.Phase == openfunction.CanaryPhaseProgressing {
+		step := fn.Spec.RolloutStrategy.Canary.Steps[fn.Status.RolloutStatus.Canary.CanaryStepStatus.CurrentStepIndex]
 		weight = step.Weight
 	} else {
 		weight = pointer.Int32(100)
@@ -917,18 +920,26 @@ func (r *FunctionReconciler) createOrUpdateHTTPRoute(fn *openfunction.Function) 
 		if err != nil {
 			return err
 		}
+		ns = fn.Namespace
+
 	} else if *fn.Spec.Serving.Triggers.Http.Engine == openfunction.HttpEngineKeda {
 		stableServiceName, stableHost, serviceName, host, port, err = r.getKedaServiceByServing(fn, gateway)
 		if err != nil {
 			return err
 		}
+		ns = util.GetConfigOrDefault(
+			r.defaultConfig,
+			"keda-http.namespace",
+			constants.DefaultKedaServingNamespace,
+		)
+
 	}
 
 	httpRoute := &k8sgatewayapiv1beta1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{Namespace: fn.Namespace, Name: fn.Name},
 	}
 	op, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, httpRoute, r.mutateHTTPRoute(fn, stableHost, host,
-		serviceName, stableServiceName, weight, port, gateway, httpRoute))
+		serviceName, stableServiceName, ns, weight, port, gateway, httpRoute))
 	if err != nil {
 		log.Error(err, "Failed to CreateOrUpdate HTTPRoute")
 		return err
@@ -958,13 +969,13 @@ func (r *FunctionReconciler) getKService(fn *openfunction.Function, gateway *net
 	log := r.Log.WithName("getKServiceByServing")
 	stableService := &kservingv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fn.Status.StableServing.Service,
+			Name:      fn.Status.RolloutStatus.Canary.Serving.Service,
 			Namespace: fn.Namespace,
 		},
 	}
 	if err := r.Get(r.ctx, client.ObjectKeyFromObject(stableService), stableService); err != nil {
 		log.Error(err, "Failed to get knative service",
-			"namespace", fn.Namespace, "name", fn.Status.StableServing.Service)
+			"namespace", fn.Namespace, "name", fn.Status.RolloutStatus.Canary.Serving.Service)
 		return "", "", "", "", 0, err
 	}
 
@@ -993,13 +1004,14 @@ func (r *FunctionReconciler) getKedaServiceByServing(fn *openfunction.Function, 
 
 	stableService := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fn.Status.StableServing.Service,
+			Name:      fn.Status.RolloutStatus.Canary.Serving.Service,
 			Namespace: fn.Namespace,
 		},
 	}
+
 	if err := r.Get(r.ctx, client.ObjectKeyFromObject(stableService), stableService); err != nil {
 		log.Error(err, "Failed to get keda service",
-			"namespace", fn.Namespace, "name", fn.Status.StableServing.Service)
+			"namespace", fn.Namespace, "name", fn.Status.RolloutStatus.Canary.Serving.Service)
 		return "", "", "", "", 0, err
 	}
 	service := &corev1.Service{
@@ -1013,17 +1025,22 @@ func (r *FunctionReconciler) getKedaServiceByServing(fn *openfunction.Function, 
 			"namespace", fn.Namespace, "name", fn.Status.Serving.Service)
 		return "", "", "", "", 0, err
 	}
+	ns := util.GetConfigOrDefault(
+		r.defaultConfig,
+		"keda-http.namespace",
+		constants.DefaultKedaServingNamespace,
+	)
 
 	return constants.DefaultKedaInterceptorProxyName,
-		fmt.Sprintf("%s.%s.svc.%s", stableService.Name, fn.Namespace, gateway.Spec.ClusterDomain),
+		fmt.Sprintf("%s.%s.svc.%s", stableService.Name, ns, gateway.Spec.ClusterDomain),
 		constants.DefaultKedaInterceptorProxyName,
-		fmt.Sprintf("%s.%s.svc.%s", service.Name, fn.Namespace, gateway.Spec.ClusterDomain),
+		fmt.Sprintf("%s.%s.svc.%s", service.Name, ns, gateway.Spec.ClusterDomain),
 		constants.DefaultInterceptorPort, nil
 }
 
 func (r *FunctionReconciler) mutateHTTPRoute(
 	fn *openfunction.Function,
-	stableHost, host, stableServiceName, serviceName string, weight *int32, port k8sgatewayapiv1beta1.PortNumber,
+	stableHost, host, stableServiceName, serviceName, ns string, weight *int32, port k8sgatewayapiv1beta1.PortNumber,
 	gateway *networkingv1alpha1.Gateway,
 	httpRoute *k8sgatewayapiv1beta1.HTTPRoute) controllerutil.MutateFn {
 	return func() error {
@@ -1031,7 +1048,7 @@ func (r *FunctionReconciler) mutateHTTPRoute(
 			fmt.Sprintf("%s.%s.svc.%s", fn.Name, fn.Namespace, gateway.Spec.ClusterDomain))
 		var hostnames []k8sgatewayapiv1beta1.Hostname
 		var rules []k8sgatewayapiv1beta1.HTTPRouteRule
-		var namespace = k8sgatewayapiv1beta1.Namespace(fn.Namespace)
+		var namespace = k8sgatewayapiv1beta1.Namespace(ns)
 		var filter = k8sgatewayapiv1beta1.HTTPRouteFilter{
 			Type: k8sgatewayapiv1beta1.HTTPRouteFilterRequestHeaderModifier,
 			RequestHeaderModifier: &k8sgatewayapiv1beta1.HTTPRequestHeaderFilter{
@@ -1502,4 +1519,14 @@ func (r *FunctionReconciler) findObjectsForGateway(gateway client.Object) []reco
 		}
 	}
 	return requests
+}
+
+func (r *FunctionReconciler) initRolloutStatus(fn *openfunction.Function) {
+
+	if fn.Status.RolloutStatus == nil {
+		fn.Status.RolloutStatus = &openfunction.RolloutStatus{
+			Canary: &openfunction.CanaryStatus{},
+		}
+	}
+
 }
