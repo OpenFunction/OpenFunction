@@ -1,88 +1,114 @@
-apiVersion: core.openfunction.io/v1beta1
+apiVersion: core.openfunction.io/v1beta2
 kind: Function
 metadata:
   name: output-target
 spec:
-  version: "v1.0.0"
   image: openfunctiondev/v1beta1-output-target:latest
-#  imageCredentials:
-#    name: push-secret
-#  build:
-#    builder: openfunction/builder-go:latest
-#    env:
-#      FUNC_NAME: "HandleKafkaInput"
-#      FUNC_CLEAR_SOURCE: "true"
-#    srcRepo:
-#      url: "https://github.com/OpenFunction/samples.git"
-#      sourceSubPath: "functions/async/bindings/kafka-input"
   serving:
-    runtime: async
-    inputs:
-      - name: greeting
-        component: target-topic
     bindings:
       target-topic:
-        type: bindings.kafka
-        version: v1
+        ignoreErrors: false
+        initTimeout: ""
         metadata:
           - name: brokers
-            value: "kafka-server-kafka-brokers:9092"
+            secretKeyRef:
+              key: ""
+              name: ""
+            value: kafka-server-kafka-brokers:9092
           - name: topics
-            value: "knative-dapr"
+            secretKeyRef:
+              key: ""
+              name: ""
+            value: knative-dapr
           - name: consumerGroup
-            value: "output-target"
+            secretKeyRef:
+              key: ""
+              name: ""
+            value: output-target
           - name: publishTopic
-            value: "knative-dapr"
+            secretKeyRef:
+              key: ""
+              name: ""
+            value: knative-dapr
           - name: authRequired
+            secretKeyRef:
+              key: ""
+              name: ""
             value: "false"
+        type: bindings.kafka
+        version: v1
     template:
       containers:
-        - name: function
-          imagePullPolicy: Always
+        - imagePullPolicy: Always
+          name: function
+          resources: {}
+    triggers:
+      dapr:
+        - inputName: greeting
+          name: target-topic
+          type: bindings.kafka
+  version: v1.0.0
+  workloadRuntime: OCIContainer
 ---
-apiVersion: core.openfunction.io/v1beta1
+apiVersion: core.openfunction.io/v1beta2
 kind: Function
 metadata:
   name: function-front
 spec:
-  version: "v1.0.0"
-  image: "openfunctiondev/v1beta1-sample-knative-dapr:latest"
-  port: 8080 # default to 8080
-#  imageCredentials:
-#    name: push-secret
-#  build:
-#    builder: openfunction/builder-go:latest
-#    env:
-#      FUNC_NAME: "ForwardToKafka"
-#      FUNC_CLEAR_SOURCE: "true"
-#    srcRepo:
-#      url: "https://github.com/OpenFunction/samples.git"
-#      sourceSubPath: "functions/knative/with-output-binding"
+  image: openfunctiondev/v1beta1-sample-knative-dapr:latest
   serving:
-    scaleOptions:
-      minReplicas: 0
-      maxReplicas: 5
-    runtime: knative
-    outputs:
-      - name: target
-        component: kafka-server
-        operation: "create"
     bindings:
       kafka-server:
-        type: bindings.kafka
-        version: v1
+        ignoreErrors: false
+        initTimeout: ""
         metadata:
           - name: brokers
-            value: "kafka-server-kafka-brokers:9092"
+            secretKeyRef:
+              key: ""
+              name: ""
+            value: kafka-server-kafka-brokers:9092
           - name: authRequired
+            secretKeyRef:
+              key: ""
+              name: ""
             value: "false"
           - name: publishTopic
-            value: "knative-dapr"
+            secretKeyRef:
+              key: ""
+              name: ""
+            value: knative-dapr
           - name: topics
-            value: "knative-dapr"
+            secretKeyRef:
+              key: ""
+              name: ""
+            value: knative-dapr
           - name: consumerGroup
-            value: "function-front"
+            secretKeyRef:
+              key: ""
+              name: ""
+            value: function-front
+        type: bindings.kafka
+        version: v1
+    outputs:
+      - dapr:
+          name: kafka-server
+          operation: create
+          outputName: target
+          type: bindings.kafka
+    scaleOptions:
+      maxReplicas: 5
+      minReplicas: 0
     template:
       containers:
-        - name: function
-          imagePullPolicy: Always
+        - imagePullPolicy: Always
+          name: function
+          resources: {}
+    triggers:
+      http:
+        port: 8080
+        route:
+          gatewayRef:
+            name: openfunction
+            namespace: openfunction
+  version: v1.0.0
+  workloadRuntime: OCIContainer

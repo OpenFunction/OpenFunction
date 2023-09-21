@@ -1,21 +1,20 @@
-apiVersion: core.openfunction.io/v1beta1
+apiVersion: core.openfunction.io/v1beta2
 kind: Function
 metadata:
   name: function-sample-build-only
 spec:
-  version: "v1.0.0"
-  image: "openfunctiondev/v1beta1-sample:latest"
-  imageCredentials:
-    name: push-secret
-  port: 8080 # default to 8080
   build:
-    successfulBuildsHistoryLimit: 2
-    failedBuildsHistoryLimit: 3
-    timeout: 10m
     builder: openfunction/builder-go:latest
     env:
-      FUNC_NAME: "HelloWorld"
       FUNC_CLEAR_SOURCE: "true"
+      FUNC_NAME: HelloWorld
+    failedBuildsHistoryLimit: 3
     srcRepo:
-      url: "https://github.com/OpenFunction/samples.git"
-      sourceSubPath: "functions/knative/hello-world-go"
+      sourceSubPath: functions/knative/hello-world-go
+      url: https://github.com/OpenFunction/samples.git
+    successfulBuildsHistoryLimit: 2
+  image: openfunctiondev/v1beta1-sample:latest
+  imageCredentials:
+    name: push-secret
+  version: v1.0.0
+  workloadRuntime: OCIContainer
