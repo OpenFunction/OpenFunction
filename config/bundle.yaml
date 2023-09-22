@@ -2210,11 +2210,12 @@ spec:
                                               description: "Namespace is the namespace
                                                 of the backend. When unspecified,
                                                 the local namespace is inferred. \n
-                                                Note that when a namespace is specified,
-                                                a ReferenceGrant object is required
-                                                in the referent namespace to allow
-                                                that namespace's owner to accept the
-                                                reference. See the ReferenceGrant
+                                                Note that when a different namespace
+                                                is specified, a ReferenceGrant object
+                                                with ReferenceGrantTo.Kind=Service
+                                                is required in the referent namespace
+                                                to allow that namespace's owner to
+                                                accept the reference. See the ReferenceGrant
                                                 documentation for details. \n Support:
                                                 Core"
                                               maxLength: 63
@@ -2485,11 +2486,12 @@ spec:
                               namespace:
                                 description: "Namespace is the namespace of the backend.
                                   When unspecified, the local namespace is inferred.
-                                  \n Note that when a namespace is specified, a ReferenceGrant
-                                  object is required in the referent namespace to
-                                  allow that namespace's owner to accept the reference.
-                                  See the ReferenceGrant documentation for details.
-                                  \n Support: Core"
+                                  \n Note that when a different namespace is specified,
+                                  a ReferenceGrant object with ReferenceGrantTo.Kind=Service
+                                  is required in the referent namespace to allow that
+                                  namespace's owner to accept the reference. See the
+                                  ReferenceGrant documentation for details. \n Support:
+                                  Core"
                                 maxLength: 63
                                 minLength: 1
                                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
@@ -2744,10 +2746,11 @@ spec:
                                         description: "Namespace is the namespace of
                                           the backend. When unspecified, the local
                                           namespace is inferred. \n Note that when
-                                          a namespace is specified, a ReferenceGrant
-                                          object is required in the referent namespace
-                                          to allow that namespace's owner to accept
-                                          the reference. See the ReferenceGrant documentation
+                                          a different namespace is specified, a ReferenceGrant
+                                          object with ReferenceGrantTo.Kind=Service
+                                          is required in the referent namespace to
+                                          allow that namespace's owner to accept the
+                                          reference. See the ReferenceGrant documentation
                                           for details. \n Support: Core"
                                         maxLength: 63
                                         minLength: 1
@@ -39597,18 +39600,10 @@ subjects:
 ---
 apiVersion: v1
 data:
-  controller_manager_config.yaml: |
-    apiVersion: controller-runtime.sigs.k8s.io/v1alpha1
-    kind: ControllerManagerConfig
-    health:
-      healthProbeBindAddress: :8081
-    metrics:
-      bindAddress: 127.0.0.1:8080
-    webhook:
-      port: 9443
-    leaderElection:
-      leaderElect: true
-      resourceName: 79f0111e.openfunction.io
+  controller_manager_config.yaml: "apiVersion: controller-runtime.sigs.k8s.io/v1alpha1\r\nkind:
+    ControllerManagerConfig\r\nhealth:\r\n  healthProbeBindAddress: :8081\r\nmetrics:\r\n
+    \ bindAddress: 127.0.0.1:8080\r\nwebhook:\r\n  port: 9443\r\nleaderElection:\r\n
+    \ leaderElect: true\r\n  resourceName: 79f0111e.openfunction.io\r\n"
 kind: ConfigMap
 metadata:
   name: openfunction-manager-config

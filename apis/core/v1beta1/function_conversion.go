@@ -16,7 +16,10 @@ package v1beta1
 import (
 	componentsv1alpha1 "github.com/dapr/dapr/pkg/apis/components/v1alpha1"
 	"gopkg.in/yaml.v3"
+	"k8s.io/apimachinery/pkg/util/json"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
+	k8sgatewayapiv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	k8sgatewayapiv1beata1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/openfunction/apis/core/v1beta2"
 )
@@ -89,11 +92,24 @@ func (src *Function) ConvertTo(dstRaw conversion.Hub) error {
 			Value: item.Value,
 		})
 	}
+	var hosts []k8sgatewayapiv1beata1.Hostname
+	for _, host := range src.Status.Route.Hosts {
+		hosts = append(hosts, k8sgatewayapiv1beata1.Hostname(host))
+	}
+	var paths []k8sgatewayapiv1beata1.HTTPPathMatch
+
+	for _, path := range src.Status.Route.Paths {
+		pType := k8sgatewayapiv1beata1.PathMatchType(*path.Type)
+		paths = append(paths, k8sgatewayapiv1beata1.HTTPPathMatch{
+			Type:  &pType,
+			Value: path.Value,
+		})
+	}
 
 	if src.Status.Route != nil {
 		dst.Status.Route = &v1beta2.RouteStatus{
-			Hosts:      src.Status.Route.Hosts,
-			Paths:      src.Status.Route.Paths,
+			Hosts:      hosts,
+			Paths:      paths,
 			Conditions: src.Status.Route.Conditions,
 		}
 	}
@@ -166,16 +182,30 @@ func convertRouteTo(route *RouteImpl) *v1beta2.RouteImpl {
 	if route == nil {
 		return nil
 	}
-
-	nr := &v1beta2.RouteImpl{
-		Hostnames: route.Hostnames,
-		Rules:     route.Rules,
+	var hosts []k8sgatewayapiv1beata1.Hostname
+	for _, host := range route.Hostnames {
+		hosts = append(hosts, k8sgatewayapiv1beata1.Hostname(host))
 	}
+
+	rulesBytes, err := json.Marshal(route.Rules)
+	if err != nil {
+		return nil
+	}
+	var rules []k8sgatewayapiv1beata1.HTTPRouteRule
+	err = json.Unmarshal(rulesBytes, &rules)
+	if err != nil {
+		return nil
+	}
+	nr := &v1beta2.RouteImpl{
+		Hostnames: hosts,
+		Rules:     rules,
+	}
+	ns := k8sgatewayapiv1beata1.Namespace(*route.GatewayRef.Namespace)
 	if route.CommonRouteSpec.GatewayRef != nil {
 		nr.CommonRouteSpec = v1beta2.CommonRouteSpec{
 			GatewayRef: &v1beta2.GatewayRef{
-				Name:      route.GatewayRef.Name,
-				Namespace: route.GatewayRef.Namespace,
+				Name:      k8sgatewayapiv1beata1.ObjectName(route.GatewayRef.Name),
+				Namespace: &ns,
 			},
 		}
 	}
@@ -439,11 +469,24 @@ func (dst *Function) ConvertFrom(srcRaw conversion.Hub) error {
 				Value: item.Value,
 			})
 		}
+		var hosts []k8sgatewayapiv1alpha2.Hostname
+		for _, host := range src.Status.Route.Hosts {
+			hosts = append(hosts, k8sgatewayapiv1alpha2.Hostname(host))
+		}
+		var paths []k8sgatewayapiv1alpha2.HTTPPathMatch
+
+		for _, path := range src.Status.Route.Paths {
+			pType := k8sgatewayapiv1alpha2.PathMatchType(*path.Type)
+			paths = append(paths, k8sgatewayapiv1alpha2.HTTPPathMatch{
+				Type:  &pType,
+				Value: path.Value,
+			})
+		}
 
 		if src.Status.Route != nil {
 			dst.Status.Route = &RouteStatus{
-				Hosts:      src.Status.Route.Hosts,
-				Paths:      src.Status.Route.Paths,
+				Hosts:      hosts,
+				Paths:      paths,
 				Conditions: src.Status.Route.Conditions,
 			}
 		}
@@ -639,16 +682,29 @@ func convertRouteFrom(route *v1beta2.RouteImpl) *RouteImpl {
 	if route == nil {
 		return nil
 	}
-
-	nr := &RouteImpl{
-		Hostnames: route.Hostnames,
-		Rules:     route.Rules,
+	var hosts []k8sgatewayapiv1alpha2.Hostname
+	for _, host := range route.Hostnames {
+		hosts = append(hosts, k8sgatewayapiv1alpha2.Hostname(host))
 	}
+	rulesBytes, err := json.Marshal(route.Rules)
+	if err != nil {
+		return nil
+	}
+	var rules []k8sgatewayapiv1alpha2.HTTPRouteRule
+	err = json.Unmarshal(rulesBytes, &rules)
+	if err != nil {
+		return nil
+	}
+	nr := &RouteImpl{
+		Hostnames: hosts,
+		Rules:     rules,
+	}
+	ns := k8sgatewayapiv1alpha2.Namespace(*route.GatewayRef.Namespace)
 	if route.CommonRouteSpec.GatewayRef != nil {
 		nr.CommonRouteSpec = CommonRouteSpec{
 			GatewayRef: &GatewayRef{
-				Name:      route.GatewayRef.Name,
-				Namespace: route.GatewayRef.Namespace,
+				Name:      k8sgatewayapiv1alpha2.ObjectName(route.GatewayRef.Name),
+				Namespace: &ns,
 			},
 		}
 	}
