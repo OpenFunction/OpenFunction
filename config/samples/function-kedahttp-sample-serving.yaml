@@ -2,7 +2,6 @@ apiVersion: core.openfunction.io/v1beta2
 kind: Function
 metadata:
   name: kedahttp-sample
-  namespace: keda # must be in the same namespace with keda-add-ons-http-interceptor-proxy
 spec:
   version: "v2.0.0"
   image: "stefanprodan/podinfo"
