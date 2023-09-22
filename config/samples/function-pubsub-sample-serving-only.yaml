@@ -53,60 +53,65 @@ spec:
     - name: allowedTopics
       value: "pubsub"
 ---
-apiVersion: core.openfunction.io/v1beta1
+apiVersion: core.openfunction.io/v1beta2
 kind: Function
 metadata:
   name: autoscaling-subscriber
 spec:
-  version: "v1.0.0"
   image: openfunctiondev/v1beta1-autoscaling-subscriber:latest
-#  imageCredentials:
-#    name: push-secret
-#  build:
-#    builder: openfunction/builder-go:latest
-#    env:
-#      FUNC_NAME: "Subscriber"
-#      FUNC_CLEAR_SOURCE: "true"
-#      # Use FUNC_GOPROXY to set the goproxy
-#      # FUNC_GOPROXY: "https://goproxy.cn"
-#    srcRepo:
-#      url: "https://github.com/OpenFunction/samples.git"
-#      sourceSubPath: "functions/async/pubsub/subscriber"
   serving:
-    runtime: "async"
+    pubsub:
+      kafka-server:
+        ignoreErrors: false
+        initTimeout: ""
+        metadata:
+          - name: brokers
+            secretKeyRef:
+              key: ""
+              name: ""
+            value: kafka-server-kafka-brokers:9092
+          - name: authRequired
+            secretKeyRef:
+              key: ""
+              name: ""
+            value: "false"
+          - name: allowedTopics
+            secretKeyRef:
+              key: ""
+              name: ""
+            value: pubsub
+          - name: consumerID
+            secretKeyRef:
+              key: ""
+              name: ""
+            value: autoscaling-subscriber
+        type: pubsub.kafka
+        version: v1
     scaleOptions:
       keda:
         scaledObject:
-          pollingInterval: 15
-          minReplicaCount: 0
-          maxReplicaCount: 10
           cooldownPeriod: 30
-    triggers:
-      - type: kafka
-        metadata:
-          topic: "pubsub"
-          bootstrapServers: kafka-server-kafka-brokers.default.svc.cluster.local:9092
-          consumerGroup: autoscaling-subscriber
-          lagThreshold: "10"
-        targetKind: "object"
+          pollingInterval: 15
+        triggers:
+          - metadata:
+              bootstrapServers: kafka-server-kafka-brokers.default.svc.cluster.local:9092
+              consumerGroup: autoscaling-subscriber
+              lagThreshold: "10"
+              topic: pubsub
+            type: kafka
+      maxReplicas: 10
+      minReplicas: 0
     template:
       containers:
-        - name: function
-          imagePullPolicy: Always
-    inputs:
-      - name: producer
-        component: kafka-server
-        topic: "pubsub"
-    pubsub:
-      kafka-server:
-        type: pubsub.kafka
-        version: v1
-        metadata:
-          - name: brokers
-            value: "kafka-server-kafka-brokers:9092"
-          - name: authRequired
-            value: "false"
-          - name: allowedTopics
-            value: "pubsub"
-          - name: consumerID
-            value: "autoscaling-subscriber"
+        - imagePullPolicy: Always
+          name: function
+          resources: {}
+    triggers:
+      dapr:
+        - inputName: producer
+          name: kafka-server
+          topic: pubsub
+          type: pubsub.kafka
+    workloadType: Deployment
+  version: v1.0.0
+  workloadRuntime: OCIContainer

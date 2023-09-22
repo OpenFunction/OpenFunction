@@ -1,4 +1,4 @@
-apiVersion: core.openfunction.io/v1beta1
+apiVersion: core.openfunction.io/v1beta2
 kind: Function
 metadata:
   name: bindings-plugins
@@ -32,31 +32,51 @@ metadata:
         key: sw8-correlation # key should be baggage for opentelemetry
         value: "base64(string key):base64(string value),base64(string key2):base64(string value2)"
 spec:
-  version: "v1.0.0"
   image: openfunctiondev/v1beta1-bindings-plugins:latest
-#  imageCredentials:
-#    name: push-secret
-#  build:
-#    builder: openfunction/builder-go:latest
-#    env:
-#      FUNC_NAME: "HandleCronInput"
-#      FUNC_CLEAR_SOURCE: "true"
-#    srcRepo:
-#      url: "https://github.com/OpenFunction/samples.git"
-#      sourceSubPath: "functions/async/bindings/cron-input"
   serving:
-    template:
-      containers:
-        - name: function
-          imagePullPolicy: Always
-    runtime: "async"
-    inputs:
-      - name: input
-        component: cron
     bindings:
       cron:
-        type: bindings.cron
-        version: v1
+        ignoreErrors: false
+        initTimeout: ""
         metadata:
           - name: schedule
-            value: "@every 2s"
+            secretKeyRef:
+              key: ""
+              name: ""
+            value: '@every 2s'
+        type: bindings.cron
+        version: v1
+    hooks:
+      policy: Override
+      post:
+        - plugin-custom
+        - plugin-example
+      pre:
+        - plugin-custom
+        - plugin-example
+    template:
+      containers:
+        - imagePullPolicy: Always
+          name: function
+          resources: {}
+    tracing:
+      baggage:
+        key: sw8-correlation
+        value: base64(string key):base64(string value),base64(string key2):base64(string
+          value2)
+      enabled: false
+      provider:
+        name: skywalking
+        oapServer: localhost:xxx
+      tags:
+        func: function-with-tracing
+        layer: faas
+        tag1: value1
+        tag2: value2
+    triggers:
+      dapr:
+        - inputName: input
+          name: cron
+          type: bindings.cron
+  version: v1.0.0
+  workloadRuntime: OCIContainer

@@ -100,14 +100,12 @@ func (r *Function) Default() {
 		version := "latest"
 		r.Spec.Version = &version
 	}
-	if r.Spec.Serving == nil {
-		r.Spec.Serving = &ServingImpl{}
-	}
-	if r.Spec.Serving.Triggers == nil {
+
+	if r.Spec.Serving != nil && r.Spec.Serving.Triggers == nil {
 		r.Spec.Serving.Triggers = &Triggers{}
 	}
 
-	if r.Spec.Serving.Triggers.Dapr == nil || len(r.Spec.Serving.Triggers.Dapr) == 0 {
+	if r.Spec.Serving != nil && len(r.Spec.Serving.Triggers.Dapr) == 0 {
 		if r.Spec.Serving.Triggers.Http == nil {
 			r.Spec.Serving.Triggers.Http = &HttpTrigger{}
 		}
@@ -344,15 +342,17 @@ func (r *Function) ValidateServing() error {
 		}
 
 		if keda := scaleOptions.Keda; keda != nil {
-			job, object, httpso := keda.ScaledJob, keda.ScaledObject, keda.HTTPScaledObject
-			// case that only ScaledJob is declared
-			flagJob := job != nil && object == nil && httpso == nil
-			// case that only ScaledObject is declared
-			flagScaledObject := job == nil && object != nil && httpso == nil
-			// case that only HTTPScaledObject is declared
-			flagHTTPScaledObject := job == nil && object == nil && httpso != nil
-			// if none of these cases happened, return error
-			if !(flagJob || flagScaledObject || flagHTTPScaledObject) {
+			scalerCount := 0
+			if keda.ScaledJob != nil {
+				scalerCount += 1
+			}
+			if keda.ScaledObject != nil {
+				scalerCount += 1
+			}
+			if keda.HTTPScaledObject != nil {
+				scalerCount += 1
+			}
+			if scalerCount > 1 {
 				return field.Required(
 					field.NewPath("spec", "serving", "scaleOptions", "keda"),
 					"Exactly one of scaledJob, scaledObject and httpScaledObject should be enabled")

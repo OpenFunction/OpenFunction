@@ -263,7 +263,7 @@ func Test_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 		{
 			name: "function.spec.serving.scaleOptions.keda.httpScaledObject.targetPendingRequests",

@@ -1,0 +1,128 @@
+# Copyright 2023 The OpenFunction Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+global:
+  Dapr:
+    enabled: true
+  Keda:
+    enabled: true
+  KnativeServing:
+    enabled: true
+  TektonPipelines:
+    enabled: false
+  ShipwrightBuild:
+    enabled: false
+  Contour:
+    enabled: true
+
+controllerManager:
+  openfunction:
+    image:
+      repository: kind-registry:5000/openfunction/openfunction
+      tag: latest
+    resources:
+      limits:
+        cpu: 0
+        memory: 0
+      requests:
+        cpu: 0
+        memory: 0
+
+knative-serving:
+  activator:
+    activator:
+      resources:
+        limits:
+          cpu: 0
+          memory: 0
+        requests:
+          cpu: 0
+          memory: 0
+  controller:
+    controller:
+      resources:
+        limits:
+          cpu: 0
+          memory: 0
+        requests:
+          cpu: 0
+          memory: 0
+  autoscaler:
+    autoscaler:
+      resources:
+        limits:
+          cpu: 0
+          memory: 0
+        requests:
+          cpu: 0
+          memory: 0
+  domainMapping:
+    domainMapping:
+      resources:
+        limits:
+          cpu: 0
+          memory: 0
+        requests:
+          cpu: 0
+          memory: 0
+  domainmappingWebhook:
+    domainmappingWebhook:
+      resources:
+        limits:
+          cpu: 0
+          memory: 0
+        requests:
+          cpu: 0
+          memory: 0
+  webhook:
+    webhook:
+      resources:
+        limits:
+          cpu: 0
+          memory: 0
+        requests:
+          cpu: 0
+          memory: 0
+  netContourController:
+    controller:
+      resources:
+        limits:
+          cpu: 0
+          memory: 0
+        requests:
+          cpu: 0
+          memory: 0
+keda:
+  resources:
+    operator:
+      limits:
+        cpu: 0
+        memory: 0
+      requests:
+        cpu: 0
+        memory: 0
+    metricServer:
+      limits:
+        cpu: 0
+        memory: 0
+      requests:
+        cpu: 0
+        memory: 0
+    webhooks:
+      limits:
+        cpu: 0
+        memory: 0
+      requests:
+        cpu: 0
+        memory: 0
