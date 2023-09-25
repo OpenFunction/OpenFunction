@@ -26,6 +26,7 @@ const (
 	CommonLabelVersion = "app.kubernetes.io/version"
 
 	DefaultFunctionVersion = "latest"
+	DefaultNamespaceKey    = "NAMESPACE"
 
 	DefaultConfigMapName       = "openfunction-config"
 	DefaultControllerNamespace = "openfunction"

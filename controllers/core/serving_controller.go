@@ -23,6 +23,9 @@ import (
 	"sync"
 	"time"
 
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
+
 	"github.com/openfunction/pkg/core/serving/knative"
 
 	"github.com/go-logr/logr"
@@ -109,7 +112,7 @@ func (r *ServingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		time.Since(s.CreationTimestamp.Time) > s.Spec.Timeout.Duration {
 		if s.Status.IsStarting() {
 			s.Status.State = openfunction.Timeout
-			if err := r.Status().Update(r.ctx, &s); err != nil {
+			if err := r.updateStatus(&s); err != nil {
 				log.Error(err, "Failed to update serving status")
 				return ctrl.Result{}, err
 			}
@@ -147,7 +150,7 @@ func (r *ServingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 		s.Status.Phase = openfunction.ServingPhase
 		s.Status.State = openfunction.Timeout
-		if err := r.Status().Update(r.ctx, &s); err != nil {
+		if err := r.updateStatus(&s); err != nil {
 			log.Error(err, "Failed to update serving status")
 			return ctrl.Result{}, err
 		}
@@ -158,8 +161,9 @@ func (r *ServingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// Reset serving status.
 	s.Status = openfunction.ServingStatus{}
-	if err := r.Status().Update(r.ctx, &s); err != nil {
-		log.Error(err, "Failed to reset serving status")
+
+	err := r.updateStatus(&s)
+	if err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -202,7 +206,7 @@ func (r *ServingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	s.Status.Phase = openfunction.ServingPhase
 	s.Status.State = openfunction.Starting
-	if err := r.Status().Update(r.ctx, &s); err != nil {
+	if err := r.updateStatus(&s); err != nil {
 		log.Error(err, "Failed to update serving status")
 		return ctrl.Result{}, err
 	}
@@ -212,6 +216,24 @@ func (r *ServingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	log.V(1).Info("Serving is starting")
 
 	return ctrl.Result{}, nil
+}
+
+func (r *ServingReconciler) updateStatus(s *openfunction.Serving) error {
+	log := r.Log.WithName("UpdateStatus")
+
+	if err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		servingClone := s.DeepCopy()
+		if err := r.Client.Get(r.ctx, types.NamespacedName{Namespace: s.Namespace, Name: s.Name}, servingClone); err != nil {
+			log.Error(err, fmt.Sprintf("error getting updated serving(%s/%s) from client", s.Namespace, s.Name))
+			return err
+		}
+		servingClone.Status = s.Status
+		return r.Client.Status().Update(r.ctx, servingClone)
+	}); err != nil {
+		log.Error(err, fmt.Sprintf("update serving(%s/%s)", s.Name, s.Namespace))
+		return err
+	}
+	return nil
 }
 
 func (r *ServingReconciler) getServingRun(s *openfunction.Serving) core.ServingRun {
@@ -246,7 +268,7 @@ func (r *ServingReconciler) getServingResult(s *openfunction.Serving, servingRun
 		s.Status.State = res
 		s.Status.Reason = reason
 		s.Status.Message = message
-		if err := r.Status().Update(r.ctx, s); err != nil {
+		if err := r.updateStatus(s); err != nil {
 			return err
 		}
 
@@ -297,7 +319,7 @@ func (r *ServingReconciler) startTimer(serving *openfunction.Serving) {
 			if s.Status.IsStarting() {
 				log.Error(nil, "Serving start timeout")
 				s.Status.State = openfunction.Timeout
-				if err := r.Status().Update(r.ctx, s); err != nil {
+				if err := r.updateStatus(s); err != nil {
 					log.Error(err, "Failed to update serving status")
 				} else {
 					r.recordEvent(s)
