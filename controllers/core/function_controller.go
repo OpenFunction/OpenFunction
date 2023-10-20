@@ -232,7 +232,7 @@ func (r *FunctionReconciler) updateCanaryRelease(fn *openfunction.Function) (*ti
 			fn.Status.RolloutStatus.Canary.CanaryStepStatus.CurrentStepState = openfunction.CanaryStepStatePaused
 			fn.Status.RolloutStatus.Canary.CanaryStepStatus.LastUpdateTime = &metav1.Time{Time: time.Now()}
 			fn.Status.RolloutStatus.Canary.CanaryStepStatus.Message = "Canary release steps to " +
-				strconv.Itoa(int(fn.Status.RolloutStatus.Canary.CanaryStepStatus.CurrentStepIndex))
+				strconv.Itoa(int(fn.Status.RolloutStatus.Canary.CanaryStepStatus.CurrentStepIndex)+1)
 		}
 		if err := r.updateStatus(fn); err != nil {
 			log.Error(err, "Failed to update function canary status")
@@ -978,7 +978,7 @@ func (r *FunctionReconciler) createOrUpdateHTTPRoute(fn *openfunction.Function) 
 		ObjectMeta: metav1.ObjectMeta{Namespace: fn.Namespace, Name: fn.Name},
 	}
 	op, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, httpRoute, r.mutateHTTPRoute(fn, stableHost, host,
-		serviceName, stableServiceName, ns, weight, port, gateway, httpRoute))
+		stableServiceName, serviceName, ns, weight, port, gateway, httpRoute))
 	if err != nil {
 		log.Error(err, "Failed to CreateOrUpdate HTTPRoute")
 		return err
