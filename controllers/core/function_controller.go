@@ -146,10 +146,18 @@ func (r *FunctionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+
 	if err = r.createOrUpdateHTTPRoute(&fn); err != nil {
 		return ctrl.Result{}, err
 	}
 
+	ready, err := r.httpRouteIsReady(&fn)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if !ready {
+		return ctrl.Result{RequeueAfter: constants.DefaultGatewayChangeCleanTime}, nil
+	}
 	// for canary rollback
 	if err := r.cleanServing(&fn); err != nil {
 		log.Error(err, "Failed to clean Serving")
@@ -236,10 +244,6 @@ func (r *FunctionReconciler) updateCanaryRelease(fn *openfunction.Function) (*ti
 		}
 		if err := r.updateStatus(fn); err != nil {
 			log.Error(err, "Failed to update function canary status")
-			return nil, err
-		}
-		if err := r.cleanServing(fn); err != nil {
-			log.Error(err, "Failed to clean Serving")
 			return nil, err
 		}
 	}
@@ -1574,4 +1578,39 @@ func (r *FunctionReconciler) initRolloutStatus(fn *openfunction.Function) error 
 	}
 	return nil
 
+}
+
+func (r *FunctionReconciler) httpRouteIsReady(fn *openfunction.Function) (bool, error) {
+	if fn.Status.Serving == nil ||
+		fn.Status.Serving.State != openfunction.Running ||
+		fn.Status.Serving.Service == "" {
+		return true, nil
+	}
+
+	log := r.Log.WithName("HttpRouteIsReady")
+	httpRoute := &k8sgatewayapiv1beta1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fn.Name,
+			Namespace: fn.Namespace,
+		},
+	}
+	if err := r.Get(r.ctx, client.ObjectKeyFromObject(httpRoute), httpRoute); err != nil {
+		log.Error(err, "Failed to get httpRoute",
+			"namespace", fn.Namespace, "name", fn.Name)
+		return false, err
+	}
+
+	for _, parent := range httpRoute.Status.Parents {
+		for _, condition := range parent.Conditions {
+			if condition.ObservedGeneration != httpRoute.Generation {
+				log.Info("httpRoute observedGeneration is not ready", "name", fn.Name, "parent", parent.ParentRef.Name, "type", condition.Type)
+				return false, nil
+			}
+			if condition.Status != "True" {
+				log.Info("httpRoute status is not ready", "name", fn.Name, "parent", parent.ParentRef.Name, "type", condition.Type)
+				return false, nil
+			}
+		}
+	}
+	return true, nil
 }

@@ -18,6 +18,7 @@ package constants
 
 import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	"time"
 )
 
 const (
@@ -44,6 +45,7 @@ const (
 	DefaultFunctionServicePort     v1beta1.PortNumber   = 80
 	DefaultFuncPort                v1beta1.PortNumber   = 8080
 	DefaultInterceptorPort         v1beta1.PortNumber   = 8080
+	DefaultGatewayChangeCleanTime                       = 5 * time.Second
 
 	WasmEdgeWorkloadRuntimeName = "wasmedge"
 	WasmEdgeRuntimeClassName    = "openfunction-crun"
