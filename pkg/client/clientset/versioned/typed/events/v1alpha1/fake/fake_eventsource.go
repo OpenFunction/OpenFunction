@@ -22,7 +22,6 @@ import (
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -36,9 +35,9 @@ type FakeEventSources struct {
 	ns   string
 }
 
-var eventsourcesResource = schema.GroupVersionResource{Group: "events.openfunction.io", Version: "v1alpha1", Resource: "eventsources"}
+var eventsourcesResource = v1alpha1.SchemeGroupVersion.WithResource("eventsources")
 
-var eventsourcesKind = schema.GroupVersionKind{Group: "events.openfunction.io", Version: "v1alpha1", Kind: "EventSource"}
+var eventsourcesKind = v1alpha1.SchemeGroupVersion.WithKind("EventSource")
 
 // Get takes name of the eventSource, and returns the corresponding eventSource object, and an error if there is any.
 func (c *FakeEventSources) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.EventSource, err error) {
@@ -117,7 +116,7 @@ func (c *FakeEventSources) UpdateStatus(ctx context.Context, eventSource *v1alph
 // Delete takes name of the eventSource and deletes it. Returns an error if one occurs.
 func (c *FakeEventSources) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(eventsourcesResource, c.ns, name), &v1alpha1.EventSource{})
+		Invokes(testing.NewDeleteActionWithOptions(eventsourcesResource, c.ns, name, opts), &v1alpha1.EventSource{})
 
 	return err
 }

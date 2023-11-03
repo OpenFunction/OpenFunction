@@ -146,7 +146,7 @@ spec:
                                 with the application protocol specified in the Listener's
                                 Protocol field. If an implementation does not support
                                 or recognize this resource type, it MUST set the \"ResolvedRefs\"
-                                condition to False for this Listener with the \"InvalidRoutesRef\"
+                                condition to False for this Listener with the \"InvalidRouteKinds\"
                                 reason. \n Support: Core"
                               items:
                                 description: RouteGroupKind indicates the group and
@@ -266,14 +266,18 @@ spec:
                             When both listener and route specify hostnames, there
                             MUST be an intersection between the values for a Route
                             to be accepted. For more information, refer to the Route
-                            specific Hostnames documentation. \n Support: Core"
+                            specific Hostnames documentation. \n Hostnames that are
+                            prefixed with a wildcard label (`*.`) are interpreted
+                            as a suffix match. That means that a match for `*.example.com`
+                            would match both `test.example.com`, and `foo.test.example.com`,
+                            but not `example.com`. \n Support: Core"
                           maxLength: 253
                           minLength: 1
                           pattern: ^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                           type: string
                         name:
-                          description: "Name is the name of the Listener. \n Support:
-                            Core"
+                          description: "Name is the name of the Listener. This name
+                            MUST be unique within a Gateway. \n Support: Core"
                           maxLength: 253
                           minLength: 1
                           pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -314,9 +318,9 @@ spec:
                                 MAY choose to support attaching multiple certificates
                                 to a Listener, but this behavior is implementation-specific.
                                 \n References to a resource in different namespace
-                                are invalid UNLESS there is a ReferencePolicy in the
+                                are invalid UNLESS there is a ReferenceGrant in the
                                 target namespace that allows the certificate to be
-                                attached. If a ReferencePolicy does not allow this
+                                attached. If a ReferenceGrant does not allow this
                                 reference, the \"ResolvedRefs\" condition MUST be
                                 set to False for this listener with the \"InvalidCertificateRef\"
                                 reason. \n This field is required to have at least
@@ -325,8 +329,8 @@ spec:
                                 can reference to standard Kubernetes resources, i.e.
                                 Secret, or implementation-specific custom resources.
                                 \n Support: Core - A single reference to a Kubernetes
-                                Secret \n Support: Implementation-specific (More than
-                                one reference or other resource types)"
+                                Secret of type kubernetes.io/tls \n Support: Implementation-specific
+                                (More than one reference or other resource types)"
                               items:
                                 description: "SecretObjectReference identifies an
                                   API object including its namespace, defaulting to
@@ -362,9 +366,9 @@ spec:
                                     description: "Namespace is the namespace of the
                                       backend. When unspecified, the local namespace
                                       is inferred. \n Note that when a namespace is
-                                      specified, a ReferencePolicy object is required
+                                      specified, a ReferenceGrant object is required
                                       in the referent namespace to allow that namespace's
-                                      owner to accept the reference. See the ReferencePolicy
+                                      owner to accept the reference. See the ReferenceGrant
                                       documentation for details. \n Support: Core"
                                     maxLength: 63
                                     minLength: 1
@@ -457,10 +461,9 @@ spec:
                     type:
                       default: IPAddress
                       description: Type of the address.
-                      enum:
-                      - IPAddress
-                      - Hostname
-                      - NamedAddress
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^Hostname|IPAddress|NamedAddress|[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\/[A-Za-z0-9\/\-._~%!$&'()*+,;=:]+$
                       type: string
                     value:
                       description: "Value of the address. The validity of the values

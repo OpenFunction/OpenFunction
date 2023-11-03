@@ -30,7 +30,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
-	k8sgatewayapiv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	k8sgatewayapiv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 // log is for logging in this package.
@@ -56,37 +56,40 @@ func (r *Gateway) Default() {
 		r.Spec.GatewayDef.Name = r.GetName()
 	}
 
-	needInjectDefaultListeners := true
+	needInjectDefaultListeners := len(r.Spec.GatewaySpec.Listeners) == 0
 	for index, listener := range r.Spec.GatewaySpec.Listeners {
 		if listener.Name == DefaultHttpListenerName {
 			needInjectDefaultListeners = false
-			internalHostname := k8sgatewayapiv1alpha2.Hostname(fmt.Sprintf("*.%s", r.Spec.ClusterDomain))
-			namespaceFromAll := k8sgatewayapiv1alpha2.NamespacesFromAll
+			internalHostname := k8sgatewayapiv1beta1.Hostname(fmt.Sprintf("*.%s", r.Spec.ClusterDomain))
+			namespaceFromAll := k8sgatewayapiv1beta1.NamespacesFromAll
 			listener.Hostname = &internalHostname
 			listener.Port = constants.DefaultGatewayListenerPort
 			listener.Protocol = constants.DefaultGatewayListenerProtocol
-			listener.AllowedRoutes = &k8sgatewayapiv1alpha2.AllowedRoutes{
-				Namespaces: &k8sgatewayapiv1alpha2.RouteNamespaces{
+			listener.AllowedRoutes = &k8sgatewayapiv1beta1.AllowedRoutes{
+				Namespaces: &k8sgatewayapiv1beta1.RouteNamespaces{
 					From: &namespaceFromAll,
 				},
 			}
 		} else {
-			hostname := k8sgatewayapiv1alpha2.Hostname(fmt.Sprintf("*.%s", r.Spec.Domain))
-			listener.Hostname = &hostname
+			if listener.Hostname == nil {
+				hostname := k8sgatewayapiv1beta1.Hostname(fmt.Sprintf("*.%s", r.Spec.Domain))
+				listener.Hostname = &hostname
+			}
+
 		}
 		r.Spec.GatewaySpec.Listeners[index] = listener
 	}
 
 	if needInjectDefaultListeners {
-		internalHostname := k8sgatewayapiv1alpha2.Hostname(fmt.Sprintf("*.%s", r.Spec.ClusterDomain))
-		namespaceFromAll := k8sgatewayapiv1alpha2.NamespacesFromAll
-		internalHttpListener := k8sgatewayapiv1alpha2.Listener{
+		internalHostname := k8sgatewayapiv1beta1.Hostname(fmt.Sprintf("*.%s", r.Spec.ClusterDomain))
+		namespaceFromAll := k8sgatewayapiv1beta1.NamespacesFromAll
+		internalHttpListener := k8sgatewayapiv1beta1.Listener{
 			Name:     DefaultHttpListenerName,
 			Hostname: &internalHostname,
 			Port:     constants.DefaultGatewayListenerPort,
 			Protocol: constants.DefaultGatewayListenerProtocol,
-			AllowedRoutes: &k8sgatewayapiv1alpha2.AllowedRoutes{
-				Namespaces: &k8sgatewayapiv1alpha2.RouteNamespaces{
+			AllowedRoutes: &k8sgatewayapiv1beta1.AllowedRoutes{
+				Namespaces: &k8sgatewayapiv1beta1.RouteNamespaces{
 					From: &namespaceFromAll,
 				},
 			},

@@ -19,6 +19,7 @@ package util
 import (
 	"context"
 	"fmt"
+	"os"
 	"reflect"
 
 	"github.com/go-logr/logr"
@@ -65,19 +66,18 @@ func GetConfigOrDefault(cm map[string]string, key string, defaultVal string) str
 
 func GetDefaultConfig(ctx context.Context, c client.Client, log logr.Logger) map[string]string {
 	log.WithName("Config").WithValues("ConfigMap", constants.DefaultConfigMapName)
-
 	cm := &corev1.ConfigMap{}
-
-	if err := c.Get(ctx, client.ObjectKey{
-		Namespace: constants.DefaultControllerNamespace,
-		Name:      constants.DefaultConfigMapName,
-	}, cm); err == nil {
-		if cm != nil {
-			return cm.Data
-		}
+	ns := os.Getenv(constants.DefaultNamespaceKey)
+	if ns == "" {
+		ns = constants.DefaultControllerNamespace
 	}
-
-	log.Info(fmt.Sprintf("Unable to get the default global configuration from ConfigMap %s in namespace %s",
-		constants.DefaultConfigMapName, constants.DefaultControllerNamespace))
+	if err := c.Get(ctx, client.ObjectKey{Namespace: ns, Name: constants.DefaultConfigMapName}, cm); err != nil {
+		log.Info(fmt.Sprintf("Unable to get the default global configuration from ConfigMap %s in namespace %s,err=%s",
+			constants.DefaultConfigMapName, ns, err))
+	}
+	if cm != nil {
+		return cm.Data
+	}
 	return nil
+
 }

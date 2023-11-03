@@ -22,7 +22,6 @@ import (
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -36,9 +35,9 @@ type FakeTriggers struct {
 	ns   string
 }
 
-var triggersResource = schema.GroupVersionResource{Group: "events.openfunction.io", Version: "v1alpha1", Resource: "triggers"}
+var triggersResource = v1alpha1.SchemeGroupVersion.WithResource("triggers")
 
-var triggersKind = schema.GroupVersionKind{Group: "events.openfunction.io", Version: "v1alpha1", Kind: "Trigger"}
+var triggersKind = v1alpha1.SchemeGroupVersion.WithKind("Trigger")
 
 // Get takes name of the trigger, and returns the corresponding trigger object, and an error if there is any.
 func (c *FakeTriggers) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.Trigger, err error) {
@@ -117,7 +116,7 @@ func (c *FakeTriggers) UpdateStatus(ctx context.Context, trigger *v1alpha1.Trigg
 // Delete takes name of the trigger and deletes it. Returns an error if one occurs.
 func (c *FakeTriggers) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(triggersResource, c.ns, name), &v1alpha1.Trigger{})
+		Invokes(testing.NewDeleteActionWithOptions(triggersResource, c.ns, name, opts), &v1alpha1.Trigger{})
 
 	return err
 }

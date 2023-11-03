@@ -22,6 +22,9 @@ import (
 	"math"
 	"time"
 
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
+
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -112,7 +115,7 @@ func (r *BuilderReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		builder.Status.Message = openfunction.Timeout
 		builder.Status.BuildDuration = builder.Spec.Timeout
 
-		if err := r.Status().Update(r.ctx, builder); err != nil {
+		if err := r.updateStatus(builder); err != nil {
 			log.Error(err, "Failed to update builder status")
 			return ctrl.Result{}, err
 		}
@@ -136,7 +139,7 @@ func (r *BuilderReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// Reset builder status.
 	builder.Status = openfunction.BuilderStatus{}
-	if err := r.Status().Update(r.ctx, builder); err != nil {
+	if err := r.updateStatus(builder); err != nil {
 		log.Error(err, "Failed to reset builder status")
 		return ctrl.Result{}, err
 	}
@@ -148,7 +151,7 @@ func (r *BuilderReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	builder.Status.Phase = openfunction.BuildPhase
 	builder.Status.State = openfunction.Building
-	if err := r.Status().Update(r.ctx, builder); err != nil {
+	if err := r.updateStatus(builder); err != nil {
 		log.Error(err, "Failed to update builder status")
 		return ctrl.Result{}, err
 	}
@@ -159,7 +162,22 @@ func (r *BuilderReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	return ctrl.Result{}, nil
 }
-
+func (r *BuilderReconciler) updateStatus(builder *openfunction.Builder) error {
+	log := r.Log.WithName("UpdateStatus")
+	if err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		builderClone := builder.DeepCopy()
+		if err := r.Client.Get(r.ctx, types.NamespacedName{Namespace: builder.Namespace, Name: builder.Name}, builderClone); err != nil {
+			log.Error(err, fmt.Sprintf("error getting updated builder(%s/%s) from client", builder.Namespace, builder.Name))
+			return err
+		}
+		builderClone.Status = builder.Status
+		return r.Client.Status().Update(r.ctx, builderClone)
+	}); err != nil {
+		log.Error(err, fmt.Sprintf("update builder(%s/%s)", builder.Name, builder.Namespace))
+		return err
+	}
+	return nil
+}
 func (r *BuilderReconciler) createBuilderRun() core.BuilderRun {
 
 	return shipwright.NewBuildRun(r.ctx, r.Client, r.Scheme, r.Log)
@@ -192,7 +210,7 @@ func (r *BuilderReconciler) getBuilderResult(builder *openfunction.Builder, buil
 				Duration: metav1.Now().UTC().Sub(builder.CreationTimestamp.UTC()).Truncate(time.Second),
 			}
 		}
-		if err := r.Status().Update(r.ctx, builder); err != nil {
+		if err := r.updateStatus(builder); err != nil {
 			return err
 		}
 
@@ -269,7 +287,7 @@ func (r *BuilderReconciler) buildTimeout(builder *openfunction.Builder) error {
 		b.Status.Reason = openfunction.Timeout
 		b.Status.Message = openfunction.Timeout
 		b.Status.BuildDuration = builder.Spec.Timeout
-		err := r.Status().Update(r.ctx, b)
+		err := r.updateStatus(b)
 		if err == nil {
 			r.recordEvent(builder)
 		}

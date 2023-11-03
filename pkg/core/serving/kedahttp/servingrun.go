@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"strings"
 
+	networkingv1alpha1 "github.com/openfunction/apis/networking/v1alpha1"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -455,10 +457,18 @@ func (r *servingRun) createScaler(s *openfunction.Serving, workload runtime.Obje
 	version = strings.ReplaceAll(version, ".", "")
 
 	var hosts []string
-	for _, hostname := range s.Spec.Triggers.Http.Route.Hostnames {
-		hosts = append(hosts, string(hostname))
+	gateway := &networkingv1alpha1.Gateway{}
+	route := s.Spec.Triggers.Http.Route
+	key := client.ObjectKey{
+		Namespace: string(*route.GatewayRef.Namespace),
+		Name:      string(route.GatewayRef.Name),
 	}
-
+	if err := r.Get(r.ctx, key, gateway); err != nil {
+		log.Error(err, "Failed to get gateway",
+			"namespace", route.GatewayRef.Namespace, "name", route.GatewayRef.Name)
+		return err
+	}
+	hosts = append(hosts, fmt.Sprintf("%s.%s.svc.%s", service.Name, s.Namespace, gateway.Spec.ClusterDomain))
 	var pathPrefix []string
 	for _, rule := range s.Spec.Triggers.Http.Route.Rules {
 		for _, match := range rule.Matches {

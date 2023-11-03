@@ -18,7 +18,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8sgatewayapiv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	k8sgatewayapiv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -34,9 +34,9 @@ const (
 )
 
 const (
-	GatewayReasonNotFound           k8sgatewayapiv1alpha2.GatewayConditionReason = "NotFound"
-	GatewayReasonCreationFailure    k8sgatewayapiv1alpha2.GatewayConditionReason = "CreationFailure"
-	GatewayReasonResourcesAvailable k8sgatewayapiv1alpha2.GatewayConditionReason = "ResourcesAvailable"
+	GatewayReasonNotFound           k8sgatewayapiv1beta1.GatewayConditionReason = "NotFound"
+	GatewayReasonCreationFailure    k8sgatewayapiv1beta1.GatewayConditionReason = "CreationFailure"
+	GatewayReasonResourcesAvailable k8sgatewayapiv1beta1.GatewayConditionReason = "ResourcesAvailable"
 )
 
 type GatewayRef struct {
@@ -71,7 +71,7 @@ type GatewayDef struct {
 	Namespace string `json:"namespace"`
 	// GatewayClassName used for this Gateway.
 	// This is the name of a GatewayClass resource.
-	GatewayClassName k8sgatewayapiv1alpha2.ObjectName `json:"gatewayClassName"`
+	GatewayClassName k8sgatewayapiv1beta1.ObjectName `json:"gatewayClassName"`
 }
 
 type K8sGatewaySpec struct {
@@ -85,7 +85,7 @@ type K8sGatewaySpec struct {
 	// +listType=map
 	// +listMapKey=name
 	// +kubebuilder:validation:MinItems=1
-	Listeners []k8sgatewayapiv1alpha2.Listener `json:"listeners"`
+	Listeners []k8sgatewayapiv1beta1.Listener `json:"listeners"`
 }
 
 // GatewaySpec defines the desired state of Gateway
@@ -134,7 +134,7 @@ type Condition struct {
 
 type ListenerStatus struct {
 	// Name is the name of the Listener that this status corresponds to.
-	Name k8sgatewayapiv1alpha2.SectionName `json:"name"`
+	Name k8sgatewayapiv1beta1.SectionName `json:"name"`
 
 	// SupportedKinds is the list indicating the Kinds supported by this
 	// listener. This MUST represent the kinds an implementation supports for
@@ -147,7 +147,7 @@ type ListenerStatus struct {
 	// reference the valid Route kinds that have been specified.
 	//
 	// +kubebuilder:validation:MaxItems=8
-	SupportedKinds []k8sgatewayapiv1alpha2.RouteGroupKind `json:"supportedKinds"`
+	SupportedKinds []k8sgatewayapiv1beta1.RouteGroupKind `json:"supportedKinds"`
 
 	// AttachedRoutes represents the total number of Routes that have been
 	// successfully attached to this Listener.
@@ -169,7 +169,7 @@ type GatewayStatus struct {
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
 
-	Addresses []k8sgatewayapiv1alpha2.GatewayAddress `json:"addresses,omitempty"`
+	Addresses []k8sgatewayapiv1beta1.GatewayAddress `json:"addresses,omitempty"`
 	// Conditions describe the current conditions of the Gateway.
 	//
 	// Known condition types are:
@@ -193,12 +193,13 @@ type GatewayStatus struct {
 	Listeners []ListenerStatus `json:"listeners,omitempty"`
 }
 
+//+genclient
 //+kubebuilder:object:root=true
 //+kubebuilder:storageversion
 //+kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Address",type=string,JSONPath=`.status.addresses[*].value`
-// +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
-// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
+//+kubebuilder:printcolumn:name="Address",type=string,JSONPath=`.status.addresses[*].value`
+//+kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
+//+kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Gateway is the Schema for the gateways API
 type Gateway struct {

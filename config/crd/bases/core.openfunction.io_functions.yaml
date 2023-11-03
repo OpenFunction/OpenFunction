@@ -246,16 +246,25 @@ spec:
                         (filters), and forwarding the request to an API object (backendRefs).
                       properties:
                         backendRefs:
-                          description: "If unspecified or invalid (refers to a non-existent
-                            resource or a Service with no endpoints), the rule performs
-                            no forwarding. If there are also no filters specified
-                            that would result in a response being sent, a HTTP 503
-                            status code is returned. 503 responses must be sent so
-                            that the overall weight is respected; if an invalid backend
-                            is requested to have 80% of requests, then 80% of requests
-                            must get a 503 instead. \n Support: Core for Kubernetes
-                            Service Support: Custom for any other resource \n Support
-                            for weight: Core"
+                          description: "BackendRefs defines the backend(s) where matching
+                            requests should be sent. \n Failure behavior here depends
+                            on how many BackendRefs are specified and how many are
+                            invalid. \n If *all* entries in BackendRefs are invalid,
+                            and there are also no filters specified in this route
+                            rule, *all* traffic which matches this rule MUST receive
+                            a 500 status code. \n See the HTTPBackendRef definition
+                            for the rules about what makes a single HTTPBackendRef
+                            invalid. \n When a HTTPBackendRef is invalid, 500 status
+                            codes MUST be returned for requests that would have otherwise
+                            been routed to an invalid backend. If multiple backends
+                            are specified, and some are invalid, the proportion of
+                            requests that would otherwise have been routed to an invalid
+                            backend MUST receive a 500 status code. \n For example,
+                            if two backends are specified with equal weights, and
+                            one is invalid, 50 percent of traffic must receive a 500.
+                            Implementations may choose how that 50 percent is determined.
+                            \n Support: Core for Kubernetes Service \n Support: Custom
+                            for any other resource \n Support for weight: Core"
                           items:
                             description: HTTPBackendRef defines how a HTTPRoute should
                               forward an HTTP request.
@@ -439,7 +448,7 @@ spec:
                                             configure this backend in the underlying
                                             implementation. \n If there is a cross-namespace
                                             reference to an *existing* object that
-                                            is not allowed by a ReferencePolicy, the
+                                            is not allowed by a ReferenceGrant, the
                                             controller must ensure the \"ResolvedRefs\"
                                             \ condition on the Route is set to `status:
                                             False`, with the \"RefNotPermitted\" reason
@@ -448,7 +457,7 @@ spec:
                                             error case, the Message of the `ResolvedRefs`
                                             Condition should be used to provide more
                                             detail about the problem. \n Support:
-                                            Extended for Kubernetes Service Support:
+                                            Extended for Kubernetes Service \n Support:
                                             Custom for any other resource"
                                           properties:
                                             group:
@@ -464,6 +473,7 @@ spec:
                                               default: Service
                                               description: Kind is kind of the referent.
                                                 For example "HTTPRoute" or "Service".
+                                                Defaults to "Service" when not specified.
                                               maxLength: 63
                                               minLength: 1
                                               pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
@@ -478,11 +488,12 @@ spec:
                                               description: "Namespace is the namespace
                                                 of the backend. When unspecified,
                                                 the local namespace is inferred. \n
-                                                Note that when a namespace is specified,
-                                                a ReferencePolicy object is required
-                                                in the referent namespace to allow
-                                                that namespace's owner to accept the
-                                                reference. See the ReferencePolicy
+                                                Note that when a different namespace
+                                                is specified, a ReferenceGrant object
+                                                with ReferenceGrantTo.Kind=Service
+                                                is required in the referent namespace
+                                                to allow that namespace's owner to
+                                                accept the reference. See the ReferenceGrant
                                                 documentation for details. \n Support:
                                                 Core"
                                               maxLength: 63
@@ -520,8 +531,62 @@ spec:
                                             Core"
                                           maxLength: 253
                                           minLength: 1
-                                          pattern: ^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                                           type: string
+                                        path:
+                                          description: "Path defines parameters used
+                                            to modify the path of the incoming request.
+                                            The modified path is then used to construct
+                                            the `Location` header. When empty, the
+                                            request path is used as-is. \n Support:
+                                            Extended \n <gateway:experimental>"
+                                          properties:
+                                            replaceFullPath:
+                                              description: "ReplaceFullPath specifies
+                                                the value with which to replace the
+                                                full path of a request during a rewrite
+                                                or redirect. \n <gateway:experimental>"
+                                              maxLength: 1024
+                                              type: string
+                                            replacePrefixMatch:
+                                              description: "ReplacePrefixMatch specifies
+                                                the value with which to replace the
+                                                prefix match of a request during a
+                                                rewrite or redirect. For example,
+                                                a request to \"/foo/bar\" with a prefix
+                                                match of \"/foo\" would be modified
+                                                to \"/bar\". \n Note that this matches
+                                                the behavior of the PathPrefix match
+                                                type. This matches full path elements.
+                                                A path element refers to the list
+                                                of labels in the path split by the
+                                                `/` separator. When specified, a trailing
+                                                `/` is ignored. For example, the paths
+                                                `/abc`, `/abc/`, and `/abc/def` would
+                                                all match the prefix `/abc`, but the
+                                                path `/abcd` would not. \n <gateway:experimental>"
+                                              maxLength: 1024
+                                              type: string
+                                            type:
+                                              description: "Type defines the type
+                                                of path modifier. Additional types
+                                                may be added in a future release of
+                                                the API. \n Note that values may be
+                                                added to this enum, implementations
+                                                must ensure that unknown values will
+                                                not cause a crash. \n Unknown values
+                                                here must result in the implementation
+                                                setting the Attached Condition for
+                                                the Route to `status: False`, with
+                                                a Reason of `UnsupportedValue`. \n
+                                                <gateway:experimental>"
+                                              enum:
+                                              - ReplaceFullPath
+                                              - ReplacePrefixMatch
+                                              type: string
+                                          required:
+                                          - type
+                                          type: object
                                         port:
                                           description: "Port is the port to be used
                                             in the value of the `Location` header
@@ -536,7 +601,14 @@ spec:
                                           description: "Scheme is the scheme to be
                                             used in the value of the `Location` header
                                             in the response. When empty, the scheme
-                                            of the request is used. \n Support: Extended"
+                                            of the request is used. \n Support: Extended
+                                            \n Note that values may be added to this
+                                            enum, implementations must ensure that
+                                            unknown values will not cause a crash.
+                                            \n Unknown values here must result in
+                                            the implementation setting the Attached
+                                            Condition for the Route to `status: False`,
+                                            with a Reason of `UnsupportedValue`."
                                           enum:
                                           - http
                                           - https
@@ -545,7 +617,13 @@ spec:
                                           default: 302
                                           description: "StatusCode is the HTTP status
                                             code to be used in response. \n Support:
-                                            Core"
+                                            Core \n Note that values may be added
+                                            to this enum, implementations must ensure
+                                            that unknown values will not cause a crash.
+                                            \n Unknown values here must result in
+                                            the implementation setting the Attached
+                                            Condition for the Route to `status: False`,
+                                            with a Reason of `UnsupportedValue`."
                                           enum:
                                           - 301
                                           - 302
@@ -578,13 +656,84 @@ spec:
                                         type cannot be resolved, the filter MUST NOT
                                         be skipped. Instead, requests that would have
                                         been processed by that filter MUST receive
-                                        a HTTP error response."
+                                        a HTTP error response. \n Note that values
+                                        may be added to this enum, implementations
+                                        must ensure that unknown values will not cause
+                                        a crash. \n Unknown values here must result
+                                        in the implementation setting the Attached
+                                        Condition for the Route to `status: False`,
+                                        with a Reason of `UnsupportedValue`. \n <gateway:experimental:validation:Enum=RequestHeaderModifier;RequestMirror;RequestRedirect;URLRewrite;ExtensionRef>"
                                       enum:
                                       - RequestHeaderModifier
                                       - RequestMirror
                                       - RequestRedirect
                                       - ExtensionRef
                                       type: string
+                                    urlRewrite:
+                                      description: "URLRewrite defines a schema for
+                                        a filter that modifies a request during forwarding.
+                                        \n Support: Extended \n <gateway:experimental>"
+                                      properties:
+                                        hostname:
+                                          description: "Hostname is the value to be
+                                            used to replace the Host header value
+                                            during forwarding. \n Support: Extended
+                                            \n <gateway:experimental>"
+                                          maxLength: 253
+                                          minLength: 1
+                                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                          type: string
+                                        path:
+                                          description: "Path defines a path rewrite.
+                                            \n Support: Extended \n <gateway:experimental>"
+                                          properties:
+                                            replaceFullPath:
+                                              description: "ReplaceFullPath specifies
+                                                the value with which to replace the
+                                                full path of a request during a rewrite
+                                                or redirect. \n <gateway:experimental>"
+                                              maxLength: 1024
+                                              type: string
+                                            replacePrefixMatch:
+                                              description: "ReplacePrefixMatch specifies
+                                                the value with which to replace the
+                                                prefix match of a request during a
+                                                rewrite or redirect. For example,
+                                                a request to \"/foo/bar\" with a prefix
+                                                match of \"/foo\" would be modified
+                                                to \"/bar\". \n Note that this matches
+                                                the behavior of the PathPrefix match
+                                                type. This matches full path elements.
+                                                A path element refers to the list
+                                                of labels in the path split by the
+                                                `/` separator. When specified, a trailing
+                                                `/` is ignored. For example, the paths
+                                                `/abc`, `/abc/`, and `/abc/def` would
+                                                all match the prefix `/abc`, but the
+                                                path `/abcd` would not. \n <gateway:experimental>"
+                                              maxLength: 1024
+                                              type: string
+                                            type:
+                                              description: "Type defines the type
+                                                of path modifier. Additional types
+                                                may be added in a future release of
+                                                the API. \n Note that values may be
+                                                added to this enum, implementations
+                                                must ensure that unknown values will
+                                                not cause a crash. \n Unknown values
+                                                here must result in the implementation
+                                                setting the Attached Condition for
+                                                the Route to `status: False`, with
+                                                a Reason of `UnsupportedValue`. \n
+                                                <gateway:experimental>"
+                                              enum:
+                                              - ReplaceFullPath
+                                              - ReplacePrefixMatch
+                                              type: string
+                                          required:
+                                          - type
+                                          type: object
+                                      type: object
                                   required:
                                   - type
                                   type: object
@@ -601,7 +750,8 @@ spec:
                               kind:
                                 default: Service
                                 description: Kind is kind of the referent. For example
-                                  "HTTPRoute" or "Service".
+                                  "HTTPRoute" or "Service". Defaults to "Service"
+                                  when not specified.
                                 maxLength: 63
                                 minLength: 1
                                 pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
@@ -614,11 +764,12 @@ spec:
                               namespace:
                                 description: "Namespace is the namespace of the backend.
                                   When unspecified, the local namespace is inferred.
-                                  \n Note that when a namespace is specified, a ReferencePolicy
-                                  object is required in the referent namespace to
-                                  allow that namespace's owner to accept the reference.
-                                  See the ReferencePolicy documentation for details.
-                                  \n Support: Core"
+                                  \n Note that when a different namespace is specified,
+                                  a ReferenceGrant object with ReferenceGrantTo.Kind=Service
+                                  is required in the referent namespace to allow that
+                                  namespace's owner to accept the reference. See the
+                                  ReferenceGrant documentation for details. \n Support:
+                                  Core"
                                 maxLength: 63
                                 minLength: 1
                                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
@@ -669,7 +820,14 @@ spec:
                             encouraged to support extended filters. - Implementation-specific
                             custom filters have no API guarantees across implementations.
                             \n Specifying a core filter multiple times has unspecified
-                            or custom conformance. \n Support: Core"
+                            or custom conformance. \n All filters are expected to
+                            be compatible with each other except for the URLRewrite
+                            and RequestRedirect filters, which may not be combined.
+                            If an implementation can not support other combinations
+                            of filters, they must clearly document that limitation.
+                            In all cases where incompatible or unsupported filters
+                            are specified, implementations MUST add a warning condition
+                            to status. \n Support: Core"
                           items:
                             description: HTTPRouteFilter defines processing steps
                               that must be completed during the request or response
@@ -829,7 +987,7 @@ spec:
                                       False` and not configure this backend in the
                                       underlying implementation. \n If there is a
                                       cross-namespace reference to an *existing* object
-                                      that is not allowed by a ReferencePolicy, the
+                                      that is not allowed by a ReferenceGrant, the
                                       controller must ensure the \"ResolvedRefs\"
                                       \ condition on the Route is set to `status:
                                       False`, with the \"RefNotPermitted\" reason
@@ -838,7 +996,7 @@ spec:
                                       Message of the `ResolvedRefs` Condition should
                                       be used to provide more detail about the problem.
                                       \n Support: Extended for Kubernetes Service
-                                      Support: Custom for any other resource"
+                                      \n Support: Custom for any other resource"
                                     properties:
                                       group:
                                         default: ""
@@ -851,7 +1009,8 @@ spec:
                                       kind:
                                         default: Service
                                         description: Kind is kind of the referent.
-                                          For example "HTTPRoute" or "Service".
+                                          For example "HTTPRoute" or "Service". Defaults
+                                          to "Service" when not specified.
                                         maxLength: 63
                                         minLength: 1
                                         pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
@@ -865,10 +1024,11 @@ spec:
                                         description: "Namespace is the namespace of
                                           the backend. When unspecified, the local
                                           namespace is inferred. \n Note that when
-                                          a namespace is specified, a ReferencePolicy
-                                          object is required in the referent namespace
-                                          to allow that namespace's owner to accept
-                                          the reference. See the ReferencePolicy documentation
+                                          a different namespace is specified, a ReferenceGrant
+                                          object with ReferenceGrantTo.Kind=Service
+                                          is required in the referent namespace to
+                                          allow that namespace's owner to accept the
+                                          reference. See the ReferenceGrant documentation
                                           for details. \n Support: Core"
                                         maxLength: 63
                                         minLength: 1
@@ -903,8 +1063,57 @@ spec:
                                       is used. \n Support: Core"
                                     maxLength: 253
                                     minLength: 1
-                                    pattern: ^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                                     type: string
+                                  path:
+                                    description: "Path defines parameters used to
+                                      modify the path of the incoming request. The
+                                      modified path is then used to construct the
+                                      `Location` header. When empty, the request path
+                                      is used as-is. \n Support: Extended \n <gateway:experimental>"
+                                    properties:
+                                      replaceFullPath:
+                                        description: "ReplaceFullPath specifies the
+                                          value with which to replace the full path
+                                          of a request during a rewrite or redirect.
+                                          \n <gateway:experimental>"
+                                        maxLength: 1024
+                                        type: string
+                                      replacePrefixMatch:
+                                        description: "ReplacePrefixMatch specifies
+                                          the value with which to replace the prefix
+                                          match of a request during a rewrite or redirect.
+                                          For example, a request to \"/foo/bar\" with
+                                          a prefix match of \"/foo\" would be modified
+                                          to \"/bar\". \n Note that this matches the
+                                          behavior of the PathPrefix match type. This
+                                          matches full path elements. A path element
+                                          refers to the list of labels in the path
+                                          split by the `/` separator. When specified,
+                                          a trailing `/` is ignored. For example,
+                                          the paths `/abc`, `/abc/`, and `/abc/def`
+                                          would all match the prefix `/abc`, but the
+                                          path `/abcd` would not. \n <gateway:experimental>"
+                                        maxLength: 1024
+                                        type: string
+                                      type:
+                                        description: "Type defines the type of path
+                                          modifier. Additional types may be added
+                                          in a future release of the API. \n Note
+                                          that values may be added to this enum, implementations
+                                          must ensure that unknown values will not
+                                          cause a crash. \n Unknown values here must
+                                          result in the implementation setting the
+                                          Attached Condition for the Route to `status:
+                                          False`, with a Reason of `UnsupportedValue`.
+                                          \n <gateway:experimental>"
+                                        enum:
+                                        - ReplaceFullPath
+                                        - ReplacePrefixMatch
+                                        type: string
+                                    required:
+                                    - type
+                                    type: object
                                   port:
                                     description: "Port is the port to be used in the
                                       value of the `Location` header in the response.
@@ -918,7 +1127,13 @@ spec:
                                     description: "Scheme is the scheme to be used
                                       in the value of the `Location` header in the
                                       response. When empty, the scheme of the request
-                                      is used. \n Support: Extended"
+                                      is used. \n Support: Extended \n Note that values
+                                      may be added to this enum, implementations must
+                                      ensure that unknown values will not cause a
+                                      crash. \n Unknown values here must result in
+                                      the implementation setting the Attached Condition
+                                      for the Route to `status: False`, with a Reason
+                                      of `UnsupportedValue`."
                                     enum:
                                     - http
                                     - https
@@ -926,7 +1141,13 @@ spec:
                                   statusCode:
                                     default: 302
                                     description: "StatusCode is the HTTP status code
-                                      to be used in response. \n Support: Core"
+                                      to be used in response. \n Support: Core \n
+                                      Note that values may be added to this enum,
+                                      implementations must ensure that unknown values
+                                      will not cause a crash. \n Unknown values here
+                                      must result in the implementation setting the
+                                      Attached Condition for the Route to `status:
+                                      False`, with a Reason of `UnsupportedValue`."
                                     enum:
                                     - 301
                                     - 302
@@ -956,13 +1177,79 @@ spec:
                                   \n If a reference to a custom filter type cannot
                                   be resolved, the filter MUST NOT be skipped. Instead,
                                   requests that would have been processed by that
-                                  filter MUST receive a HTTP error response."
+                                  filter MUST receive a HTTP error response. \n Note
+                                  that values may be added to this enum, implementations
+                                  must ensure that unknown values will not cause a
+                                  crash. \n Unknown values here must result in the
+                                  implementation setting the Attached Condition for
+                                  the Route to `status: False`, with a Reason of `UnsupportedValue`.
+                                  \n <gateway:experimental:validation:Enum=RequestHeaderModifier;RequestMirror;RequestRedirect;URLRewrite;ExtensionRef>"
                                 enum:
                                 - RequestHeaderModifier
                                 - RequestMirror
                                 - RequestRedirect
                                 - ExtensionRef
                                 type: string
+                              urlRewrite:
+                                description: "URLRewrite defines a schema for a filter
+                                  that modifies a request during forwarding. \n Support:
+                                  Extended \n <gateway:experimental>"
+                                properties:
+                                  hostname:
+                                    description: "Hostname is the value to be used
+                                      to replace the Host header value during forwarding.
+                                      \n Support: Extended \n <gateway:experimental>"
+                                    maxLength: 253
+                                    minLength: 1
+                                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                    type: string
+                                  path:
+                                    description: "Path defines a path rewrite. \n
+                                      Support: Extended \n <gateway:experimental>"
+                                    properties:
+                                      replaceFullPath:
+                                        description: "ReplaceFullPath specifies the
+                                          value with which to replace the full path
+                                          of a request during a rewrite or redirect.
+                                          \n <gateway:experimental>"
+                                        maxLength: 1024
+                                        type: string
+                                      replacePrefixMatch:
+                                        description: "ReplacePrefixMatch specifies
+                                          the value with which to replace the prefix
+                                          match of a request during a rewrite or redirect.
+                                          For example, a request to \"/foo/bar\" with
+                                          a prefix match of \"/foo\" would be modified
+                                          to \"/bar\". \n Note that this matches the
+                                          behavior of the PathPrefix match type. This
+                                          matches full path elements. A path element
+                                          refers to the list of labels in the path
+                                          split by the `/` separator. When specified,
+                                          a trailing `/` is ignored. For example,
+                                          the paths `/abc`, `/abc/`, and `/abc/def`
+                                          would all match the prefix `/abc`, but the
+                                          path `/abcd` would not. \n <gateway:experimental>"
+                                        maxLength: 1024
+                                        type: string
+                                      type:
+                                        description: "Type defines the type of path
+                                          modifier. Additional types may be added
+                                          in a future release of the API. \n Note
+                                          that values may be added to this enum, implementations
+                                          must ensure that unknown values will not
+                                          cause a crash. \n Unknown values here must
+                                          result in the implementation setting the
+                                          Attached Condition for the Route to `status:
+                                          False`, with a Reason of `UnsupportedValue`.
+                                          \n <gateway:experimental>"
+                                        enum:
+                                        - ReplaceFullPath
+                                        - ReplacePrefixMatch
+                                        type: string
+                                    required:
+                                    - type
+                                    type: object
+                                type: object
                             required:
                             - type
                             type: object
@@ -990,18 +1277,21 @@ spec:
                             effect of matching every HTTP request. \n Proxy or Load
                             Balancer routing configuration generated from HTTPRoutes
                             MUST prioritize rules based on the following criteria,
-                            continuing on ties. Precedence must be given to the the
-                            Rule with the largest number of: \n * Characters in a
-                            matching non-wildcard hostname. * Characters in a matching
-                            hostname. * Characters in a matching path. * Header matches.
-                            * Query param matches. \n If ties still exist across multiple
+                            continuing on ties. Precedence must be given to the Rule
+                            with the largest number of: \n * Characters in a matching
+                            non-wildcard hostname. * Characters in a matching hostname.
+                            * Characters in a matching path. * Header matches. * Query
+                            param matches. \n If ties still exist across multiple
                             Routes, matching precedence MUST be determined in order
                             of the following criteria, continuing on ties: \n * The
                             oldest Route based on creation timestamp. * The Route
-                            appearing first in alphabetical order by \"<namespace>/<name>\".
+                            appearing first in alphabetical order by \"{namespace}/{name}\".
                             \n If ties still exist within the Route that has been
                             given precedence, matching precedence MUST be granted
-                            to the first matching rule meeting the above criteria."
+                            to the first matching rule meeting the above criteria.
+                            \n When no rules matching a request have been successfully
+                            attached to the parent a request is coming from, a HTTP
+                            404 status code MUST be returned."
                           items:
                             description: "HTTPRouteMatch defines the predicate used
                               to match requests to a given action. Multiple match
@@ -1121,9 +1411,14 @@ spec:
                                     select a HTTP route by matching HTTP query parameters.
                                   properties:
                                     name:
-                                      description: Name is the name of the HTTP query
+                                      description: "Name is the name of the HTTP query
                                         param to be matched. This must be an exact
                                         string match. (See https://tools.ietf.org/html/rfc7230#section-2.7.3).
+                                        \n If multiple entries specify equivalent
+                                        query param names, only the first entry with
+                                        an equivalent name MUST be considered for
+                                        a match. Subsequent entries with an equivalent
+                                        query param name MUST be ignored."
                                       maxLength: 256
                                       minLength: 1
                                       type: string
@@ -9556,6 +9851,34 @@ spec:
                     type: string
                 type: object
                 x-kubernetes-map-type: atomic
+              rolloutStrategy:
+                description: Canary strategy for a function
+                properties:
+                  canary:
+                    properties:
+                      steps:
+                        description: Canary release steps for a function
+                        items:
+                          properties:
+                            pause:
+                              description: Pause defines a pause stage for a canary
+                                step, manual or auto
+                              properties:
+                                duration:
+                                  description: Duration the amount of time to wait
+                                    before moving to the next step.
+                                  format: int32
+                                  type: integer
+                              type: object
+                            weight:
+                              description: Weight indicate how many percentage of
+                                traffic the canary function should receive
+                              format: int32
+                              type: integer
+                          type: object
+                        type: array
+                    type: object
+                type: object
               serving:
                 description: Information needed to run a function. The serving step
                   will be skipped if `Serving` is nil.
@@ -17583,18 +17906,31 @@ spec:
                                     to an API object (backendRefs).
                                   properties:
                                     backendRefs:
-                                      description: "If unspecified or invalid (refers
-                                        to a non-existent resource or a Service with
-                                        no endpoints), the rule performs no forwarding.
-                                        If there are also no filters specified that
-                                        would result in a response being sent, a HTTP
-                                        503 status code is returned. 503 responses
-                                        must be sent so that the overall weight is
-                                        respected; if an invalid backend is requested
-                                        to have 80% of requests, then 80% of requests
-                                        must get a 503 instead. \n Support: Core for
-                                        Kubernetes Service Support: Custom for any
-                                        other resource \n Support for weight: Core"
+                                      description: "BackendRefs defines the backend(s)
+                                        where matching requests should be sent. \n
+                                        Failure behavior here depends on how many
+                                        BackendRefs are specified and how many are
+                                        invalid. \n If *all* entries in BackendRefs
+                                        are invalid, and there are also no filters
+                                        specified in this route rule, *all* traffic
+                                        which matches this rule MUST receive a 500
+                                        status code. \n See the HTTPBackendRef definition
+                                        for the rules about what makes a single HTTPBackendRef
+                                        invalid. \n When a HTTPBackendRef is invalid,
+                                        500 status codes MUST be returned for requests
+                                        that would have otherwise been routed to an
+                                        invalid backend. If multiple backends are
+                                        specified, and some are invalid, the proportion
+                                        of requests that would otherwise have been
+                                        routed to an invalid backend MUST receive
+                                        a 500 status code. \n For example, if two
+                                        backends are specified with equal weights,
+                                        and one is invalid, 50 percent of traffic
+                                        must receive a 500. Implementations may choose
+                                        how that 50 percent is determined. \n Support:
+                                        Core for Kubernetes Service \n Support: Custom
+                                        for any other resource \n Support for weight:
+                                        Core"
                                       items:
                                         description: HTTPBackendRef defines how a
                                           HTTPRoute should forward an HTTP request.
@@ -17821,21 +18157,21 @@ spec:
                                                         \n If there is a cross-namespace
                                                         reference to an *existing*
                                                         object that is not allowed
-                                                        by a ReferencePolicy, the
-                                                        controller must ensure the
-                                                        \"ResolvedRefs\"  condition
-                                                        on the Route is set to `status:
-                                                        False`, with the \"RefNotPermitted\"
-                                                        reason and not configure this
-                                                        backend in the underlying
-                                                        implementation. \n In either
-                                                        error case, the Message of
-                                                        the `ResolvedRefs` Condition
-                                                        should be used to provide
-                                                        more detail about the problem.
-                                                        \n Support: Extended for Kubernetes
-                                                        Service Support: Custom for
-                                                        any other resource"
+                                                        by a ReferenceGrant, the controller
+                                                        must ensure the \"ResolvedRefs\"
+                                                        \ condition on the Route is
+                                                        set to `status: False`, with
+                                                        the \"RefNotPermitted\" reason
+                                                        and not configure this backend
+                                                        in the underlying implementation.
+                                                        \n In either error case, the
+                                                        Message of the `ResolvedRefs`
+                                                        Condition should be used to
+                                                        provide more detail about
+                                                        the problem. \n Support: Extended
+                                                        for Kubernetes Service \n
+                                                        Support: Custom for any other
+                                                        resource"
                                                       properties:
                                                         group:
                                                           default: ""
@@ -17853,6 +18189,8 @@ spec:
                                                           description: Kind is kind
                                                             of the referent. For example
                                                             "HTTPRoute" or "Service".
+                                                            Defaults to "Service"
+                                                            when not specified.
                                                           maxLength: 63
                                                           minLength: 1
                                                           pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
@@ -17870,12 +18208,12 @@ spec:
                                                             the local namespace is
                                                             inferred. \n Note that
                                                             when a namespace is specified,
-                                                            a ReferencePolicy object
+                                                            a ReferenceGrant object
                                                             is required in the referent
                                                             namespace to allow that
                                                             namespace's owner to accept
                                                             the reference. See the
-                                                            ReferencePolicy documentation
+                                                            ReferenceGrant documentation
                                                             for details. \n Support:
                                                             Core"
                                                           maxLength: 63
@@ -17917,8 +18255,78 @@ spec:
                                                         is used. \n Support: Core"
                                                       maxLength: 253
                                                       minLength: 1
-                                                      pattern: ^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                                                       type: string
+                                                    path:
+                                                      description: "Path defines parameters
+                                                        used to modify the path of
+                                                        the incoming request. The
+                                                        modified path is then used
+                                                        to construct the `Location`
+                                                        header. When empty, the request
+                                                        path is used as-is. \n Support:
+                                                        Extended \n <gateway:experimental>"
+                                                      properties:
+                                                        replaceFullPath:
+                                                          description: "ReplaceFullPath
+                                                            specifies the value with
+                                                            which to replace the full
+                                                            path of a request during
+                                                            a rewrite or redirect.
+                                                            \n <gateway:experimental>"
+                                                          maxLength: 1024
+                                                          type: string
+                                                        replacePrefixMatch:
+                                                          description: "ReplacePrefixMatch
+                                                            specifies the value with
+                                                            which to replace the prefix
+                                                            match of a request during
+                                                            a rewrite or redirect.
+                                                            For example, a request
+                                                            to \"/foo/bar\" with a
+                                                            prefix match of \"/foo\"
+                                                            would be modified to \"/bar\".
+                                                            \n Note that this matches
+                                                            the behavior of the PathPrefix
+                                                            match type. This matches
+                                                            full path elements. A
+                                                            path element refers to
+                                                            the list of labels in
+                                                            the path split by the
+                                                            `/` separator. When specified,
+                                                            a trailing `/` is ignored.
+                                                            For example, the paths
+                                                            `/abc`, `/abc/`, and `/abc/def`
+                                                            would all match the prefix
+                                                            `/abc`, but the path `/abcd`
+                                                            would not. \n <gateway:experimental>"
+                                                          maxLength: 1024
+                                                          type: string
+                                                        type:
+                                                          description: "Type defines
+                                                            the type of path modifier.
+                                                            Additional types may be
+                                                            added in a future release
+                                                            of the API. \n Note that
+                                                            values may be added to
+                                                            this enum, implementations
+                                                            must ensure that unknown
+                                                            values will not cause
+                                                            a crash. \n Unknown values
+                                                            here must result in the
+                                                            implementation setting
+                                                            the Attached Condition
+                                                            for the Route to `status:
+                                                            False`, with a Reason
+                                                            of `UnsupportedValue`.
+                                                            \n <gateway:experimental>"
+                                                          enum:
+                                                          - ReplaceFullPath
+                                                          - ReplacePrefixMatch
+                                                          type: string
+                                                      required:
+                                                      - type
+                                                      type: object
                                                     port:
                                                       description: "Port is the port
                                                         to be used in the value of
@@ -17936,7 +18344,16 @@ spec:
                                                         of the `Location` header in
                                                         the response. When empty,
                                                         the scheme of the request
-                                                        is used. \n Support: Extended"
+                                                        is used. \n Support: Extended
+                                                        \n Note that values may be
+                                                        added to this enum, implementations
+                                                        must ensure that unknown values
+                                                        will not cause a crash. \n
+                                                        Unknown values here must result
+                                                        in the implementation setting
+                                                        the Attached Condition for
+                                                        the Route to `status: False`,
+                                                        with a Reason of `UnsupportedValue`."
                                                       enum:
                                                       - http
                                                       - https
@@ -17946,7 +18363,15 @@ spec:
                                                       description: "StatusCode is
                                                         the HTTP status code to be
                                                         used in response. \n Support:
-                                                        Core"
+                                                        Core \n Note that values may
+                                                        be added to this enum, implementations
+                                                        must ensure that unknown values
+                                                        will not cause a crash. \n
+                                                        Unknown values here must result
+                                                        in the implementation setting
+                                                        the Attached Condition for
+                                                        the Route to `status: False`,
+                                                        with a Reason of `UnsupportedValue`."
                                                       enum:
                                                       - 301
                                                       - 302
@@ -17989,13 +18414,104 @@ spec:
                                                     be skipped. Instead, requests
                                                     that would have been processed
                                                     by that filter MUST receive a
-                                                    HTTP error response."
+                                                    HTTP error response. \n Note that
+                                                    values may be added to this enum,
+                                                    implementations must ensure that
+                                                    unknown values will not cause
+                                                    a crash. \n Unknown values here
+                                                    must result in the implementation
+                                                    setting the Attached Condition
+                                                    for the Route to `status: False`,
+                                                    with a Reason of `UnsupportedValue`.
+                                                    \n <gateway:experimental:validation:Enum=RequestHeaderModifier;RequestMirror;RequestRedirect;URLRewrite;ExtensionRef>"
                                                   enum:
                                                   - RequestHeaderModifier
                                                   - RequestMirror
                                                   - RequestRedirect
                                                   - ExtensionRef
                                                   type: string
+                                                urlRewrite:
+                                                  description: "URLRewrite defines
+                                                    a schema for a filter that modifies
+                                                    a request during forwarding. \n
+                                                    Support: Extended \n <gateway:experimental>"
+                                                  properties:
+                                                    hostname:
+                                                      description: "Hostname is the
+                                                        value to be used to replace
+                                                        the Host header value during
+                                                        forwarding. \n Support: Extended
+                                                        \n <gateway:experimental>"
+                                                      maxLength: 253
+                                                      minLength: 1
+                                                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                                      type: string
+                                                    path:
+                                                      description: "Path defines a
+                                                        path rewrite. \n Support:
+                                                        Extended \n <gateway:experimental>"
+                                                      properties:
+                                                        replaceFullPath:
+                                                          description: "ReplaceFullPath
+                                                            specifies the value with
+                                                            which to replace the full
+                                                            path of a request during
+                                                            a rewrite or redirect.
+                                                            \n <gateway:experimental>"
+                                                          maxLength: 1024
+                                                          type: string
+                                                        replacePrefixMatch:
+                                                          description: "ReplacePrefixMatch
+                                                            specifies the value with
+                                                            which to replace the prefix
+                                                            match of a request during
+                                                            a rewrite or redirect.
+                                                            For example, a request
+                                                            to \"/foo/bar\" with a
+                                                            prefix match of \"/foo\"
+                                                            would be modified to \"/bar\".
+                                                            \n Note that this matches
+                                                            the behavior of the PathPrefix
+                                                            match type. This matches
+                                                            full path elements. A
+                                                            path element refers to
+                                                            the list of labels in
+                                                            the path split by the
+                                                            `/` separator. When specified,
+                                                            a trailing `/` is ignored.
+                                                            For example, the paths
+                                                            `/abc`, `/abc/`, and `/abc/def`
+                                                            would all match the prefix
+                                                            `/abc`, but the path `/abcd`
+                                                            would not. \n <gateway:experimental>"
+                                                          maxLength: 1024
+                                                          type: string
+                                                        type:
+                                                          description: "Type defines
+                                                            the type of path modifier.
+                                                            Additional types may be
+                                                            added in a future release
+                                                            of the API. \n Note that
+                                                            values may be added to
+                                                            this enum, implementations
+                                                            must ensure that unknown
+                                                            values will not cause
+                                                            a crash. \n Unknown values
+                                                            here must result in the
+                                                            implementation setting
+                                                            the Attached Condition
+                                                            for the Route to `status:
+                                                            False`, with a Reason
+                                                            of `UnsupportedValue`.
+                                                            \n <gateway:experimental>"
+                                                          enum:
+                                                          - ReplaceFullPath
+                                                          - ReplacePrefixMatch
+                                                          type: string
+                                                      required:
+                                                      - type
+                                                      type: object
+                                                  type: object
                                               required:
                                               - type
                                               type: object
@@ -18014,6 +18530,7 @@ spec:
                                             default: Service
                                             description: Kind is kind of the referent.
                                               For example "HTTPRoute" or "Service".
+                                              Defaults to "Service" when not specified.
                                             maxLength: 63
                                             minLength: 1
                                             pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
@@ -18028,10 +18545,10 @@ spec:
                                               of the backend. When unspecified, the
                                               local namespace is inferred. \n Note
                                               that when a namespace is specified,
-                                              a ReferencePolicy object is required
+                                              a ReferenceGrant object is required
                                               in the referent namespace to allow that
                                               namespace's owner to accept the reference.
-                                              See the ReferencePolicy documentation
+                                              See the ReferenceGrant documentation
                                               for details. \n Support: Core"
                                             maxLength: 63
                                             minLength: 1
@@ -18090,7 +18607,16 @@ spec:
                                         custom filters have no API guarantees across
                                         implementations. \n Specifying a core filter
                                         multiple times has unspecified or custom conformance.
-                                        \n Support: Core"
+                                        \n All filters are expected to be compatible
+                                        with each other except for the URLRewrite
+                                        and RequestRedirect filters, which may not
+                                        be combined. If an implementation can not
+                                        support other combinations of filters, they
+                                        must clearly document that limitation. In
+                                        all cases where incompatible or unsupported
+                                        filters are specified, implementations MUST
+                                        add a warning condition to status. \n Support:
+                                        Core"
                                       items:
                                         description: HTTPRouteFilter defines processing
                                           steps that must be completed during the
@@ -18275,7 +18801,7 @@ spec:
                                                   this backend in the underlying implementation.
                                                   \n If there is a cross-namespace
                                                   reference to an *existing* object
-                                                  that is not allowed by a ReferencePolicy,
+                                                  that is not allowed by a ReferenceGrant,
                                                   the controller must ensure the \"ResolvedRefs\"
                                                   \ condition on the Route is set
                                                   to `status: False`, with the \"RefNotPermitted\"
@@ -18285,7 +18811,7 @@ spec:
                                                   of the `ResolvedRefs` Condition
                                                   should be used to provide more detail
                                                   about the problem. \n Support: Extended
-                                                  for Kubernetes Service Support:
+                                                  for Kubernetes Service \n Support:
                                                   Custom for any other resource"
                                                 properties:
                                                   group:
@@ -18302,7 +18828,8 @@ spec:
                                                     default: Service
                                                     description: Kind is kind of the
                                                       referent. For example "HTTPRoute"
-                                                      or "Service".
+                                                      or "Service". Defaults to "Service"
+                                                      when not specified.
                                                     maxLength: 63
                                                     minLength: 1
                                                     pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
@@ -18319,11 +18846,11 @@ spec:
                                                       unspecified, the local namespace
                                                       is inferred. \n Note that when
                                                       a namespace is specified, a
-                                                      ReferencePolicy object is required
+                                                      ReferenceGrant object is required
                                                       in the referent namespace to
                                                       allow that namespace's owner
                                                       to accept the reference. See
-                                                      the ReferencePolicy documentation
+                                                      the ReferenceGrant documentation
                                                       for details. \n Support: Core"
                                                     maxLength: 63
                                                     minLength: 1
@@ -18362,8 +18889,68 @@ spec:
                                                   \n Support: Core"
                                                 maxLength: 253
                                                 minLength: 1
-                                                pattern: ^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                                                 type: string
+                                              path:
+                                                description: "Path defines parameters
+                                                  used to modify the path of the incoming
+                                                  request. The modified path is then
+                                                  used to construct the `Location`
+                                                  header. When empty, the request
+                                                  path is used as-is. \n Support:
+                                                  Extended \n <gateway:experimental>"
+                                                properties:
+                                                  replaceFullPath:
+                                                    description: "ReplaceFullPath
+                                                      specifies the value with which
+                                                      to replace the full path of
+                                                      a request during a rewrite or
+                                                      redirect. \n <gateway:experimental>"
+                                                    maxLength: 1024
+                                                    type: string
+                                                  replacePrefixMatch:
+                                                    description: "ReplacePrefixMatch
+                                                      specifies the value with which
+                                                      to replace the prefix match
+                                                      of a request during a rewrite
+                                                      or redirect. For example, a
+                                                      request to \"/foo/bar\" with
+                                                      a prefix match of \"/foo\" would
+                                                      be modified to \"/bar\". \n
+                                                      Note that this matches the behavior
+                                                      of the PathPrefix match type.
+                                                      This matches full path elements.
+                                                      A path element refers to the
+                                                      list of labels in the path split
+                                                      by the `/` separator. When specified,
+                                                      a trailing `/` is ignored. For
+                                                      example, the paths `/abc`, `/abc/`,
+                                                      and `/abc/def` would all match
+                                                      the prefix `/abc`, but the path
+                                                      `/abcd` would not. \n <gateway:experimental>"
+                                                    maxLength: 1024
+                                                    type: string
+                                                  type:
+                                                    description: "Type defines the
+                                                      type of path modifier. Additional
+                                                      types may be added in a future
+                                                      release of the API. \n Note
+                                                      that values may be added to
+                                                      this enum, implementations must
+                                                      ensure that unknown values will
+                                                      not cause a crash. \n Unknown
+                                                      values here must result in the
+                                                      implementation setting the Attached
+                                                      Condition for the Route to `status:
+                                                      False`, with a Reason of `UnsupportedValue`.
+                                                      \n <gateway:experimental>"
+                                                    enum:
+                                                    - ReplaceFullPath
+                                                    - ReplacePrefixMatch
+                                                    type: string
+                                                required:
+                                                - type
+                                                type: object
                                               port:
                                                 description: "Port is the port to
                                                   be used in the value of the `Location`
@@ -18379,7 +18966,15 @@ spec:
                                                   to be used in the value of the `Location`
                                                   header in the response. When empty,
                                                   the scheme of the request is used.
-                                                  \n Support: Extended"
+                                                  \n Support: Extended \n Note that
+                                                  values may be added to this enum,
+                                                  implementations must ensure that
+                                                  unknown values will not cause a
+                                                  crash. \n Unknown values here must
+                                                  result in the implementation setting
+                                                  the Attached Condition for the Route
+                                                  to `status: False`, with a Reason
+                                                  of `UnsupportedValue`."
                                                 enum:
                                                 - http
                                                 - https
@@ -18388,7 +18983,14 @@ spec:
                                                 default: 302
                                                 description: "StatusCode is the HTTP
                                                   status code to be used in response.
-                                                  \n Support: Core"
+                                                  \n Support: Core \n Note that values
+                                                  may be added to this enum, implementations
+                                                  must ensure that unknown values
+                                                  will not cause a crash. \n Unknown
+                                                  values here must result in the implementation
+                                                  setting the Attached Condition for
+                                                  the Route to `status: False`, with
+                                                  a Reason of `UnsupportedValue`."
                                                 enum:
                                                 - 301
                                                 - 302
@@ -18426,13 +19028,92 @@ spec:
                                               filter MUST NOT be skipped. Instead,
                                               requests that would have been processed
                                               by that filter MUST receive a HTTP error
-                                              response."
+                                              response. \n Note that values may be
+                                              added to this enum, implementations
+                                              must ensure that unknown values will
+                                              not cause a crash. \n Unknown values
+                                              here must result in the implementation
+                                              setting the Attached Condition for the
+                                              Route to `status: False`, with a Reason
+                                              of `UnsupportedValue`. \n <gateway:experimental:validation:Enum=RequestHeaderModifier;RequestMirror;RequestRedirect;URLRewrite;ExtensionRef>"
                                             enum:
                                             - RequestHeaderModifier
                                             - RequestMirror
                                             - RequestRedirect
                                             - ExtensionRef
                                             type: string
+                                          urlRewrite:
+                                            description: "URLRewrite defines a schema
+                                              for a filter that modifies a request
+                                              during forwarding. \n Support: Extended
+                                              \n <gateway:experimental>"
+                                            properties:
+                                              hostname:
+                                                description: "Hostname is the value
+                                                  to be used to replace the Host header
+                                                  value during forwarding. \n Support:
+                                                  Extended \n <gateway:experimental>"
+                                                maxLength: 253
+                                                minLength: 1
+                                                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                                type: string
+                                              path:
+                                                description: "Path defines a path
+                                                  rewrite. \n Support: Extended \n
+                                                  <gateway:experimental>"
+                                                properties:
+                                                  replaceFullPath:
+                                                    description: "ReplaceFullPath
+                                                      specifies the value with which
+                                                      to replace the full path of
+                                                      a request during a rewrite or
+                                                      redirect. \n <gateway:experimental>"
+                                                    maxLength: 1024
+                                                    type: string
+                                                  replacePrefixMatch:
+                                                    description: "ReplacePrefixMatch
+                                                      specifies the value with which
+                                                      to replace the prefix match
+                                                      of a request during a rewrite
+                                                      or redirect. For example, a
+                                                      request to \"/foo/bar\" with
+                                                      a prefix match of \"/foo\" would
+                                                      be modified to \"/bar\". \n
+                                                      Note that this matches the behavior
+                                                      of the PathPrefix match type.
+                                                      This matches full path elements.
+                                                      A path element refers to the
+                                                      list of labels in the path split
+                                                      by the `/` separator. When specified,
+                                                      a trailing `/` is ignored. For
+                                                      example, the paths `/abc`, `/abc/`,
+                                                      and `/abc/def` would all match
+                                                      the prefix `/abc`, but the path
+                                                      `/abcd` would not. \n <gateway:experimental>"
+                                                    maxLength: 1024
+                                                    type: string
+                                                  type:
+                                                    description: "Type defines the
+                                                      type of path modifier. Additional
+                                                      types may be added in a future
+                                                      release of the API. \n Note
+                                                      that values may be added to
+                                                      this enum, implementations must
+                                                      ensure that unknown values will
+                                                      not cause a crash. \n Unknown
+                                                      values here must result in the
+                                                      implementation setting the Attached
+                                                      Condition for the Route to `status:
+                                                      False`, with a Reason of `UnsupportedValue`.
+                                                      \n <gateway:experimental>"
+                                                    enum:
+                                                    - ReplaceFullPath
+                                                    - ReplacePrefixMatch
+                                                    type: string
+                                                required:
+                                                - type
+                                                type: object
+                                            type: object
                                         required:
                                         - type
                                         type: object
@@ -18465,21 +19146,23 @@ spec:
                                         configuration generated from HTTPRoutes MUST
                                         prioritize rules based on the following criteria,
                                         continuing on ties. Precedence must be given
-                                        to the the Rule with the largest number of:
-                                        \n * Characters in a matching non-wildcard
-                                        hostname. * Characters in a matching hostname.
-                                        * Characters in a matching path. * Header
-                                        matches. * Query param matches. \n If ties
-                                        still exist across multiple Routes, matching
-                                        precedence MUST be determined in order of
-                                        the following criteria, continuing on ties:
-                                        \n * The oldest Route based on creation timestamp.
-                                        * The Route appearing first in alphabetical
-                                        order by \"<namespace>/<name>\". \n If ties
-                                        still exist within the Route that has been
-                                        given precedence, matching precedence MUST
-                                        be granted to the first matching rule meeting
-                                        the above criteria."
+                                        to the Rule with the largest number of: \n
+                                        * Characters in a matching non-wildcard hostname.
+                                        * Characters in a matching hostname. * Characters
+                                        in a matching path. * Header matches. * Query
+                                        param matches. \n If ties still exist across
+                                        multiple Routes, matching precedence MUST
+                                        be determined in order of the following criteria,
+                                        continuing on ties: \n * The oldest Route
+                                        based on creation timestamp. * The Route appearing
+                                        first in alphabetical order by \"{namespace}/{name}\".
+                                        \n If ties still exist within the Route that
+                                        has been given precedence, matching precedence
+                                        MUST be granted to the first matching rule
+                                        meeting the above criteria. \n When no rules
+                                        matching a request have been successfully
+                                        attached to the parent a request is coming
+                                        from, a HTTP 404 status code MUST be returned."
                                       items:
                                         description: "HTTPRouteMatch defines the predicate
                                           used to match requests to a given action.
@@ -18617,10 +19300,17 @@ spec:
                                                 HTTP query parameters.
                                               properties:
                                                 name:
-                                                  description: Name is the name of
+                                                  description: "Name is the name of
                                                     the HTTP query param to be matched.
                                                     This must be an exact string match.
                                                     (See https://tools.ietf.org/html/rfc7230#section-2.7.3).
+                                                    \n If multiple entries specify
+                                                    equivalent query param names,
+                                                    only the first entry with an equivalent
+                                                    name MUST be considered for a
+                                                    match. Subsequent entries with
+                                                    an equivalent query param name
+                                                    MUST be ignored."
                                                   maxLength: 256
                                                   minLength: 1
                                                   type: string
@@ -18748,6 +19438,59 @@ spec:
                 properties:
                   imageDigest:
                     type: string
+                type: object
+              rollout:
+                properties:
+                  canary:
+                    description: CanaryStatus status fields that only pertain to the
+                      canary release
+                    properties:
+                      revision:
+                        properties:
+                          imageDigest:
+                            type: string
+                        type: object
+                      serving:
+                        properties:
+                          buildDuration:
+                            type: string
+                          lastSuccessfulResourceRef:
+                            type: string
+                          message:
+                            type: string
+                          reason:
+                            type: string
+                          resourceHash:
+                            type: string
+                          resourceRef:
+                            type: string
+                          service:
+                            type: string
+                          state:
+                            type: string
+                        type: object
+                      status:
+                        properties:
+                          currentStepIndex:
+                            format: int32
+                            type: integer
+                          currentStepState:
+                            type: string
+                          lastUpdateTime:
+                            format: date-time
+                            type: string
+                          message:
+                            type: string
+                          phase:
+                            description: CanaryPhase are a set of phases that this
+                              Canary release
+                            type: string
+                        required:
+                        - currentStepIndex
+                        - currentStepState
+                        - phase
+                        type: object
+                    type: object
                 type: object
               route:
                 properties:

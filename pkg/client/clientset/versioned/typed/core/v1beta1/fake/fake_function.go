@@ -22,7 +22,6 @@ import (
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -36,9 +35,9 @@ type FakeFunctions struct {
 	ns   string
 }
 
-var functionsResource = schema.GroupVersionResource{Group: "core.openfunction.io", Version: "v1beta1", Resource: "functions"}
+var functionsResource = v1beta1.SchemeGroupVersion.WithResource("functions")
 
-var functionsKind = schema.GroupVersionKind{Group: "core.openfunction.io", Version: "v1beta1", Kind: "Function"}
+var functionsKind = v1beta1.SchemeGroupVersion.WithKind("Function")
 
 // Get takes name of the function, and returns the corresponding function object, and an error if there is any.
 func (c *FakeFunctions) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.Function, err error) {
@@ -117,7 +116,7 @@ func (c *FakeFunctions) UpdateStatus(ctx context.Context, function *v1beta1.Func
 // Delete takes name of the function and deletes it. Returns an error if one occurs.
 func (c *FakeFunctions) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(functionsResource, c.ns, name), &v1beta1.Function{})
+		Invokes(testing.NewDeleteActionWithOptions(functionsResource, c.ns, name, opts), &v1beta1.Function{})
 
 	return err
 }

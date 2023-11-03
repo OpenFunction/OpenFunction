@@ -22,7 +22,6 @@ import (
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -36,9 +35,9 @@ type FakeBuilders struct {
 	ns   string
 }
 
-var buildersResource = schema.GroupVersionResource{Group: "core.openfunction.io", Version: "v1beta2", Resource: "builders"}
+var buildersResource = v1beta2.SchemeGroupVersion.WithResource("builders")
 
-var buildersKind = schema.GroupVersionKind{Group: "core.openfunction.io", Version: "v1beta2", Kind: "Builder"}
+var buildersKind = v1beta2.SchemeGroupVersion.WithKind("Builder")
 
 // Get takes name of the builder, and returns the corresponding builder object, and an error if there is any.
 func (c *FakeBuilders) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta2.Builder, err error) {
@@ -117,7 +116,7 @@ func (c *FakeBuilders) UpdateStatus(ctx context.Context, builder *v1beta2.Builde
 // Delete takes name of the builder and deletes it. Returns an error if one occurs.
 func (c *FakeBuilders) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(buildersResource, c.ns, name), &v1beta2.Builder{})
+		Invokes(testing.NewDeleteActionWithOptions(buildersResource, c.ns, name, opts), &v1beta2.Builder{})
 
 	return err
 }

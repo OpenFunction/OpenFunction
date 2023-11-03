@@ -16,18 +16,18 @@ limitations under the License.
 
 package gateway
 
-import "sigs.k8s.io/gateway-api/apis/v1alpha2"
+import "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-func ConvertListenersListToMapping(listeners []v1alpha2.Listener) map[v1alpha2.SectionName]v1alpha2.Listener {
-	mapping := make(map[v1alpha2.SectionName]v1alpha2.Listener)
+func ConvertListenersListToMapping(listeners []v1beta1.Listener) map[v1beta1.SectionName]v1beta1.Listener {
+	mapping := make(map[v1beta1.SectionName]v1beta1.Listener)
 	for _, listener := range listeners {
 		mapping[listener.Name] = listener
 	}
 	return mapping
 }
 
-func ConvertListenersMappingToList(mapping map[v1alpha2.SectionName]v1alpha2.Listener) []v1alpha2.Listener {
-	var listeners []v1alpha2.Listener
+func ConvertListenersMappingToList(mapping map[v1beta1.SectionName]v1beta1.Listener) []v1beta1.Listener {
+	var listeners []v1beta1.Listener
 	for _, listener := range mapping {
 		listeners = append(listeners, listener)
 	}

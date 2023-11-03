@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta2
 
 import (
+	"fmt"
 	//"fmt"
 	//"reflect"
 	"testing"
@@ -26,6 +27,7 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilpointer "k8s.io/utils/pointer"
 )
 
 func Test_Validate(t *testing.T) {
@@ -710,12 +712,125 @@ func Test_Validate(t *testing.T) {
 				},
 			},
 			wantErr: true,
+		}, {
+			name: "function.spec.rolloutStrategy.canary.steps",
+			r: Function{
+				Spec: FunctionSpec{
+					Image: "test",
+					Serving: &ServingImpl{
+						Triggers: &Triggers{Http: &HttpTrigger{Engine: (*Engine)(utilpointer.String(string(HttpEngineKnative)))}},
+					},
+					RolloutStrategy: &RolloutStrategy{
+						Canary: &CanaryStrategy{
+							Steps: []CanaryStep{
+								{
+									Weight: utilpointer.Int32(10),
+									Pause: Pause{
+										Duration: utilpointer.Int32(10000),
+									},
+								},
+								{
+									Weight: utilpointer.Int32(20),
+									Pause: Pause{
+										Duration: utilpointer.Int32(10000),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		}, {
+			name: "function.spec.rolloutStrategy.canary.steps.weight",
+			r: Function{
+				Spec: FunctionSpec{
+					Image: "test",
+					Serving: &ServingImpl{
+						Triggers: &Triggers{Http: &HttpTrigger{Engine: (*Engine)(utilpointer.String(string(HttpEngineKnative)))}},
+					},
+					RolloutStrategy: &RolloutStrategy{Canary: &CanaryStrategy{
+						Steps: []CanaryStep{
+							{
+								Weight: utilpointer.Int32(10),
+								Pause: Pause{
+									Duration: utilpointer.Int32(10000),
+								},
+							},
+							{
+								Weight: utilpointer.Int32(20),
+								Pause: Pause{
+									Duration: utilpointer.Int32(10000),
+								},
+							},
+						},
+					}},
+				},
+			},
+			wantErr: false,
+		}, {
+			name: "function.spec.rolloutStrategy.canary.steps.weight-error",
+			r: Function{
+				Spec: FunctionSpec{
+					Image: "test",
+					Serving: &ServingImpl{
+						Triggers: &Triggers{Http: &HttpTrigger{Engine: (*Engine)(utilpointer.String(string(HttpEngineKnative)))}},
+					},
+					RolloutStrategy: &RolloutStrategy{Canary: &CanaryStrategy{
+						Steps: []CanaryStep{
+							{
+								Weight: utilpointer.Int32(20),
+								Pause: Pause{
+									Duration: utilpointer.Int32(10000),
+								},
+							},
+							{
+								Weight: utilpointer.Int32(10),
+								Pause: Pause{
+									Duration: utilpointer.Int32(10000),
+								},
+							},
+						},
+					}},
+				},
+			},
+			wantErr: true,
+		}, {
+			name: "function.spec.rolloutStrategy.canary.steps.pause",
+			r: Function{
+				Spec: FunctionSpec{
+					Image: "test",
+					Serving: &ServingImpl{
+						Triggers: &Triggers{Http: &HttpTrigger{Engine: (*Engine)(utilpointer.String(string(HttpEngineKnative)))}},
+					},
+					RolloutStrategy: &RolloutStrategy{
+						Canary: &CanaryStrategy{
+							Steps: []CanaryStep{
+								{
+									Weight: utilpointer.Int32(10),
+									Pause: Pause{
+										Duration: utilpointer.Int32(10000),
+									},
+								},
+								{
+									Weight: utilpointer.Int32(20),
+									Pause: Pause{
+										Duration: utilpointer.Int32(10000),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErr: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.r.Validate()
+			fmt.Println(got)
 			if (got != nil) != tt.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", got, tt.wantErr)
 				return
