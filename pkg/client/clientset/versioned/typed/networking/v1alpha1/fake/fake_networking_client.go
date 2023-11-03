@@ -20,10 +20,16 @@ package fake
 import (
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
+
+	v1alpha1 "github.com/openfunction/pkg/client/clientset/versioned/typed/networking/v1alpha1"
 )
 
 type FakeNetworkingV1alpha1 struct {
 	*testing.Fake
+}
+
+func (c *FakeNetworkingV1alpha1) Gateways(namespace string) v1alpha1.GatewayInterface {
+	return &FakeGateways{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

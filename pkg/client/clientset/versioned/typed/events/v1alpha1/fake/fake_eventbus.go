@@ -22,7 +22,6 @@ import (
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -36,9 +35,9 @@ type FakeEventBuses struct {
 	ns   string
 }
 
-var eventbusesResource = schema.GroupVersionResource{Group: "events.openfunction.io", Version: "v1alpha1", Resource: "eventbuses"}
+var eventbusesResource = v1alpha1.SchemeGroupVersion.WithResource("eventbuses")
 
-var eventbusesKind = schema.GroupVersionKind{Group: "events.openfunction.io", Version: "v1alpha1", Kind: "EventBus"}
+var eventbusesKind = v1alpha1.SchemeGroupVersion.WithKind("EventBus")
 
 // Get takes name of the eventBus, and returns the corresponding eventBus object, and an error if there is any.
 func (c *FakeEventBuses) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.EventBus, err error) {
@@ -105,7 +104,7 @@ func (c *FakeEventBuses) Update(ctx context.Context, eventBus *v1alpha1.EventBus
 // Delete takes name of the eventBus and deletes it. Returns an error if one occurs.
 func (c *FakeEventBuses) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(eventbusesResource, c.ns, name), &v1alpha1.EventBus{})
+		Invokes(testing.NewDeleteActionWithOptions(eventbusesResource, c.ns, name, opts), &v1alpha1.EventBus{})
 
 	return err
 }

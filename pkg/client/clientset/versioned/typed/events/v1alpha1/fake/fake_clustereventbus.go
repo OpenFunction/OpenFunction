@@ -22,7 +22,6 @@ import (
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -36,9 +35,9 @@ type FakeClusterEventBuses struct {
 	ns   string
 }
 
-var clustereventbusesResource = schema.GroupVersionResource{Group: "events.openfunction.io", Version: "v1alpha1", Resource: "clustereventbuses"}
+var clustereventbusesResource = v1alpha1.SchemeGroupVersion.WithResource("clustereventbuses")
 
-var clustereventbusesKind = schema.GroupVersionKind{Group: "events.openfunction.io", Version: "v1alpha1", Kind: "ClusterEventBus"}
+var clustereventbusesKind = v1alpha1.SchemeGroupVersion.WithKind("ClusterEventBus")
 
 // Get takes name of the clusterEventBus, and returns the corresponding clusterEventBus object, and an error if there is any.
 func (c *FakeClusterEventBuses) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ClusterEventBus, err error) {
@@ -105,7 +104,7 @@ func (c *FakeClusterEventBuses) Update(ctx context.Context, clusterEventBus *v1a
 // Delete takes name of the clusterEventBus and deletes it. Returns an error if one occurs.
 func (c *FakeClusterEventBuses) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(clustereventbusesResource, c.ns, name), &v1alpha1.ClusterEventBus{})
+		Invokes(testing.NewDeleteActionWithOptions(clustereventbusesResource, c.ns, name, opts), &v1alpha1.ClusterEventBus{})
 
 	return err
 }

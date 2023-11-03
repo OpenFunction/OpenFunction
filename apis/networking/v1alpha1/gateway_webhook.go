@@ -56,7 +56,7 @@ func (r *Gateway) Default() {
 		r.Spec.GatewayDef.Name = r.GetName()
 	}
 
-	needInjectDefaultListeners := true
+	needInjectDefaultListeners := len(r.Spec.GatewaySpec.Listeners) == 0
 	for index, listener := range r.Spec.GatewaySpec.Listeners {
 		if listener.Name == DefaultHttpListenerName {
 			needInjectDefaultListeners = false
@@ -71,8 +71,11 @@ func (r *Gateway) Default() {
 				},
 			}
 		} else {
-			hostname := k8sgatewayapiv1beta1.Hostname(fmt.Sprintf("*.%s", r.Spec.Domain))
-			listener.Hostname = &hostname
+			if listener.Hostname == nil {
+				hostname := k8sgatewayapiv1beta1.Hostname(fmt.Sprintf("*.%s", r.Spec.Domain))
+				listener.Hostname = &hostname
+			}
+
 		}
 		r.Spec.GatewaySpec.Listeners[index] = listener
 	}

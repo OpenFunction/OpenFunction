@@ -17,8 +17,9 @@ limitations under the License.
 package constants
 
 import (
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
 	"time"
+
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 const (
@@ -45,7 +46,7 @@ const (
 	DefaultFunctionServicePort     v1beta1.PortNumber   = 80
 	DefaultFuncPort                v1beta1.PortNumber   = 8080
 	DefaultInterceptorPort         v1beta1.PortNumber   = 8080
-	DefaultGatewayChangeCleanTime                       = 5 * time.Second
+	DefaultGatewayChangeCleanTime                       = 10 * time.Second
 
 	WasmEdgeWorkloadRuntimeName = "wasmedge"
 	WasmEdgeRuntimeClassName    = "openfunction-crun"

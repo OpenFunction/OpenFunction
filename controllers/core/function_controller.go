@@ -150,7 +150,6 @@ func (r *FunctionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if err = r.createOrUpdateHTTPRoute(&fn); err != nil {
 		return ctrl.Result{}, err
 	}
-
 	ready, err := r.httpRouteIsReady(&fn)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -163,7 +162,6 @@ func (r *FunctionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		log.Error(err, "Failed to clean Serving")
 		return ctrl.Result{}, err
 	}
-
 	if recheckTime != nil {
 		return ctrl.Result{RequeueAfter: time.Until(*recheckTime)}, nil
 	}
@@ -610,6 +608,9 @@ func (r *FunctionReconciler) createServing(fn *openfunction.Function) error {
 		log.Error(err, "Failed to SetOwnerReferences for serving")
 		return err
 	}
+	if fn.Status.Build != nil && fn.Status.Build.State == openfunction.Skipped {
+		serving.Spec.Image = fn.Spec.Image
+	}
 
 	if err := r.Create(r.ctx, serving); err != nil {
 		log.Error(err, "Failed to create serving")
@@ -750,6 +751,12 @@ func (r *FunctionReconciler) updateFuncWithServingStatus(fn *openfunction.Functi
 
 // Clean up redundant servings caused by the `createOrUpdateBuilder` function failed.
 func (r *FunctionReconciler) cleanServing(fn *openfunction.Function) error {
+	if fn.Status.Serving == nil ||
+		fn.Status.Serving.State != openfunction.Running ||
+		fn.Status.Serving.Service == "" {
+		return nil
+	}
+
 	log := r.Log.WithName("CleanServing").
 		WithValues("Function", fmt.Sprintf("%s/%s", fn.Namespace, fn.Name))
 
@@ -765,6 +772,18 @@ func (r *FunctionReconciler) cleanServing(fn *openfunction.Function) error {
 		stableName = fn.Status.RolloutStatus.Canary.Serving.ResourceRef
 		oldStableName = fn.Status.Serving.LastSuccessfulResourceRef
 	}
+
+	realHttpRoute := &k8sgatewayapiv1beta1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fn.Name,
+			Namespace: fn.Namespace,
+		},
+	}
+
+	if err := r.Get(r.ctx, client.ObjectKeyFromObject(realHttpRoute), realHttpRoute); err != nil {
+		return err
+	}
+
 	servings := &openfunction.ServingList{}
 	if err := r.List(r.ctx, servings, client.InNamespace(fn.Namespace), client.MatchingLabels{constants.FunctionLabel: fn.Name}); err != nil {
 		return err
@@ -978,16 +997,23 @@ func (r *FunctionReconciler) createOrUpdateHTTPRoute(fn *openfunction.Function) 
 
 	}
 
+	if !r.HttpRouteHasChange(fn, stableHost, host,
+		stableServiceName, serviceName, ns, weight, port, gateway) {
+		log.Info("http Route not change", "fn", fn.Name, "namespace", fn.Namespace)
+		return nil
+	}
+
 	httpRoute := &k8sgatewayapiv1beta1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{Namespace: fn.Namespace, Name: fn.Name},
 	}
+
 	op, err := controllerutil.CreateOrUpdate(r.ctx, r.Client, httpRoute, r.mutateHTTPRoute(fn, stableHost, host,
 		stableServiceName, serviceName, ns, weight, port, gateway, httpRoute))
 	if err != nil {
 		log.Error(err, "Failed to CreateOrUpdate HTTPRoute")
 		return err
 	}
-	log.V(1).Info(fmt.Sprintf("HTTPRoute %s", op))
+	log.V(1).Info(fmt.Sprintf("HTTPRoute %s", op), "name", fn.Name, "namespace", fn.Namespace)
 
 	if err := r.updateFuncWithHTTPRouteStatus(fn, gateway, httpRoute); err != nil {
 		return err
@@ -1001,7 +1027,7 @@ func (r *FunctionReconciler) createOrUpdateHTTPRoute(fn *openfunction.Function) 
 		log.Error(err, "Failed to CreateOrUpdate service")
 		return err
 	}
-	log.V(1).Info(fmt.Sprintf("service %s", op))
+	log.V(1).Info(fmt.Sprintf("service %s", op), "name", fn.Name, "namespace", fn.Namespace)
 
 	return nil
 
@@ -1610,7 +1636,40 @@ func (r *FunctionReconciler) httpRouteIsReady(fn *openfunction.Function) (bool, 
 				log.Info("httpRoute status is not ready", "name", fn.Name, "parent", parent.ParentRef.Name, "type", condition.Type)
 				return false, nil
 			}
+
+			expectedTime := metav1.Now().Add(-constants.DefaultGatewayChangeCleanTime)
+			if condition.LastTransitionTime.Time.After(expectedTime) {
+				log.Info("httpRoute update time is not ready", "name", fn.Name, "parent", parent.ParentRef.Name, "type", condition.Type)
+				return false, nil
+			}
 		}
 	}
 	return true, nil
+}
+func (r *FunctionReconciler) HttpRouteHasChange(fn *openfunction.Function,
+	stableHost, host, stableServiceName, serviceName, ns string, weight *int32, port k8sgatewayapiv1beta1.PortNumber,
+	gateway *networkingv1alpha1.Gateway) bool {
+
+	httpRoute := &k8sgatewayapiv1beta1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{Namespace: fn.Namespace, Name: fn.Name},
+	}
+
+	err := r.mutateHTTPRoute(fn, stableHost, host,
+		stableServiceName, serviceName, ns, weight, port, gateway, httpRoute)()
+	if err != nil {
+		return true
+	}
+	realHttpRoute := &k8sgatewayapiv1beta1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fn.Name,
+			Namespace: fn.Namespace,
+		},
+	}
+
+	if err := r.Get(r.ctx, client.ObjectKeyFromObject(realHttpRoute), realHttpRoute); err != nil {
+		return true
+	}
+
+	return util.Hash(realHttpRoute.Spec) != util.Hash(httpRoute.Spec)
+
 }
