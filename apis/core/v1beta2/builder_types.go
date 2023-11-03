@@ -19,8 +19,6 @@ package v1beta2
 import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	shipwrightv1alpha1 "github.com/shipwright-io/build/pkg/apis/build/v1alpha1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -42,21 +40,36 @@ type Strategy struct {
 	Kind *string `json:"kind,omitempty"`
 }
 
-// The value type contains the properties for a value, this allows for an
+type ObjectKeyRef struct {
+
+	// Name of the object
+	// +required
+	Name string `json:"name"`
+
+	// Key inside the object
+	// +required
+	Key string `json:"key"`
+
+	// An optional format to add pre- or suffix to the object value. For example 'KEY=${SECRET_VALUE}' or 'KEY=${CONFIGMAP_VALUE}' depending on the context.
+	// +optional
+	Format *string `json:"format,omitempty"`
+}
+
+// SingleValue is the value type contains the properties for a value, this allows for an
 // easy extension in the future to support more kinds
 type SingleValue struct {
 
 	// The value of the parameter
 	// +optional
-	Value *string `json:"value"`
+	Value *string `json:"value,omitempty"`
 
 	// The ConfigMap value of the parameter
 	// +optional
-	ConfigMapValue *shipwrightv1alpha1.ObjectKeyRef `json:"configMapValue,omitempty"`
+	ConfigMapValue *ObjectKeyRef `json:"configMapValue,omitempty"`
 
 	// The secret value of the parameter
 	// +optional
-	SecretValue *shipwrightv1alpha1.ObjectKeyRef `json:"secretValue,omitempty"`
+	SecretValue *ObjectKeyRef `json:"secretValue,omitempty"`
 }
 
 // ParamValue is a key/value that populates a strategy parameter

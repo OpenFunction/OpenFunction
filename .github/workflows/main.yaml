@@ -156,7 +156,8 @@ jobs:
           for i in {1..600}
           do
             status=`kubectl get kafkas.kafka.strimzi.io kafka-server -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'`
-            if [ $status == "True" ]; then
+            echo "kafka staus" is "$status"
+            if [ "$status" = "True" ]; then
               echo "The Kafka is ready!"
               break
             else
