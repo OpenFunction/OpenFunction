@@ -29,6 +29,7 @@ import (
 const (
 	Knative Runtime = "knative"
 	Async   Runtime = "async"
+	Elastic Runtime = "elastic"
 
 	DaprBindings = "bindings"
 	DaprPubsub   = "pubsub"
