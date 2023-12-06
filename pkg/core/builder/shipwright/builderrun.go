@@ -263,9 +263,15 @@ func (r *builderRun) Cancel(builder *openfunction.Builder) error {
 	log := r.log.WithName("Cancel").
 		WithValues("Builder", fmt.Sprintf("%s/%s", builder.Namespace, builder.Name))
 
+	name := getName(builder, shipwrightBuildRunName)
+	if name == "" {
+		log.Info("buildrun not created")
+		return nil
+	}
+
 	shipwrightBuildRun := &shipwrightv1alpha1.BuildRun{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      getName(builder, shipwrightBuildRunName),
+			Name:      name,
 			Namespace: builder.Namespace,
 		},
 	}
@@ -273,6 +279,9 @@ func (r *builderRun) Cancel(builder *openfunction.Builder) error {
 	if err := r.Get(r.ctx, client.ObjectKeyFromObject(shipwrightBuildRun), shipwrightBuildRun); util.IgnoreNotFound(err) != nil {
 		log.Error(err, "Failed to get BuildRun", "BuildRun", shipwrightBuildRun.Name)
 		return util.IgnoreNotFound(err)
+	} else if util.IsNotFound(err) {
+		log.Info("buildrun not found")
+		return nil
 	}
 
 	if shipwrightBuildRun.Spec.State != shipwrightv1alpha1.BuildRunRequestedStatePtr(shipwrightv1alpha1.BuildRunStateCancel) {
@@ -379,6 +388,24 @@ func (r *builderRun) createShipwrightBuild(builder *openfunction.Builder) *shipw
 	return shipwrightBuild
 }
 
+func objectKeyRefConvert(ref *openfunction.ObjectKeyRef) *shipwrightv1alpha1.ObjectKeyRef {
+	if ref == nil {
+		return nil
+	}
+
+	ret := &shipwrightv1alpha1.ObjectKeyRef{
+		Name: ref.Name,
+		Key:  ref.Key,
+	}
+
+	if ref.Format != nil {
+		format := *ref.Format
+		ret.Format = &format
+	}
+
+	return ret
+}
+
 func appendParams(shipwrightBuild *shipwrightv1alpha1.Build, b *openfunction.Builder) {
 	for _, p := range b.Spec.Shipwright.Params {
 		if p == nil {
@@ -393,16 +420,16 @@ func appendParams(shipwrightBuild *shipwrightv1alpha1.Build, b *openfunction.Bui
 		if p.SingleValue != nil {
 			param.SingleValue = &shipwrightv1alpha1.SingleValue{
 				Value:          p.Value,
-				ConfigMapValue: p.ConfigMapValue,
-				SecretValue:    p.SecretValue,
+				ConfigMapValue: objectKeyRefConvert(p.ConfigMapValue),
+				SecretValue:    objectKeyRefConvert(p.SecretValue),
 			}
 		}
 
 		for _, v := range p.Values {
 			param.Values = append(param.Values, shipwrightv1alpha1.SingleValue{
 				Value:          v.Value,
-				ConfigMapValue: v.ConfigMapValue,
-				SecretValue:    v.SecretValue,
+				ConfigMapValue: objectKeyRefConvert(v.ConfigMapValue),
+				SecretValue:    objectKeyRefConvert(v.SecretValue),
 			})
 		}
 

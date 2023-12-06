@@ -137,28 +137,29 @@ func (src *Function) convertBuildTo(dst *v1beta2.Function) error {
 		}
 	}
 
-	if src.Spec.Build.Shipwright != nil ||
-		(src.Spec.Build.Params != nil && len(src.Spec.Build.Params) > 0) {
-		dst.Spec.Build.Shipwright = &v1beta2.ShipwrightEngine{}
+	dst.Spec.Build.Shipwright = &v1beta2.ShipwrightEngine{}
+	if src.Spec.Build.Shipwright != nil {
+		dst.Spec.Build.Shipwright.Timeout = src.Spec.Build.Shipwright.Timeout
+
 		if src.Spec.Build.Shipwright.Strategy != nil {
 			dst.Spec.Build.Shipwright.Strategy = &v1beta2.Strategy{}
 			dst.Spec.Build.Shipwright.Strategy.Name = src.Spec.Build.Shipwright.Strategy.Name
 			dst.Spec.Build.Shipwright.Strategy.Kind = src.Spec.Build.Shipwright.Strategy.Kind
 		}
-		dst.Spec.Build.Shipwright.Timeout = src.Spec.Build.Shipwright.Timeout
+	}
 
-		if src.Spec.Build.Params != nil {
-			for k, v := range src.Spec.Build.Params {
-				value := v
-				dst.Spec.Build.Shipwright.Params = append(dst.Spec.Build.Shipwright.Params, &v1beta2.ParamValue{
-					SingleValue: &v1beta2.SingleValue{
-						Value: &value,
-					},
-					Name: k,
-				})
-			}
+	if src.Spec.Build.Params != nil && len(src.Spec.Build.Params) > 0 {
+		for k, v := range src.Spec.Build.Params {
+			value := v
+			dst.Spec.Build.Shipwright.Params = append(dst.Spec.Build.Shipwright.Params, &v1beta2.ParamValue{
+				SingleValue: &v1beta2.SingleValue{
+					Value: &value,
+				},
+				Name: k,
+			})
 		}
 	}
+
 	return nil
 }
 
