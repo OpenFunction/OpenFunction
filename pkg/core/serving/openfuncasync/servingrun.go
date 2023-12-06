@@ -30,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -55,17 +54,6 @@ type servingRun struct {
 
 func Registry(rm meta.RESTMapper) []client.Object {
 	var objs = []client.Object{&appsv1.Deployment{}, &appsv1.StatefulSet{}, &batchv1.Job{}}
-	if _, err := rm.ResourcesFor(schema.GroupVersionResource{Group: "keda.sh", Version: "v1alpha1", Resource: "scaledobjects"}); err == nil {
-		objs = append(objs, &kedav1alpha1.ScaledObject{})
-	}
-
-	if _, err := rm.ResourcesFor(schema.GroupVersionResource{Group: "keda.sh", Version: "v1alpha1", Resource: "scaledjobs"}); err == nil {
-		objs = append(objs, &kedav1alpha1.ScaledJob{})
-	}
-
-	if _, err := rm.ResourcesFor(schema.GroupVersionResource{Group: "dapr.io", Version: "v1alpha1", Resource: "components"}); err == nil {
-		objs = append(objs, &componentsv1alpha1.Component{})
-	}
 
 	return objs
 }

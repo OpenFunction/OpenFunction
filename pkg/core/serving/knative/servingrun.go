@@ -137,6 +137,10 @@ func (r *servingRun) Clean(s *openfunction.Serving) error {
 		}
 	}
 
+	if err := common.CleanDaprComponents(r.Client, s); err != nil {
+		return err
+	}
+
 	if err := common.CleanDaprProxy(r.ctx, log, r.Client, s); err != nil {
 		return err
 	}

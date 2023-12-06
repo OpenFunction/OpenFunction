@@ -304,6 +304,21 @@ func CleanDaprProxy(
 	return nil
 }
 
+func CleanDaprComponents(c client.Client, s *openfunction.Serving) error {
+	componentList := &componentsv1alpha1.ComponentList{}
+	if err := c.List(context.Background(), componentList, client.InNamespace(s.Namespace), client.MatchingLabels{ServingLabel: s.Name}); err != nil {
+		return err
+	}
+
+	for _, item := range componentList.Items {
+		if err := c.Delete(context.Background(), &item); util.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func AddPodMetadataEnv(namespace string) []corev1.EnvVar {
 	podNameEnv := corev1.EnvVar{
 		Name: "POD_NAME",
