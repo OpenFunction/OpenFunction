@@ -30,7 +30,7 @@ created, the function controller will:
 - Create Function Service to accept event(for async functions).
 
 ```yaml
-apiVersion: core.openfunction.io/v1beta1
+apiVersion: core.openfunction.io/v1beta2
 kind: Function
 metadata:
   name: sink

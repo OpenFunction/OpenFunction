@@ -18,7 +18,7 @@ Since the domain will be deprecated, the following resources will be removed:
 - The Domain-related logic will be removed
 - The `OpenFunction/config/domain/default-domain.yaml` will be removed
 ```yaml=
-apiVersion: core.openfunction.io/v1beta1
+apiVersion: core.openfunction.io/v1beta2
 kind: Domain
 metadata:
   name: openfunction
@@ -315,7 +315,7 @@ Whenever a function is created, the function controller will:
 - Create service `{{.Name}}.{{.Namespace}}.svc.cluster.local`, the service will create a cname to OpenFunction gateway. This address will be used as function internal address
 
 ```yaml=
-apiVersion: core.openfunction.io/v1beta1
+apiVersion: core.openfunction.io/v1beta2
 kind: Function
 metadata:
   name: function-sample

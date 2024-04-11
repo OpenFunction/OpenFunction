@@ -34,7 +34,7 @@ When you define `spec.serving.states` in Function CR, the controller will do the
 - Generate states relevant context to the `FUNC_CONTEXT` env var
 
 ```yaml
-apiVersion: core.openfunction.io/v1beta1
+apiVersion: core.openfunction.io/v1beta2
 kind: Function
 metadata:
   name: state-function-sample

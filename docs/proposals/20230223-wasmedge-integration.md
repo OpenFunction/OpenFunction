@@ -84,7 +84,7 @@ When the value of the `spec.workloadRuntime` field is `wasmedge` or the annotati
 
 
 ```yaml=
-apiVersion: core.openfunction.io/v1beta1
+apiVersion: core.openfunction.io/v1beta2
 kind: Function
 metadata:
   name: wasmedge-http-server-build
@@ -137,7 +137,7 @@ When the value of the `spec.workloadRuntime` field is `wasmedge` or the annotati
 #### WASM cases in Knative Serving
 
 ```yaml=
-apiVersion: core.openfunction.io/v1beta1
+apiVersion: core.openfunction.io/v1beta2
 kind: Function
 metadata:
   name: wasmedge-http-server-serving

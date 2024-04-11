@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-apiVersion: core.openfunction.io/v1beta1
+apiVersion: core.openfunction.io/v1beta2
 kind: Function
 metadata:
   name: e2e-v1beta1-cron-in-kafka-out
@@ -67,7 +67,7 @@ spec:
           - name: authRequired
             value: "false"
 ---
-apiVersion: core.openfunction.io/v1beta1
+apiVersion: core.openfunction.io/v1beta2
 kind: Function
 metadata:
   name: sink-a
@@ -82,7 +82,7 @@ spec:
         - name: function
           imagePullPolicy: Always
 ---
-apiVersion: core.openfunction.io/v1beta1
+apiVersion: core.openfunction.io/v1beta2
 kind: Function
 metadata:
   name: sink-b

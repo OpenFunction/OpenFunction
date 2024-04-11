@@ -76,7 +76,7 @@ In this sample, the event source is a Kafka server and the target function is a 
   You can create a function like below as the EventSource Sink.
 
   ```yaml
-  apiVersion: core.openfunction.io/v1beta1
+  apiVersion: core.openfunction.io/v1beta2
   kind: Function
   metadata:
     name: sink
@@ -164,7 +164,7 @@ At this point we see that the target function is not started (because there is n
 Create an event producer `events-producer.yaml`:
 
 ```yaml
-apiVersion: core.openfunction.io/v1beta1
+apiVersion: core.openfunction.io/v1beta2
 kind: Function
 metadata:
   name: events-producer
@@ -235,7 +235,7 @@ serving-4x5wh-ksvc-wxbf2-v100-deployment-5c495c84f6-8n6mk      2/2     Running  
   You can create a function like below as the target function to trigger:
 
   ```yaml
-  apiVersion: core.openfunction.io/v1beta1
+  apiVersion: core.openfunction.io/v1beta2
   kind: Function
   metadata:
     name: sink
@@ -282,7 +282,7 @@ serving-4x5wh-ksvc-wxbf2-v100-deployment-5c495c84f6-8n6mk      2/2     Running  
   We create an Async function that is triggered by the Trigger and prints the received message:
 
   ```yaml
-  apiVersion: core.openfunction.io/v1beta1
+  apiVersion: core.openfunction.io/v1beta2
   kind: Function
   metadata:
     name: trigger-target
