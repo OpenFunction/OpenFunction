@@ -381,6 +381,9 @@ func (r *GatewayReconciler) updateGatewayAnnotations(gateway *networkingv1alpha1
 		return nil
 	}
 	gatewayConfigAnnotation, _ := json.Marshal(networkingv1alpha1.Gateway{Spec: gateway.Spec})
+	if gateway.Annotations == nil {
+		gateway.Annotations = make(map[string]string)
+	}
 	gateway.Annotations[networkingv1alpha1.GatewayConfigAnnotation] = string(gatewayConfigAnnotation)
 	if err := r.Update(r.ctx, gateway); err != nil {
 		log.Error(err, "Failed to update annotations on Gateway", "namespace", gateway.Namespace, "name", gateway.Name)
