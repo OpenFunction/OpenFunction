@@ -8,7 +8,7 @@ In [events framework proposal](https://github.com/OpenFunction/OpenFunction/blob
 
 **TriggerEnvConfig** is used to receive and process events passed by the OpenFunction events framework.
 
-**TriggerMgr** is used to store informations during the event triggering process, providing the ability for condition determination.
+**TriggerMgr** is used to store information during the event triggering process, providing the ability for condition determination.
 
 ```go
 type TriggerEnvConfig struct {
@@ -98,7 +98,7 @@ Input name: A -> Topic name: default-my-es-a-event-a
 
 Input name: B -> Topic name: default-my-es-b-event-b
 
-### Initilization
+### Initialization
 
 triggerManager.TopicInputMap:
 
