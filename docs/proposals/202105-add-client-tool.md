@@ -317,7 +317,7 @@ In this proposal I will named the command line tool for OpenFunction `fn`.
       -n, --namespace strings             the Namespace name (default: default)
           --output string                 format of Serving dry-run (yaml or json)
           --image string                  the target Function container image
-          --version string                the Funtion version
+          --version string                the Function version
           --build string                  name of the Build to be used
           --serving string                name of the Serving to be used
     ```
@@ -364,7 +364,7 @@ In this proposal I will named the command line tool for OpenFunction `fn`.
       -n, --namespace strings             the Namespace name (default: default)
           --output string                 format of Serving dry-run (yaml or json)
           --image string                  the target Function container image
-          --version string                the Funtion version
+          --version string                the Function version
           --build string                  name of the Build to be used
           --serving string                name of the Serving to be used
     ```

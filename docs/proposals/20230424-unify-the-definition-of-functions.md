@@ -80,7 +80,7 @@ Rename `plugin` to `hook`, and move the hook config to `spec.serving`.
 There are global hooks and private hooks, the global hooks define in the config of `OpenFunction Controller`, the private hooks
 define in the `Function` cr. 
 
-By default, all hooks will be executed, user can controll this logic by the `policy` field. There have two policy to determine the relation of global hooks and private hooks.
+By default, all hooks will be executed, user can control this logic by the `policy` field. There have two policy to determine the relation of global hooks and private hooks.
 - `Append` All hooks will be executed, the private pre hooks will execute after the global pre hooks , and the private post hooks will execute before the global post hooks. this is the default policy.
 - `Override` Only execute the private hooks. 
 

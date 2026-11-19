@@ -8,7 +8,7 @@ Development of function conversion suites for different programming languages.
 
 - Main function template
 
-  During the build process of OpenFunction, the builder renders the user code using the main function template, based on which the mian function in the app image is generated.
+  During the build process of OpenFunction, the builder renders the user code using the main function template, based on which the main function in the app image is generated.
 
 - Function handler library
 
